@@ -1,0 +1,24 @@
+<resources>
+    <!-- ===== ПЕРЕОПРЕДЕЛЕНИЕ ТОЛЬКО ДЛЯ НОЧНОГО РЕЖИМА ===== -->
+    <color name="primary">#4FC3F7</color>
+    <color name="primary_container">#1A237E</color>
+    <color name="secondary">#4DB6AC</color>
+    <color name="tertiary">#EF5350</color>
+
+    <color name="on_primary">#121212</color>
+    <color name="on_surface">#E8EAED</color>
+    <color name="on_surface_secondary">#9AA0A6</color>
+
+    <color name="surface">#1E1E1E</color>
+    <color name="surface_variant">#2D2D2D</color>
+    <color name="background">#121212</color>
+
+    <color name="status_bar">#1E1E1E</color>
+
+    <color name="card_background">#2D2D2D</color>
+    <color name="card_elevation">#3D3D3D</color>
+
+    <color name="error">#EF5350</color>
+    <color name="success">#66BB6A</color>
+    <color name="warning">#FFA726</color>
+</resources>
