@@ -20,7 +20,7 @@ public class MyApp extends Application {
 
         // Инициализируем DatabaseHelper и копируем БД из assets
         DatabaseHelper dbHelper = DatabaseHelper.getInstance(this);
-        dbHelper.ensureDatabaseReady();
+       // dbHelper.ensureDatabaseReady();
 
         // Создаём Repository (внедряем зависимости)
         repository = new RepositoryImpl(dbHelper);

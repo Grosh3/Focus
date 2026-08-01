@@ -1,18 +1,145 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.main.MainActivity">
+    android:orientation="vertical"
+    android:padding="16dp">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- Верхняя панель с кнопками -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- Статус списка (слева) -->
+        <TextView
+            android:id="@+id/tvListStatus"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="НОВЫЙ 17"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <!-- Кнопка НОВАЯ ЗАДВИЖКА (видна когда нет записи) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNewValve"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="➕ НОВАЯ ЗАДВИЖКА"
+            android:layout_marginEnd="8dp"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+        <!-- Кнопка К СПИСКУ (видна когда есть запись) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnToList"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📋 К СПИСКУ"
+            android:visibility="gone"
+            android:layout_marginEnd="8dp"
+            style="@style/Widget.Material3.Button" />
+
+        <!-- Справка -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnHelp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="❓"
+            style="@style/Widget.Material3.Button.TextButton" />
+
+        <!-- Списки -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLists"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🗂️"
+            style="@style/Widget.Material3.Button.TextButton" />
+
+        <!-- Настройки -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSettings"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:text="⚙️" />
+    </LinearLayout>
+
+    <!-- Поиск -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Поиск задвижек (≥3 символов)..."
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:maxLines="1" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Список задвижек -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvGateValves"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:clipToPadding="false"
+        android:paddingBottom="8dp" />
+    <!-- Сообщение "Ничего не найдено" -->
+    <TextView
+        android:id="@+id/tvEmptySearch"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="🔍 Ничего не найдено\nПопробуйте изменить запрос"
+        android:textSize="18sp"
+        android:textColor="@color/on_surface_secondary"
+        android:visibility="gone" />
+
+
+
+    <!-- Нижние кнопки (горизонтальные) -->
+    <LinearLayout
+        android:id="@+id/bottomButtons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="8dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSetpoints"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="ЖУРНАЛ УСТАВОК"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSensors"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="СПИСОК ДАТЧИКОВ"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnConverter"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="ЗАМЕР ТЕМПЕРАТУРЫ"
+            style="@style/Widget.Material3.Button.OutlinedButton" />
+    </LinearLayout>
+
+</LinearLayout>

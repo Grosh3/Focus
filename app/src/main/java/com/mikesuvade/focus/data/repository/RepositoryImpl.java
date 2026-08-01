@@ -71,15 +71,58 @@ public class RepositoryImpl implements IRepository {
         List<GateValve> valves = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
-        String selection = DatabaseContract.GateValvesEntry.COLUMN_NAME + " LIKE ? OR " +
-                DatabaseContract.GateValvesEntry.COLUMN_KKS + " LIKE ? OR " +
-                DatabaseContract.GateValvesEntry.COLUMN_NAME_ENG + " LIKE ?";
+        // Очищаем от пробелов и дефисов
+        String cleanQuery = query.replaceAll("[\\s-]", "");
+        String prefixQuery = query + "%";
+
+        // ==========================================
+        // 🔧 ПОИСК С УЧЁТОМ ПРОБЕЛОВ
+        // ==========================================
+        String selection =
+                // 1. Основной поиск (с пробелами и дефисами)
+                "(LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_KKS + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ISY + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_POWER_CABINET + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_FULL_NAME + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ON_PLACE + ") LIKE LOWER(?)" +
+                        ") OR " +
+                        // 2. Поиск без пробелов и дефисов (СВП-6 → СВП6, 24 НБ → 24НБ)
+                        "(LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_KKS + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ISY + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_POWER_CABINET + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_FULL_NAME + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ON_PLACE + ") LIKE LOWER(?)" +
+                        ") OR " +
+                        // 3. Поиск по префиксу (ТО1 → ТО1, ТО15, ТО100)
+                        "(LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_KKS + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ISY + ") LIKE LOWER(?)" +
+                        ")";
 
         String[] args = new String[]{
+                // Основной поиск (6 полей)
                 "%" + query + "%",
                 "%" + query + "%",
-                "%" + query + "%"
+                "%" + query + "%",
+                "%" + query + "%",
+                "%" + query + "%",
+                "%" + query + "%",
+                // Поиск без пробелов (6 полей) — ДОБАВЛЕНО!
+                "%" + cleanQuery + "%",
+                "%" + cleanQuery + "%",
+                "%" + cleanQuery + "%",
+                "%" + cleanQuery + "%",
+                "%" + cleanQuery + "%",
+                "%" + cleanQuery + "%",
+                // Поиск по префиксу (3 поля)
+                prefixQuery,
+                prefixQuery,
+                prefixQuery
         };
+
+        Log.d("SEARCH", "Запрос: " + query + " | clean: " + cleanQuery + " | prefix: " + prefixQuery);
 
         Cursor cursor = db.query(
                 DatabaseContract.GateValvesEntry.TABLE_NAME,
@@ -87,13 +130,18 @@ public class RepositoryImpl implements IRepository {
                 selection,
                 args,
                 null, null,
-                DatabaseContract.GateValvesEntry.COLUMN_NAME + " ASC"
+                "LENGTH(" + DatabaseContract.GateValvesEntry.COLUMN_NAME + ") ASC, " +
+                        DatabaseContract.GateValvesEntry.COLUMN_NAME + " ASC"
         );
+
+        Log.d("SEARCH", "Количество найденных записей: " + cursor.getCount());
 
         while (cursor.moveToNext()) {
             valves.add(cursorToGateValve(cursor));
         }
         cursor.close();
+
+        Log.d("SEARCH", "Возвращено объектов: " + valves.size());
         return valves;
     }
 
@@ -550,7 +598,6 @@ public class RepositoryImpl implements IRepository {
         List<ConverterPoint> points = getConverterPoints(tableName);
         if (points.isEmpty()) return 0;
 
-        // Находим две точки для интерполяции
         ConverterPoint lower = null;
         ConverterPoint upper = null;
 
@@ -564,16 +611,15 @@ public class RepositoryImpl implements IRepository {
         }
 
         if (lower == null && upper != null) {
-            return upper.getTemperature(); // Экстраполяция вниз
+            return upper.getTemperature();
         }
         if (lower != null && upper == null) {
-            return lower.getTemperature(); // Экстраполяция вверх
+            return lower.getTemperature();
         }
         if (lower == null && upper == null) {
             return 0;
         }
 
-        // Линейная интерполяция
         if (lower.getSignalValue() == upper.getSignalValue()) {
             return lower.getTemperature();
         }
@@ -746,7 +792,13 @@ public class RepositoryImpl implements IRepository {
         valve.setNameEng(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_NAME_ENG)));
         valve.setKks(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_KKS)));
         valve.setName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_NAME)));
-        valve.setIsy(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_ISY)));
+
+        String isy = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_ISY));
+        if (isy != null && isy.endsWith(".0")) {
+            isy = isy.substring(0, isy.length() - 2);
+        }
+        valve.setIsy(isy);
+
         valve.setPowerCabinet(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_POWER_CABINET)));
         valve.setFullName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_FULL_NAME)));
         valve.setOnPlace(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_ON_PLACE)));
@@ -790,6 +842,7 @@ public class RepositoryImpl implements IRepository {
         valve.setCustom(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_IS_CUSTOM)) == 1);
         return valve;
     }
+
     private Sensor cursorToSensorUser(Cursor cursor) {
         Sensor sensor = new Sensor();
         sensor.setId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry._ID)));
@@ -910,7 +963,13 @@ public class RepositoryImpl implements IRepository {
         values.put(DatabaseContract.GateValvesEntry.COLUMN_NAME_ENG, valve.getNameEng());
         values.put(DatabaseContract.GateValvesEntry.COLUMN_KKS, valve.getKks());
         values.put(DatabaseContract.GateValvesEntry.COLUMN_NAME, valve.getName());
-        values.put(DatabaseContract.GateValvesEntry.COLUMN_ISY, valve.getIsy());
+
+        String isy = valve.getIsy();
+        if (isy != null && isy.endsWith(".0")) {
+            isy = isy.substring(0, isy.length() - 2);
+        }
+        values.put(DatabaseContract.GateValvesEntry.COLUMN_ISY, isy);
+
         values.put(DatabaseContract.GateValvesEntry.COLUMN_POWER_CABINET, valve.getPowerCabinet());
         values.put(DatabaseContract.GateValvesEntry.COLUMN_FULL_NAME, valve.getFullName());
         values.put(DatabaseContract.GateValvesEntry.COLUMN_ON_PLACE, valve.getOnPlace());
@@ -933,7 +992,13 @@ public class RepositoryImpl implements IRepository {
         values.put(DatabaseContract.GateValvesUserEntry.COLUMN_NAME_ENG, valve.getNameEng());
         values.put(DatabaseContract.GateValvesUserEntry.COLUMN_KKS, valve.getKks());
         values.put(DatabaseContract.GateValvesUserEntry.COLUMN_NAME, valve.getName());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_ISY, valve.getIsy());
+
+        String isy = valve.getIsy();
+        if (isy != null && isy.endsWith(".0")) {
+            isy = isy.substring(0, isy.length() - 2);
+        }
+        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_ISY, isy);
+
         values.put(DatabaseContract.GateValvesUserEntry.COLUMN_POWER_CABINET, valve.getPowerCabinet());
         values.put(DatabaseContract.GateValvesUserEntry.COLUMN_FULL_NAME, valve.getFullName());
         values.put(DatabaseContract.GateValvesUserEntry.COLUMN_ON_PLACE, valve.getOnPlace());
@@ -1087,5 +1152,4 @@ public class RepositoryImpl implements IRepository {
         setpoint.setEquipmentGroup(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP)));
         return setpoint;
     }
-
 }
