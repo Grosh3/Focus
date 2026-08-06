@@ -10,43 +10,30 @@ import com.mikesuvade.focus.domain.models.GateValve;
 import com.mikesuvade.focus.domain.repository.IRepository;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MainViewModel extends ViewModel {
 
     private static final String TAG = "MainViewModel";
     private final IRepository repository;
 
-    // Список задвижек для отображения (результат поиска)
     private final MutableLiveData<List<GateValve>> gateValves = new MutableLiveData<>();
-
-    // Все задвижки (для сброса поиска)
     private List<GateValve> allGateValves = new ArrayList<>();
-
-    // Текущий список задвижек (временный, в памяти)
     private final List<GateValve> currentList = new ArrayList<>();
-
-    // Состояние записи
     private final MutableLiveData<Boolean> isRecording = new MutableLiveData<>(false);
-
-    // Имя списка
     private final MutableLiveData<String> listName = new MutableLiveData<>("НОВЫЙ 1");
-
-    // Размер текущего списка
     private final MutableLiveData<Integer> currentListSize = new MutableLiveData<>(0);
-
-    // Следующий номер для "НОВЫЙ X"
     private int nextListNumber = 1;
 
     public MainViewModel(IRepository repository) {
         this.repository = repository;
-        loadAllGateValves();
         updateNextListNumber();
         logDatabaseCount();
         logFirstRecords();
+        gateValves.setValue(new ArrayList<>());
     }
-
-    // ==================== GETTERS ====================
 
     public LiveData<List<GateValve>> getGateValves() {
         return gateValves;
@@ -72,66 +59,100 @@ public class MainViewModel extends ViewModel {
         return currentList.size();
     }
 
-    // ==================== ЗАГРУЗКА ДАННЫХ ====================
-
+    // ==========================================
+    // 🔧 ЗАГРУЗКА ОБЪЕДИНЁННЫХ ДАННЫХ
+    // ==========================================
     private void loadAllGateValves() {
         new Thread(() -> {
             try {
-                // Сначала ищем в gate_valves_user
-                List<GateValve> userValves = repository.getCustomGateValves();
-                if (userValves != null && !userValves.isEmpty()) {
-                    allGateValves = userValves;
-                } else {
+                // Получаем все задвижки из основной таблицы
+                List<GateValve> allValves = repository.getAllGateValves();
 
-                    // Если нет, берём из gate_valves
-                    allGateValves = repository.getAllGateValves();
+                // Получаем все пользовательские правки
+                List<GateValve> userValves = repository.getCustomGateValves();
+
+                // Создаём карту для быстрого поиска правок по original_id
+                Map<Integer, GateValve> userMap = new HashMap<>();
+                for (GateValve uv : userValves) {
+                    userMap.put(uv.getOriginalId(), uv);
                 }
+
+                // Объединяем: если есть user-версия — берём её
+                List<GateValve> merged = new ArrayList<>();
+                for (GateValve valve : allValves) {
+                    GateValve userValve = userMap.get(valve.getId());
+                    if (userValve != null) {
+                        merged.add(userValve); // берём user-версию
+                    } else {
+                        merged.add(valve); // оставляем основную
+                    }
+                }
+
+                allGateValves = merged;
                 gateValves.postValue(allGateValves);
+                Log.d(TAG, "Загружено " + merged.size() + " задвижек (объединённых)");
             } catch (Exception e) {
                 Log.e(TAG, "Error loading valves", e);
             }
         }).start();
     }
 
-    private void updateNextListNumber() {
-        new Thread(() -> {
-            try {
-                // Считаем количество сохранённых списков
-                int count = repository.getAllWorkSessions().size();
-                nextListNumber = count + 1;
-                listName.postValue("НОВЫЙ " + nextListNumber);
-            } catch (Exception e) {
-                Log.e(TAG, "Error updating list number", e);
-            }
-        }).start();
-    }
-
-    // ==================== ПОИСК ====================
+    // ==========================================
+    // 🔍 ПОИСК
+    // ==========================================
     public void search(String query) {
-        if (query == null || query.trim().length() < 2) {  // ← МЕНЯЕМ 3 НА 2
-            // Меньше 2 символов - показываем все
-            gateValves.setValue(allGateValves);
+        if (query == null || query.trim().isEmpty()) {
+            gateValves.setValue(new ArrayList<>());
+            return;
+        }
+
+        String trimmedQuery = query.trim();
+
+        // Команда #все
+        if (trimmedQuery.equalsIgnoreCase("#все")) {
+            loadAllGateValves();
+            return;
+        }
+
+        // Обычный поиск (>= 2 символов)
+        if (trimmedQuery.length() < 2) {
+            gateValves.setValue(new ArrayList<>());
             return;
         }
 
         new Thread(() -> {
             try {
-                List<GateValve> results = repository.searchGateValves(query.trim());
-                gateValves.postValue(results);
+                // Ищем в основной таблице
+                List<GateValve> results = repository.searchGateValves(trimmedQuery);
+
+                // Ищем в пользовательской таблице
+                List<GateValve> userResults = repository.searchCustomGateValves(trimmedQuery);
+
+                // Объединяем (пользовательские имеют приоритет)
+                Map<Integer, GateValve> resultMap = new HashMap<>();
+                for (GateValve v : results) {
+                    resultMap.put(v.getId(), v);
+                }
+                for (GateValve uv : userResults) {
+                    resultMap.put(uv.getOriginalId(), uv);
+                }
+
+                List<GateValve> mergedResults = new ArrayList<>(resultMap.values());
+                gateValves.postValue(mergedResults);
+                Log.d(TAG, "Найдено " + mergedResults.size() + " задвижек");
             } catch (Exception e) {
                 Log.e(TAG, "Search error", e);
             }
         }).start();
     }
 
-
-    // ==================== РАБОТА СО СПИСКОМ ====================
-
+    // ==========================================
+    // 📋 РАБОТА СО СПИСКОМ
+    // ==========================================
     public void addToCurrentList(GateValve valve) {
-        // Проверяем, есть ли уже в списке
         for (GateValve v : currentList) {
             if (v.getId() == valve.getId()) {
-                return; // уже есть
+                return;
             }
         }
         currentList.add(valve);
@@ -163,8 +184,6 @@ public class MainViewModel extends ViewModel {
         }
     }
 
-    // ==================== ПРОВЕРКИ ====================
-
     public boolean isInCurrentList(GateValve valve) {
         for (GateValve v : currentList) {
             if (v.getId() == valve.getId()) {
@@ -174,12 +193,23 @@ public class MainViewModel extends ViewModel {
         return false;
     }
 
-    // ==================== ОБНОВЛЕНИЕ ====================
-
     public void refreshData() {
-        loadAllGateValves();
+       // loadAllGateValves();
         updateNextListNumber();
     }
+
+    private void updateNextListNumber() {
+        new Thread(() -> {
+            try {
+                int count = repository.getAllWorkSessions().size();
+                nextListNumber = count + 1;
+                listName.postValue("НОВЫЙ " + nextListNumber);
+            } catch (Exception e) {
+                Log.e(TAG, "Error updating list number", e);
+            }
+        }).start();
+    }
+
     private void logDatabaseCount() {
         new Thread(() -> {
             try {
@@ -190,6 +220,7 @@ public class MainViewModel extends ViewModel {
             }
         }).start();
     }
+
     private void logFirstRecords() {
         new Thread(() -> {
             try {

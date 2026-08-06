@@ -21,6 +21,11 @@ public class GateValve {
     private byte[] namespaceViewPerifer;
     private String descriptionBlockingPerifer;
 
+    // ==========================================
+    // 🔧 НОВОЕ ПОЛЕ — МЕСТОПОЛОЖЕНИЕ
+    // ==========================================
+    private String locationDescription;
+
     // Для пользовательских таблиц
     private int originalId;
     private String editedAt;
@@ -91,6 +96,17 @@ public class GateValve {
 
     public String getDescriptionBlockingPerifer() { return descriptionBlockingPerifer; }
     public void setDescriptionBlockingPerifer(String descriptionBlockingPerifer) { this.descriptionBlockingPerifer = descriptionBlockingPerifer; }
+
+    // ==========================================
+    // 🔧 НОВЫЙ ГЕТТЕР И СЕТТЕР
+    // ==========================================
+    public String getLocationDescription() {
+        return locationDescription;
+    }
+
+    public void setLocationDescription(String locationDescription) {
+        this.locationDescription = locationDescription;
+    }
 
     public int getOriginalId() { return originalId; }
     public void setOriginalId(int originalId) { this.originalId = originalId; }

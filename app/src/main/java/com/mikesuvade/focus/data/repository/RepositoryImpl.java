@@ -813,6 +813,7 @@ public class RepositoryImpl implements IRepository {
         valve.setDescriptionBlockingClose(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_DESCRIPTION_BLOCKING_CLOSE)));
         valve.setNamespaceViewPerifer(cursor.getBlob(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_NAMESPACE_VIEW_PERIFER)));
         valve.setDescriptionBlockingPerifer(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_DESCRIPTION_BLOCKING_PERIFER)));
+        valve.setLocationDescription(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_LOCATION_DESCRIPTION)));
         return valve;
     }
 
@@ -837,6 +838,12 @@ public class RepositoryImpl implements IRepository {
         valve.setDescriptionBlockingClose(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_DESCRIPTION_BLOCKING_CLOSE)));
         valve.setNamespaceViewPerifer(cursor.getBlob(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_NAMESPACE_VIEW_PERIFER)));
         valve.setDescriptionBlockingPerifer(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_DESCRIPTION_BLOCKING_PERIFER)));
+
+        // ==========================================
+        // 🔧 ДОБАВЛЯЕМ location_description
+        // ==========================================
+        valve.setLocationDescription(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_LOCATION_DESCRIPTION)));
+
         valve.setOriginalId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_ORIGINAL_ID)));
         valve.setEditedAt(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_EDITED_AT)));
         valve.setCustom(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_IS_CUSTOM)) == 1);
@@ -984,6 +991,7 @@ public class RepositoryImpl implements IRepository {
         values.put(DatabaseContract.GateValvesEntry.COLUMN_DESCRIPTION_BLOCKING_CLOSE, valve.getDescriptionBlockingClose());
         values.put(DatabaseContract.GateValvesEntry.COLUMN_NAMESPACE_VIEW_PERIFER, valve.getNamespaceViewPerifer());
         values.put(DatabaseContract.GateValvesEntry.COLUMN_DESCRIPTION_BLOCKING_PERIFER, valve.getDescriptionBlockingPerifer());
+        values.put(DatabaseContract.GateValvesEntry.COLUMN_LOCATION_DESCRIPTION, valve.getLocationDescription());
         return values;
     }
 
@@ -1013,11 +1021,16 @@ public class RepositoryImpl implements IRepository {
         values.put(DatabaseContract.GateValvesUserEntry.COLUMN_DESCRIPTION_BLOCKING_CLOSE, valve.getDescriptionBlockingClose());
         values.put(DatabaseContract.GateValvesUserEntry.COLUMN_NAMESPACE_VIEW_PERIFER, valve.getNamespaceViewPerifer());
         values.put(DatabaseContract.GateValvesUserEntry.COLUMN_DESCRIPTION_BLOCKING_PERIFER, valve.getDescriptionBlockingPerifer());
+
+        // ==========================================
+        // 🔧 ДОБАВЛЯЕМ location_description
+        // ==========================================
+        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_LOCATION_DESCRIPTION, valve.getLocationDescription());
+
         values.put(DatabaseContract.GateValvesUserEntry.COLUMN_ORIGINAL_ID, valve.getOriginalId());
         values.put(DatabaseContract.GateValvesUserEntry.COLUMN_IS_CUSTOM, valve.isCustom() ? 1 : 0);
         return values;
     }
-
     private ContentValues sensorToContentValues(Sensor sensor) {
         ContentValues values = new ContentValues();
         values.put(DatabaseContract.SensorScheduleEntry.COLUMN_KEYNUM, sensor.getKeynum());
@@ -1151,5 +1164,46 @@ public class RepositoryImpl implements IRepository {
         setpoint.setNotes(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_NOTES)));
         setpoint.setEquipmentGroup(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP)));
         return setpoint;
+    }
+    @Override
+    public List<GateValve> searchCustomGateValves(String query) {
+        List<GateValve> valves = new ArrayList<>();
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+
+        String selection = DatabaseContract.GateValvesUserEntry.COLUMN_NAME + " LIKE ? OR " +
+                DatabaseContract.GateValvesUserEntry.COLUMN_KKS + " LIKE ? OR " +
+                DatabaseContract.GateValvesUserEntry.COLUMN_ISY + " LIKE ? OR " +
+                DatabaseContract.GateValvesUserEntry.COLUMN_POWER_CABINET + " LIKE ? OR " +
+                DatabaseContract.GateValvesUserEntry.COLUMN_FULL_NAME + " LIKE ? OR " +
+                DatabaseContract.GateValvesUserEntry.COLUMN_ON_PLACE + " LIKE ?";
+
+        String[] args = new String[]{
+                "%" + query + "%",
+                "%" + query + "%",
+                "%" + query + "%",
+                "%" + query + "%",
+                "%" + query + "%",
+                "%" + query + "%"
+        };
+
+        Log.d("SEARCH", "Пользовательский поиск: " + query);
+
+        Cursor cursor = db.query(
+                DatabaseContract.GateValvesUserEntry.TABLE_NAME,
+                null,
+                selection,
+                args,
+                null, null,
+                DatabaseContract.GateValvesUserEntry.COLUMN_NAME + " ASC"
+        );
+
+        Log.d("SEARCH", "Найдено в user: " + cursor.getCount());
+
+        while (cursor.moveToNext()) {
+            valves.add(cursorToGateValveUser(cursor));
+        }
+        cursor.close();
+
+        return valves;
     }
 }

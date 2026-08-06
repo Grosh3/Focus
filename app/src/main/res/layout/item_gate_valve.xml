@@ -51,16 +51,16 @@
                 style="@style/Widget.Material3.Button.TextButton" />
         </LinearLayout>
 
-        <!-- Сборка -->
+        <!-- Сборка + Местоположение (объединённые) -->
         <TextView
-            android:id="@+id/tvPowerCabinet"
+            android:id="@+id/tvLocation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Сборка: Шкаф А"
+            android:text="28НВ ШК5 котел н.Б"
             android:textSize="14sp"
-            android:textColor="?android:attr/textColorSecondary"
-            android:textStyle="bold"/>
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary" />
 
         <!-- Расположение -->
         <TextView

@@ -154,7 +154,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
     static class ViewHolder extends RecyclerView.ViewHolder {
         private final TextView tvIsy;
         private final TextView tvName;
-        private final TextView tvPowerCabinet;
+        private final TextView tvLocation;
         private final TextView tvOnPlace;
         private final TextView tvFullName;
         private final TextView tvKks;
@@ -168,7 +168,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
             super(itemView);
             tvIsy = itemView.findViewById(R.id.tvIsy);
             tvName = itemView.findViewById(R.id.tvName);
-            tvPowerCabinet = itemView.findViewById(R.id.tvPowerCabinet);
+            tvLocation = itemView.findViewById(R.id.tvLocation);
             tvOnPlace = itemView.findViewById(R.id.tvOnPlace);
             tvFullName = itemView.findViewById(R.id.tvFullName);
             tvKks = itemView.findViewById(R.id.tvKks);
@@ -178,7 +178,6 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
             btnBlockingClose = itemView.findViewById(R.id.btnBlockingClose);
             btnExternalChain = itemView.findViewById(R.id.btnExternalChain);
         }
-
         void bind(GateValve valve, boolean isExpanded) {
             // ==========================================
             // ISY и NAME — если ISY пустой, NAME занимает его место
@@ -211,25 +210,32 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 tvName.setGravity(Gravity.START);
             }
 
-            // Сборка: power_cabinet
+            // ==========================================
+            // СБОРКА + МЕСТОПОЛОЖЕНИЕ (объединённые)
+            // ==========================================
             String powerCabinet = valve.getPowerCabinet();
+            String locationDescription = valve.getLocationDescription();
+
+            String locationText = "";
             if (powerCabinet != null && !powerCabinet.isEmpty()) {
-                tvPowerCabinet.setVisibility(View.VISIBLE);
-                tvPowerCabinet.setText("Сборка: " + powerCabinet);
-            } else {
-                tvPowerCabinet.setVisibility(View.GONE);
+                locationText = powerCabinet;
+                if (locationDescription != null && !locationDescription.isEmpty()) {
+                    locationText += ", сборка " + locationDescription;
+                }
+            } else if (locationDescription != null && !locationDescription.isEmpty()) {
+                locationText = locationDescription;
             }
 
-            // Расположение: on_place
-            String onPlace = valve.getOnPlace();
-            if (onPlace != null && !onPlace.isEmpty()) {
-                tvOnPlace.setVisibility(View.VISIBLE);
-                tvOnPlace.setText("Расположение: " + onPlace);
+            if (!locationText.isEmpty()) {
+                tvLocation.setVisibility(View.VISIBLE);
+                tvLocation.setText(locationText);
             } else {
-                tvOnPlace.setVisibility(View.GONE);
+                tvLocation.setVisibility(View.GONE);
             }
 
-            // Описание: full_name_of_the_position
+            // ==========================================
+            // ОПИСАНИЕ
+            // ==========================================
             String fullName = valve.getFullName();
             if (fullName != null && !fullName.isEmpty()) {
                 tvFullName.setVisibility(View.VISIBLE);
@@ -238,7 +244,20 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 tvFullName.setVisibility(View.GONE);
             }
 
-            // KKS: kks
+            // ==========================================
+            // РАСПОЛОЖЕНИЕ
+            // ==========================================
+            String onPlace = valve.getOnPlace();
+            if (onPlace != null && !onPlace.isEmpty()) {
+                tvOnPlace.setVisibility(View.VISIBLE);
+                tvOnPlace.setText("Расположение: " + onPlace);
+            } else {
+                tvOnPlace.setVisibility(View.GONE);
+            }
+
+            // ==========================================
+            // KKS
+            // ==========================================
             String kks = valve.getKks();
             if (kks != null && !kks.isEmpty()) {
                 tvKks.setVisibility(View.VISIBLE);
@@ -247,8 +266,11 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 tvKks.setVisibility(View.GONE);
             }
 
-            // Разворачиваемая часть
+            // ==========================================
+            // РАЗВОРАЧИВАЕМАЯ ЧАСТЬ (блокировки)
+            // ==========================================
             expandedContent.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
         }
+
     }
 }

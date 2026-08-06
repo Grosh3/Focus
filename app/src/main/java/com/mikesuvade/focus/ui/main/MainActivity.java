@@ -1,14 +1,18 @@
 package com.mikesuvade.focus.ui.main;
 
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -18,6 +22,7 @@ import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.GateValve;
 import com.mikesuvade.focus.domain.repository.IRepository;
+import com.mikesuvade.focus.ui.detail.DetailActivity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -96,6 +101,18 @@ public class MainActivity extends AppCompatActivity {
         rvGateValves.setLayoutManager(new LinearLayoutManager(this));
         adapter = new GateValveAdapter();
 
+        // ==========================================
+        // 🧹 СКРЫВАЕМ КЛАВИАТУРУ ПРИ ПРОКРУТКЕ
+        // ==========================================
+        rvGateValves.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                if (newState == RecyclerView.SCROLL_STATE_DRAGGING) {
+                    hideKeyboard();
+                }
+            }
+        });
+
         // Клик по элементу - развернуть/свернуть
         adapter.setOnItemClickListener((valve, position) -> {
             toggleExpanded(position);
@@ -103,8 +120,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Длинный клик - редактировать
         adapter.setOnItemLongClickListener(valve -> {
-            Toast.makeText(this, "Редактировать: " + valve.getName(), Toast.LENGTH_SHORT).show();
-            // TODO: Открыть DetailActivity для редактирования
+            Intent intent = new Intent(MainActivity.this, DetailActivity.class);
+            intent.putExtra("valve_id", valve.getId());
+            startActivity(intent);
+           // return true;
         });
 
         // Кнопка + добавить в список
@@ -136,6 +155,7 @@ public class MainActivity extends AppCompatActivity {
             adapter.setExpanded(position, true);
         }
     }
+
     private void setupSearch() {
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override
@@ -144,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 String query = s.toString().trim();
-                if (query.length() >= 2) {  // ← МЕНЯЕМ 3 НА 2
+                if (query.length() >= 2) {
                     viewModel.search(query);
                     bottomButtons.setVisibility(View.GONE);
                 } else if (query.isEmpty()) {
@@ -250,6 +270,18 @@ public class MainActivity extends AppCompatActivity {
         viewModel.getCurrentListSizeLiveData().observe(this, size -> {
             // Можно обновить баннер или что-то ещё
         });
+    }
+
+    // ==========================================
+    // 🧹 СКРЫТИЕ КЛАВИАТУРЫ
+    // ==========================================
+    private void hideKeyboard() {
+        if (etSearch != null && etSearch.getWindowToken() != null) {
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
+            }
+        }
     }
 
     @Override

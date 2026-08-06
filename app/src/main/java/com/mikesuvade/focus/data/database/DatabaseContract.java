@@ -27,6 +27,7 @@ public final class DatabaseContract {
         public static final String COLUMN_DESCRIPTION_BLOCKING_CLOSE = "description_blocking_close";
         public static final String COLUMN_NAMESPACE_VIEW_PERIFER = "namespace_view_perifer";
         public static final String COLUMN_DESCRIPTION_BLOCKING_PERIFER = "description_blocking_perifer";
+        public static final String COLUMN_LOCATION_DESCRIPTION = "location_description";
     }
 
     // ==================== GATE VALVES USER ====================
@@ -53,6 +54,7 @@ public final class DatabaseContract {
         public static final String COLUMN_ORIGINAL_ID = "original_id";
         public static final String COLUMN_EDITED_AT = "edited_at";
         public static final String COLUMN_IS_CUSTOM = "is_custom";
+        public static final String COLUMN_LOCATION_DESCRIPTION = "location_description";
     }
 
     // ==================== SENSOR SCHEDULE ====================

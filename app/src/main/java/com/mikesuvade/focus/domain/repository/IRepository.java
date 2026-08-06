@@ -75,4 +75,5 @@ public interface IRepository {
     List<com.mikesuvade.focus.domain.models.ValveItem> getValveItemsBySession(String sessionId);
     int updateValveItem(com.mikesuvade.focus.domain.models.ValveItem item);
     int deleteValveItem(int itemId);
+    List<GateValve> searchCustomGateValves(String query);
 }
