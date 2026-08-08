@@ -7,6 +7,7 @@ public final class DatabaseContract {
     private DatabaseContract() {}
 
     // ==================== GATE VALVES ====================
+
     public static class GateValvesEntry implements BaseColumns {
         public static final String TABLE_NAME = "gate_valves";
         public static final String COLUMN_NAME_ENG = "name_eng";
@@ -28,34 +29,15 @@ public final class DatabaseContract {
         public static final String COLUMN_NAMESPACE_VIEW_PERIFER = "namespace_view_perifer";
         public static final String COLUMN_DESCRIPTION_BLOCKING_PERIFER = "description_blocking_perifer";
         public static final String COLUMN_LOCATION_DESCRIPTION = "location_description";
-    }
+        public static final String COLUMN_IS_EDITED = "is_edited";
 
-    // ==================== GATE VALVES USER ====================
-    public static class GateValvesUserEntry implements BaseColumns {
-        public static final String TABLE_NAME = "gate_valves_user";
-        public static final String COLUMN_NAME_ENG = "name_eng";
-        public static final String COLUMN_KKS = "kks";
-        public static final String COLUMN_NAME = "name";
-        public static final String COLUMN_ISY = "isy";
-        public static final String COLUMN_POWER_CABINET = "power_cabinet";
-        public static final String COLUMN_FULL_NAME = "full_name_of_the_position";
-        public static final String COLUMN_ON_PLACE = "on_place";
-        public static final String COLUMN_AP_50 = "ap_50";
-        public static final String COLUMN_MARK = "mark";
-        public static final String COLUMN_CDA_CABINET = "cda_cabinet";
-        public static final String COLUMN_CDA_CABINET_POSITION = "cda_cabinet_position";
-        public static final String COLUMN_SLOT = "slot";
-        public static final String COLUMN_NAME_SPACE_VIEW_OPEN = "name_space_view_open";
-        public static final String COLUMN_DESCRIPTION_BLOCKING_OPEN = "description_blocking_open";
-        public static final String COLUMN_NAMESPACE_VIEW_CLOSE = "namespace_view_close";
-        public static final String COLUMN_DESCRIPTION_BLOCKING_CLOSE = "description_blocking_close";
-        public static final String COLUMN_NAMESPACE_VIEW_PERIFER = "namespace_view_perifer";
-        public static final String COLUMN_DESCRIPTION_BLOCKING_PERIFER = "description_blocking_perifer";
-        public static final String COLUMN_ORIGINAL_ID = "original_id";
+        // ==========================================
+        // 🔧 ТОЛЬКО ОДНА КОЛОНКА!
+        // ==========================================
         public static final String COLUMN_EDITED_AT = "edited_at";
-        public static final String COLUMN_IS_CUSTOM = "is_custom";
-        public static final String COLUMN_LOCATION_DESCRIPTION = "location_description";
     }
+    // ==================== GATE VALVES USER ====================
+
 
     // ==================== SENSOR SCHEDULE ====================
     public static class SensorScheduleEntry implements BaseColumns {
@@ -87,35 +69,7 @@ public final class DatabaseContract {
     }
 
     // ==================== SENSOR SCHEDULE USER ====================
-    public static class SensorScheduleUserEntry implements BaseColumns {
-        public static final String TABLE_NAME = "sensor_schedule_user";
-        public static final String COLUMN_ORIGINAL_KKS = "original_kks";
-        public static final String COLUMN_KEYNUM = "keynum";
-        public static final String COLUMN_FA = "fa";
-        public static final String COLUMN_ST_MARKIR = "st_markir";
-        public static final String COLUMN_FULL_NAME = "full_name";
-        public static final String COLUMN_NAME = "name";
-        public static final String COLUMN_MEDIA = "media";
-        public static final String COLUMN_UNITS = "units";
-        public static final String COLUMN_NOMINAL = "nominal";
-        public static final String COLUMN_VOL_MIN = "vol_min";
-        public static final String COLUMN_VOL_MAX = "vol_max";
-        public static final String COLUMN_SPEED = "speed";
-        public static final String COLUMN_FAULT_PAR = "fault_par";
-        public static final String COLUMN_INSTEAD_F = "instead_f";
-        public static final String COLUMN_FILTER = "filter";
-        public static final String COLUMN_MODEL_SENSOR = "model_sensor";
-        public static final String COLUMN_MOD_SENSOR = "mod_sensor";
-        public static final String COLUMN_ADDITIONAL_INFO = "additional_info";
-        public static final String COLUMN_MIN_VAL = "min_val";
-        public static final String COLUMN_MAX_VAL = "max_val";
-        public static final String COLUMN_MEASURE_UNIT = "measure_unit";
-        public static final String COLUMN_LOCATION = "location";
-        public static final String COLUMN_CVA = "cva";
-        public static final String COLUMN_DAMPING_TIME = "damping_time";
-        public static final String COLUMN_EDITED_AT = "edited_at";
-        public static final String COLUMN_IS_CUSTOM = "is_custom";
-    }
+
 
     // ==================== SETPOINT SCHEDULE ====================
     public static class SetpointScheduleEntry implements BaseColumns {
@@ -131,20 +85,7 @@ public final class DatabaseContract {
     }
 
     // ==================== SETPOINT SCHEDULE USER ====================
-    public static class SetpointScheduleUserEntry implements BaseColumns {
-        public static final String TABLE_NAME = "setpoint_schedule_user";
-        public static final String COLUMN_ORIGINAL_ID = "original_id";
-        public static final String COLUMN_NAME = "name";
-        public static final String COLUMN_POSITION_NAME = "position_name";
-        public static final String COLUMN_LOCATION = "location";
-        public static final String COLUMN_SETPOINT_VALUE = "setpoint_value";
-        public static final String COLUMN_DELAY_TIME = "delay_time";
-        public static final String COLUMN_OPERATION = "operation";
-        public static final String COLUMN_NOTES = "notes";
-        public static final String COLUMN_EQUIPMENT_GROUP = "equipment_group";
-        public static final String COLUMN_EDITED_AT = "edited_at";
-        public static final String COLUMN_IS_CUSTOM = "is_custom";
-    }
+
 
     // ==================== CONVERTER TABLES (термометры/термопары) ====================
     public static class Gr21Entry implements BaseColumns {

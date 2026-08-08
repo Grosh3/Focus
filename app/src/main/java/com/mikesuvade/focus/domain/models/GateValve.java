@@ -30,6 +30,8 @@ public class GateValve {
     private int originalId;
     private String editedAt;
     private boolean isCustom;
+    private int isEdited;  // 0 = не редактировалась, 1 = редактировалась
+    private String editedAtValve;
 
     // Конструкторы
     public GateValve() {}
@@ -116,6 +118,11 @@ public class GateValve {
 
     public boolean isCustom() { return isCustom; }
     public void setCustom(boolean custom) { isCustom = custom; }
+    public int getIsEdited() { return isEdited; }
+    public void setIsEdited(int isEdited) { this.isEdited = isEdited; }
+
+    public String getEditedAtValve() { return editedAtValve; }
+    public void setEditedAtValve(String editedAtValve) { this.editedAtValve = editedAtValve; }
 
     @Override
     public String toString() {

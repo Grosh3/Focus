@@ -71,15 +71,10 @@ public class RepositoryImpl implements IRepository {
         List<GateValve> valves = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
-        // Очищаем от пробелов и дефисов
         String cleanQuery = query.replaceAll("[\\s-]", "");
         String prefixQuery = query + "%";
 
-        // ==========================================
-        // 🔧 ПОИСК С УЧЁТОМ ПРОБЕЛОВ
-        // ==========================================
         String selection =
-                // 1. Основной поиск (с пробелами и дефисами)
                 "(LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
                         "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_KKS + ") LIKE LOWER(?) OR " +
                         "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ISY + ") LIKE LOWER(?) OR " +
@@ -87,7 +82,6 @@ public class RepositoryImpl implements IRepository {
                         "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_FULL_NAME + ") LIKE LOWER(?) OR " +
                         "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ON_PLACE + ") LIKE LOWER(?)" +
                         ") OR " +
-                        // 2. Поиск без пробелов и дефисов (СВП-6 → СВП6, 24 НБ → 24НБ)
                         "(LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
                         "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_KKS + ") LIKE LOWER(?) OR " +
                         "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ISY + ") LIKE LOWER(?) OR " +
@@ -95,28 +89,24 @@ public class RepositoryImpl implements IRepository {
                         "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_FULL_NAME + ") LIKE LOWER(?) OR " +
                         "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ON_PLACE + ") LIKE LOWER(?)" +
                         ") OR " +
-                        // 3. Поиск по префиксу (ТО1 → ТО1, ТО15, ТО100)
                         "(LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
                         "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_KKS + ") LIKE LOWER(?) OR " +
                         "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ISY + ") LIKE LOWER(?)" +
                         ")";
 
         String[] args = new String[]{
-                // Основной поиск (6 полей)
                 "%" + query + "%",
                 "%" + query + "%",
                 "%" + query + "%",
                 "%" + query + "%",
                 "%" + query + "%",
                 "%" + query + "%",
-                // Поиск без пробелов (6 полей) — ДОБАВЛЕНО!
                 "%" + cleanQuery + "%",
                 "%" + cleanQuery + "%",
                 "%" + cleanQuery + "%",
                 "%" + cleanQuery + "%",
                 "%" + cleanQuery + "%",
                 "%" + cleanQuery + "%",
-                // Поиск по префиксу (3 поля)
                 prefixQuery,
                 prefixQuery,
                 prefixQuery
@@ -172,73 +162,6 @@ public class RepositoryImpl implements IRepository {
                 DatabaseContract.GateValvesEntry._ID + " = ?",
                 new String[]{String.valueOf(id)}
         );
-    }
-
-    // ==================== GATE VALVES USER ====================
-
-    @Override
-    public List<GateValve> getCustomGateValves() {
-        List<GateValve> valves = new ArrayList<>();
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor = db.query(
-                DatabaseContract.GateValvesUserEntry.TABLE_NAME,
-                null, null, null, null, null,
-                DatabaseContract.GateValvesUserEntry.COLUMN_EDITED_AT + " DESC"
-        );
-
-        while (cursor.moveToNext()) {
-            valves.add(cursorToGateValveUser(cursor));
-        }
-        cursor.close();
-        return valves;
-    }
-
-    @Override
-    public long insertCustomGateValve(GateValve valve) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = gateValveUserToContentValues(valve);
-        return db.insert(DatabaseContract.GateValvesUserEntry.TABLE_NAME, null, values);
-    }
-
-    @Override
-    public int updateCustomGateValve(GateValve valve) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = gateValveUserToContentValues(valve);
-        return db.update(
-                DatabaseContract.GateValvesUserEntry.TABLE_NAME,
-                values,
-                DatabaseContract.GateValvesUserEntry._ID + " = ?",
-                new String[]{String.valueOf(valve.getId())}
-        );
-    }
-
-    @Override
-    public int deleteCustomGateValve(int id) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        return db.delete(
-                DatabaseContract.GateValvesUserEntry.TABLE_NAME,
-                DatabaseContract.GateValvesUserEntry._ID + " = ?",
-                new String[]{String.valueOf(id)}
-        );
-    }
-
-    @Override
-    public GateValve getCustomGateValveByOriginalId(int originalId) {
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor = db.query(
-                DatabaseContract.GateValvesUserEntry.TABLE_NAME,
-                null,
-                DatabaseContract.GateValvesUserEntry.COLUMN_ORIGINAL_ID + " = ?",
-                new String[]{String.valueOf(originalId)},
-                null, null, null
-        );
-
-        GateValve valve = null;
-        if (cursor.moveToFirst()) {
-            valve = cursorToGateValveUser(cursor);
-        }
-        cursor.close();
-        return valve;
     }
 
     // ==================== SENSORS ====================
@@ -339,73 +262,6 @@ public class RepositoryImpl implements IRepository {
         );
     }
 
-    // ==================== SENSORS USER ====================
-
-    @Override
-    public List<Sensor> getCustomSensors() {
-        List<Sensor> sensors = new ArrayList<>();
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor = db.query(
-                DatabaseContract.SensorScheduleUserEntry.TABLE_NAME,
-                null, null, null, null, null,
-                DatabaseContract.SensorScheduleUserEntry.COLUMN_EDITED_AT + " DESC"
-        );
-
-        while (cursor.moveToNext()) {
-            sensors.add(cursorToSensorUser(cursor));
-        }
-        cursor.close();
-        return sensors;
-    }
-
-    @Override
-    public long insertCustomSensor(Sensor sensor) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = sensorUserToContentValues(sensor);
-        return db.insert(DatabaseContract.SensorScheduleUserEntry.TABLE_NAME, null, values);
-    }
-
-    @Override
-    public int updateCustomSensor(Sensor sensor) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = sensorUserToContentValues(sensor);
-        return db.update(
-                DatabaseContract.SensorScheduleUserEntry.TABLE_NAME,
-                values,
-                DatabaseContract.SensorScheduleUserEntry._ID + " = ?",
-                new String[]{String.valueOf(sensor.getId())}
-        );
-    }
-
-    @Override
-    public int deleteCustomSensor(int id) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        return db.delete(
-                DatabaseContract.SensorScheduleUserEntry.TABLE_NAME,
-                DatabaseContract.SensorScheduleUserEntry._ID + " = ?",
-                new String[]{String.valueOf(id)}
-        );
-    }
-
-    @Override
-    public Sensor getCustomSensorByOriginalKks(String originalKks) {
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor = db.query(
-                DatabaseContract.SensorScheduleUserEntry.TABLE_NAME,
-                null,
-                DatabaseContract.SensorScheduleUserEntry.COLUMN_ORIGINAL_KKS + " = ?",
-                new String[]{originalKks},
-                null, null, null
-        );
-
-        Sensor sensor = null;
-        if (cursor.moveToFirst()) {
-            sensor = cursorToSensorUser(cursor);
-        }
-        cursor.close();
-        return sensor;
-    }
-
     // ==================== SETPOINTS ====================
 
     @Override
@@ -502,73 +358,6 @@ public class RepositoryImpl implements IRepository {
                 DatabaseContract.SetpointScheduleEntry._ID + " = ?",
                 new String[]{String.valueOf(id)}
         );
-    }
-
-    // ==================== SETPOINTS USER ====================
-
-    @Override
-    public List<Setpoint> getCustomSetpoints() {
-        List<Setpoint> setpoints = new ArrayList<>();
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor = db.query(
-                DatabaseContract.SetpointScheduleUserEntry.TABLE_NAME,
-                null, null, null, null, null,
-                DatabaseContract.SetpointScheduleUserEntry.COLUMN_EDITED_AT + " DESC"
-        );
-
-        while (cursor.moveToNext()) {
-            setpoints.add(cursorToSetpointUser(cursor));
-        }
-        cursor.close();
-        return setpoints;
-    }
-
-    @Override
-    public long insertCustomSetpoint(Setpoint setpoint) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = setpointUserToContentValues(setpoint);
-        return db.insert(DatabaseContract.SetpointScheduleUserEntry.TABLE_NAME, null, values);
-    }
-
-    @Override
-    public int updateCustomSetpoint(Setpoint setpoint) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = setpointUserToContentValues(setpoint);
-        return db.update(
-                DatabaseContract.SetpointScheduleUserEntry.TABLE_NAME,
-                values,
-                DatabaseContract.SetpointScheduleUserEntry._ID + " = ?",
-                new String[]{String.valueOf(setpoint.getId())}
-        );
-    }
-
-    @Override
-    public int deleteCustomSetpoint(int id) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        return db.delete(
-                DatabaseContract.SetpointScheduleUserEntry.TABLE_NAME,
-                DatabaseContract.SetpointScheduleUserEntry._ID + " = ?",
-                new String[]{String.valueOf(id)}
-        );
-    }
-
-    @Override
-    public Setpoint getCustomSetpointByOriginalId(int originalId) {
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor = db.query(
-                DatabaseContract.SetpointScheduleUserEntry.TABLE_NAME,
-                null,
-                DatabaseContract.SetpointScheduleUserEntry.COLUMN_ORIGINAL_ID + " = ?",
-                new String[]{String.valueOf(originalId)},
-                null, null, null
-        );
-
-        Setpoint setpoint = null;
-        if (cursor.moveToFirst()) {
-            setpoint = cursorToSetpointUser(cursor);
-        }
-        cursor.close();
-        return setpoint;
     }
 
     // ==================== CONVERTER ====================
@@ -814,88 +603,51 @@ public class RepositoryImpl implements IRepository {
         valve.setNamespaceViewPerifer(cursor.getBlob(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_NAMESPACE_VIEW_PERIFER)));
         valve.setDescriptionBlockingPerifer(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_DESCRIPTION_BLOCKING_PERIFER)));
         valve.setLocationDescription(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_LOCATION_DESCRIPTION)));
+        valve.setIsEdited(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_IS_EDITED)));
+        valve.setEditedAtValve(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_EDITED_AT)));  // ← ИСПРАВЛЕНО!
+        valve.setEditedAtValve(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_EDITED_AT)));
         return valve;
     }
-
-    private GateValve cursorToGateValveUser(Cursor cursor) {
-        GateValve valve = new GateValve();
-        valve.setId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry._ID)));
-        valve.setNameEng(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_NAME_ENG)));
-        valve.setKks(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_KKS)));
-        valve.setName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_NAME)));
-        valve.setIsy(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_ISY)));
-        valve.setPowerCabinet(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_POWER_CABINET)));
-        valve.setFullName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_FULL_NAME)));
-        valve.setOnPlace(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_ON_PLACE)));
-        valve.setAp50(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_AP_50)));
-        valve.setMark(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_MARK)));
-        valve.setCdaCabinet(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_CDA_CABINET)));
-        valve.setCdaCabinetPosition(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_CDA_CABINET_POSITION)));
-        valve.setSlot(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_SLOT)));
-        valve.setNameSpaceViewOpen(cursor.getBlob(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_NAME_SPACE_VIEW_OPEN)));
-        valve.setDescriptionBlockingOpen(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_DESCRIPTION_BLOCKING_OPEN)));
-        valve.setNamespaceViewClose(cursor.getBlob(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_NAMESPACE_VIEW_CLOSE)));
-        valve.setDescriptionBlockingClose(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_DESCRIPTION_BLOCKING_CLOSE)));
-        valve.setNamespaceViewPerifer(cursor.getBlob(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_NAMESPACE_VIEW_PERIFER)));
-        valve.setDescriptionBlockingPerifer(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_DESCRIPTION_BLOCKING_PERIFER)));
-
-        // ==========================================
-        // 🔧 ДОБАВЛЯЕМ location_description
-        // ==========================================
-        valve.setLocationDescription(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_LOCATION_DESCRIPTION)));
-
-        valve.setOriginalId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_ORIGINAL_ID)));
-        valve.setEditedAt(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_EDITED_AT)));
-        valve.setCustom(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesUserEntry.COLUMN_IS_CUSTOM)) == 1);
-        return valve;
-    }
-
-    private Sensor cursorToSensorUser(Cursor cursor) {
+    private Sensor cursorToSensor(Cursor cursor) {
         Sensor sensor = new Sensor();
-        sensor.setId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry._ID)));
-        sensor.setOriginalKks(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_ORIGINAL_KKS)));
-        sensor.setKeynum(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_KEYNUM)));
-        sensor.setFa(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_FA)));
-        sensor.setStMarkir(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_ST_MARKIR)));
-        sensor.setFullName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_FULL_NAME)));
-        sensor.setName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_NAME)));
-        sensor.setMedia(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_MEDIA)));
-        sensor.setUnits(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_UNITS)));
-        sensor.setNominal(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_NOMINAL)));
-        sensor.setVolMin(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_VOL_MIN)));
-        sensor.setVolMax(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_VOL_MAX)));
-        sensor.setSpeed(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_SPEED)));
-        sensor.setFaultPar(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_FAULT_PAR)));
-        sensor.setInsteadF(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_INSTEAD_F)));
-        sensor.setFilter(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_FILTER)));
-        sensor.setModelSensor(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_MODEL_SENSOR)));
-        sensor.setModSensor(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_MOD_SENSOR)));
-        sensor.setAdditionalInfo(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_ADDITIONAL_INFO)));
-        sensor.setMinVal(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_MIN_VAL)));
-        sensor.setMaxVal(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_MAX_VAL)));
-        sensor.setMeasureUnit(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_MEASURE_UNIT)));
-        sensor.setLocation(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_LOCATION)));
-        sensor.setCva(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_CVA)));
-        sensor.setDampingTime(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_DAMPING_TIME)));
-        sensor.setEditedAt(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_EDITED_AT)));
-        sensor.setCustom(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleUserEntry.COLUMN_IS_CUSTOM)) == 1);
+        sensor.setKeynum(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_KEYNUM)));
+        sensor.setFa(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FA)));
+        sensor.setKks(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_KKS)));
+        sensor.setStMarkir(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR)));
+        sensor.setFullName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FULL_NAME)));
+        sensor.setName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_NAME)));
+        sensor.setMedia(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MEDIA)));
+        sensor.setUnits(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_UNITS)));
+        sensor.setNominal(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_NOMINAL)));
+        sensor.setVolMin(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_VOL_MIN)));
+        sensor.setVolMax(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_VOL_MAX)));
+        sensor.setSpeed(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_SPEED)));
+        sensor.setFaultPar(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FAULT_PAR)));
+        sensor.setInsteadF(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_INSTEAD_F)));
+        sensor.setFilter(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FILTER)));
+        sensor.setModelSensor(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MODEL_SENSOR)));
+        sensor.setModSensor(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MOD_SENSOR)));
+        sensor.setAdditionalInfo(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_ADDITIONAL_INFO)));
+        sensor.setMinVal(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MIN)));
+        sensor.setMaxVal(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MAX)));
+        sensor.setMeasureUnit(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MEASURE_UNIT)));
+        sensor.setLocation(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_LOCATION)));
+        sensor.setCva(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_CVA)));
+        sensor.setDampingTime(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_DAMPING_TIME)));
         return sensor;
     }
 
-    private Setpoint cursorToSetpointUser(Cursor cursor) {
+    private Setpoint cursorToSetpoint(Cursor cursor) {
         Setpoint setpoint = new Setpoint();
-        setpoint.setId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleUserEntry._ID)));
-        setpoint.setOriginalId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleUserEntry.COLUMN_ORIGINAL_ID)));
-        setpoint.setName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleUserEntry.COLUMN_NAME)));
-        setpoint.setPositionName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleUserEntry.COLUMN_POSITION_NAME)));
-        setpoint.setLocation(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleUserEntry.COLUMN_LOCATION)));
-        setpoint.setSetpointValue(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleUserEntry.COLUMN_SETPOINT_VALUE)));
-        setpoint.setDelayTime(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleUserEntry.COLUMN_DELAY_TIME)));
-        setpoint.setOperation(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleUserEntry.COLUMN_OPERATION)));
-        setpoint.setNotes(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleUserEntry.COLUMN_NOTES)));
-        setpoint.setEquipmentGroup(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleUserEntry.COLUMN_EQUIPMENT_GROUP)));
-        setpoint.setEditedAt(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleUserEntry.COLUMN_EDITED_AT)));
-        setpoint.setCustom(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleUserEntry.COLUMN_IS_CUSTOM)) == 1);
+        setpoint.setId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry._ID)));
+        setpoint.setName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_NAME)));
+        setpoint.setPositionName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME)));
+        setpoint.setLocation(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_LOCATION)));
+        setpoint.setSetpointValue(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_SETPOINT_VALUE)));
+        setpoint.setDelayTime(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_DELAY_TIME)));
+        setpoint.setOperation(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_OPERATION)));
+        setpoint.setNotes(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_NOTES)));
+        setpoint.setEquipmentGroup(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP)));
         return setpoint;
     }
 
@@ -934,35 +686,6 @@ public class RepositoryImpl implements IRepository {
         return item;
     }
 
-    private Sensor cursorToSensor(Cursor cursor) {
-        Sensor sensor = new Sensor();
-        sensor.setKeynum(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_KEYNUM)));
-        sensor.setFa(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FA)));
-        sensor.setKks(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_KKS)));
-        sensor.setStMarkir(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR)));
-        sensor.setFullName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FULL_NAME)));
-        sensor.setName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_NAME)));
-        sensor.setMedia(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MEDIA)));
-        sensor.setUnits(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_UNITS)));
-        sensor.setNominal(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_NOMINAL)));
-        sensor.setVolMin(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_VOL_MIN)));
-        sensor.setVolMax(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_VOL_MAX)));
-        sensor.setSpeed(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_SPEED)));
-        sensor.setFaultPar(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FAULT_PAR)));
-        sensor.setInsteadF(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_INSTEAD_F)));
-        sensor.setFilter(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FILTER)));
-        sensor.setModelSensor(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MODEL_SENSOR)));
-        sensor.setModSensor(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MOD_SENSOR)));
-        sensor.setAdditionalInfo(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_ADDITIONAL_INFO)));
-        sensor.setMinVal(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MIN)));
-        sensor.setMaxVal(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MAX)));
-        sensor.setMeasureUnit(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MEASURE_UNIT)));
-        sensor.setLocation(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_LOCATION)));
-        sensor.setCva(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_CVA)));
-        sensor.setDampingTime(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_DAMPING_TIME)));
-        return sensor;
-    }
-
     // ==================== HELPERS: Object to ContentValues ====================
 
     private ContentValues gateValveToContentValues(GateValve valve) {
@@ -992,45 +715,16 @@ public class RepositoryImpl implements IRepository {
         values.put(DatabaseContract.GateValvesEntry.COLUMN_NAMESPACE_VIEW_PERIFER, valve.getNamespaceViewPerifer());
         values.put(DatabaseContract.GateValvesEntry.COLUMN_DESCRIPTION_BLOCKING_PERIFER, valve.getDescriptionBlockingPerifer());
         values.put(DatabaseContract.GateValvesEntry.COLUMN_LOCATION_DESCRIPTION, valve.getLocationDescription());
+        values.put(DatabaseContract.GateValvesEntry.COLUMN_IS_EDITED, valve.getIsEdited());
+
+        // ==========================================
+        // 🔧 ТОЛЬКО ОДНА СТРОКА — ПРАВИЛЬНАЯ!
+        // ==========================================
+        values.put(DatabaseContract.GateValvesEntry.COLUMN_EDITED_AT, valve.getEditedAtValve());
+
         return values;
     }
 
-    private ContentValues gateValveUserToContentValues(GateValve valve) {
-        ContentValues values = new ContentValues();
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_NAME_ENG, valve.getNameEng());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_KKS, valve.getKks());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_NAME, valve.getName());
-
-        String isy = valve.getIsy();
-        if (isy != null && isy.endsWith(".0")) {
-            isy = isy.substring(0, isy.length() - 2);
-        }
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_ISY, isy);
-
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_POWER_CABINET, valve.getPowerCabinet());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_FULL_NAME, valve.getFullName());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_ON_PLACE, valve.getOnPlace());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_AP_50, valve.getAp50());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_MARK, valve.getMark());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_CDA_CABINET, valve.getCdaCabinet());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_CDA_CABINET_POSITION, valve.getCdaCabinetPosition());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_SLOT, valve.getSlot());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_NAME_SPACE_VIEW_OPEN, valve.getNameSpaceViewOpen());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_DESCRIPTION_BLOCKING_OPEN, valve.getDescriptionBlockingOpen());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_NAMESPACE_VIEW_CLOSE, valve.getNamespaceViewClose());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_DESCRIPTION_BLOCKING_CLOSE, valve.getDescriptionBlockingClose());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_NAMESPACE_VIEW_PERIFER, valve.getNamespaceViewPerifer());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_DESCRIPTION_BLOCKING_PERIFER, valve.getDescriptionBlockingPerifer());
-
-        // ==========================================
-        // 🔧 ДОБАВЛЯЕМ location_description
-        // ==========================================
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_LOCATION_DESCRIPTION, valve.getLocationDescription());
-
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_ORIGINAL_ID, valve.getOriginalId());
-        values.put(DatabaseContract.GateValvesUserEntry.COLUMN_IS_CUSTOM, valve.isCustom() ? 1 : 0);
-        return values;
-    }
     private ContentValues sensorToContentValues(Sensor sensor) {
         ContentValues values = new ContentValues();
         values.put(DatabaseContract.SensorScheduleEntry.COLUMN_KEYNUM, sensor.getKeynum());
@@ -1060,36 +754,6 @@ public class RepositoryImpl implements IRepository {
         return values;
     }
 
-    private ContentValues sensorUserToContentValues(Sensor sensor) {
-        ContentValues values = new ContentValues();
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_ORIGINAL_KKS, sensor.getOriginalKks());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_KEYNUM, sensor.getKeynum());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_FA, sensor.getFa());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_ST_MARKIR, sensor.getStMarkir());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_FULL_NAME, sensor.getFullName());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_NAME, sensor.getName());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_MEDIA, sensor.getMedia());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_UNITS, sensor.getUnits());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_NOMINAL, sensor.getNominal());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_VOL_MIN, sensor.getVolMin());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_VOL_MAX, sensor.getVolMax());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_SPEED, sensor.getSpeed());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_FAULT_PAR, sensor.getFaultPar());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_INSTEAD_F, sensor.getInsteadF());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_FILTER, sensor.getFilter());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_MODEL_SENSOR, sensor.getModelSensor());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_MOD_SENSOR, sensor.getModSensor());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_ADDITIONAL_INFO, sensor.getAdditionalInfo());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_MIN_VAL, sensor.getMinVal());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_MAX_VAL, sensor.getMaxVal());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_MEASURE_UNIT, sensor.getMeasureUnit());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_LOCATION, sensor.getLocation());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_CVA, sensor.getCva());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_DAMPING_TIME, sensor.getDampingTime());
-        values.put(DatabaseContract.SensorScheduleUserEntry.COLUMN_IS_CUSTOM, sensor.isCustom() ? 1 : 0);
-        return values;
-    }
-
     private ContentValues setpointToContentValues(Setpoint setpoint) {
         ContentValues values = new ContentValues();
         values.put(DatabaseContract.SetpointScheduleEntry.COLUMN_NAME, setpoint.getName());
@@ -1100,21 +764,6 @@ public class RepositoryImpl implements IRepository {
         values.put(DatabaseContract.SetpointScheduleEntry.COLUMN_OPERATION, setpoint.getOperation());
         values.put(DatabaseContract.SetpointScheduleEntry.COLUMN_NOTES, setpoint.getNotes());
         values.put(DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP, setpoint.getEquipmentGroup());
-        return values;
-    }
-
-    private ContentValues setpointUserToContentValues(Setpoint setpoint) {
-        ContentValues values = new ContentValues();
-        values.put(DatabaseContract.SetpointScheduleUserEntry.COLUMN_ORIGINAL_ID, setpoint.getOriginalId());
-        values.put(DatabaseContract.SetpointScheduleUserEntry.COLUMN_NAME, setpoint.getName());
-        values.put(DatabaseContract.SetpointScheduleUserEntry.COLUMN_POSITION_NAME, setpoint.getPositionName());
-        values.put(DatabaseContract.SetpointScheduleUserEntry.COLUMN_LOCATION, setpoint.getLocation());
-        values.put(DatabaseContract.SetpointScheduleUserEntry.COLUMN_SETPOINT_VALUE, setpoint.getSetpointValue());
-        values.put(DatabaseContract.SetpointScheduleUserEntry.COLUMN_DELAY_TIME, setpoint.getDelayTime());
-        values.put(DatabaseContract.SetpointScheduleUserEntry.COLUMN_OPERATION, setpoint.getOperation());
-        values.put(DatabaseContract.SetpointScheduleUserEntry.COLUMN_NOTES, setpoint.getNotes());
-        values.put(DatabaseContract.SetpointScheduleUserEntry.COLUMN_EQUIPMENT_GROUP, setpoint.getEquipmentGroup());
-        values.put(DatabaseContract.SetpointScheduleUserEntry.COLUMN_IS_CUSTOM, setpoint.isCustom() ? 1 : 0);
         return values;
     }
 
@@ -1148,62 +797,5 @@ public class RepositoryImpl implements IRepository {
         values.put(DatabaseContract.ValveItemsEntry.COLUMN_IS_CHECKED, item.isChecked() ? 1 : 0);
         values.put(DatabaseContract.ValveItemsEntry.COLUMN_OPERATION_TIMESTAMP, item.getOperationTimestamp());
         return values;
-    }
-
-    // ==================== HELPERS: Cursor to Object (недостающие) ====================
-
-    private Setpoint cursorToSetpoint(Cursor cursor) {
-        Setpoint setpoint = new Setpoint();
-        setpoint.setId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry._ID)));
-        setpoint.setName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_NAME)));
-        setpoint.setPositionName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME)));
-        setpoint.setLocation(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_LOCATION)));
-        setpoint.setSetpointValue(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_SETPOINT_VALUE)));
-        setpoint.setDelayTime(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_DELAY_TIME)));
-        setpoint.setOperation(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_OPERATION)));
-        setpoint.setNotes(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_NOTES)));
-        setpoint.setEquipmentGroup(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP)));
-        return setpoint;
-    }
-    @Override
-    public List<GateValve> searchCustomGateValves(String query) {
-        List<GateValve> valves = new ArrayList<>();
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-
-        String selection = DatabaseContract.GateValvesUserEntry.COLUMN_NAME + " LIKE ? OR " +
-                DatabaseContract.GateValvesUserEntry.COLUMN_KKS + " LIKE ? OR " +
-                DatabaseContract.GateValvesUserEntry.COLUMN_ISY + " LIKE ? OR " +
-                DatabaseContract.GateValvesUserEntry.COLUMN_POWER_CABINET + " LIKE ? OR " +
-                DatabaseContract.GateValvesUserEntry.COLUMN_FULL_NAME + " LIKE ? OR " +
-                DatabaseContract.GateValvesUserEntry.COLUMN_ON_PLACE + " LIKE ?";
-
-        String[] args = new String[]{
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%"
-        };
-
-        Log.d("SEARCH", "Пользовательский поиск: " + query);
-
-        Cursor cursor = db.query(
-                DatabaseContract.GateValvesUserEntry.TABLE_NAME,
-                null,
-                selection,
-                args,
-                null, null,
-                DatabaseContract.GateValvesUserEntry.COLUMN_NAME + " ASC"
-        );
-
-        Log.d("SEARCH", "Найдено в user: " + cursor.getCount());
-
-        while (cursor.moveToNext()) {
-            valves.add(cursorToGateValveUser(cursor));
-        }
-        cursor.close();
-
-        return valves;
     }
 }

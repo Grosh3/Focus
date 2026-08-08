@@ -19,6 +19,10 @@ import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.GateValve;
 import com.mikesuvade.focus.domain.repository.IRepository;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
 public class DetailActivity extends AppCompatActivity {
 
     public static final String EXTRA_VALVE_ID = "valve_id";
@@ -48,6 +52,7 @@ public class DetailActivity extends AppCompatActivity {
 
     private boolean isExtraVisible = false;
     private boolean isSaved = false;
+    private EditText etLocationDescription;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +82,7 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        tvValveTitle = findViewById(R.id.tvValveTitle);
+       // tvValveTitle = findViewById(R.id.tvValveTitle);
         etName = findViewById(R.id.etName);
         etKks = findViewById(R.id.etKks);
         etIsy = findViewById(R.id.etIsy);
@@ -93,6 +98,9 @@ public class DetailActivity extends AppCompatActivity {
         extraFieldsContainer = findViewById(R.id.extraFieldsContainer);
         btnToggleExtra = findViewById(R.id.btnToggleExtra);
         tvStatus = findViewById(R.id.tvStatus);
+      //  etLocationDescription = findViewById(R.id.etLocationDescription);
+        etLocationDescription = findViewById(R.id.etLocationDescription);
+        tvValveTitle = findViewById(R.id.tvValveTitle);
     }
 
     private void setupListeners() {
@@ -107,12 +115,8 @@ public class DetailActivity extends AppCompatActivity {
     private void loadValveData() {
         new Thread(() -> {
             try {
-                // Сначала ищем в user-таблице
-                GateValve valve = repository.getCustomGateValveByOriginalId(valveId);
-                if (valve == null) {
-                    // Если нет, берём из основной
-                    valve = repository.getGateValveById(valveId);
-                }
+                // Загружаем из основной таблицы (user-таблиц больше нет)
+                GateValve valve = repository.getGateValveById(valveId);
                 currentValve = valve;
                 originalValve = copyValve(valve);
 
@@ -150,6 +154,7 @@ public class DetailActivity extends AppCompatActivity {
         etCdaCabinet.setText(currentValve.getCdaCabinet());
         etCdaCabinetPosition.setText(currentValve.getCdaCabinetPosition());
         etSlot.setText(currentValve.getSlot());
+        etLocationDescription.setText(currentValve.getLocationDescription());
     }
 
     @Override
@@ -176,12 +181,21 @@ public class DetailActivity extends AppCompatActivity {
         // Собираем данные с полей
         GateValve updatedValve = new GateValve();
         updatedValve.setId(currentValve.getId());
-        updatedValve.setName(etName.getText().toString().trim());
-        updatedValve.setKks(etKks.getText().toString().trim());
+
+        // ==========================================
+        // 1️⃣ Основные поля (в порядке отображения)
+        // ==========================================
         updatedValve.setIsy(etIsy.getText().toString().trim());
+        updatedValve.setName(etName.getText().toString().trim());
         updatedValve.setPowerCabinet(etPowerCabinet.getText().toString().trim());
+        updatedValve.setLocationDescription(etLocationDescription.getText().toString().trim());
         updatedValve.setOnPlace(etOnPlace.getText().toString().trim());
         updatedValve.setFullName(etFullName.getText().toString().trim());
+
+        // ==========================================
+        // 2️⃣ Дополнительные поля (включая KKS)
+        // ==========================================
+        updatedValve.setKks(etKks.getText().toString().trim());
         updatedValve.setNameEng(etNameEng.getText().toString().trim());
         updatedValve.setAp50(etAp50.getText().toString().trim());
         updatedValve.setMark(etMark.getText().toString().trim());
@@ -197,23 +211,15 @@ public class DetailActivity extends AppCompatActivity {
         updatedValve.setDescriptionBlockingClose(currentValve.getDescriptionBlockingClose());
         updatedValve.setDescriptionBlockingPerifer(currentValve.getDescriptionBlockingPerifer());
 
-        // Сохраняем в user-таблицу
+        // Устанавливаем флаг редактирования и дату
+        updatedValve.setIsEdited(1);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        updatedValve.setEditedAtValve(sdf.format(new Date()));
+
+        // Сохраняем напрямую в основную таблицу
         new Thread(() -> {
             try {
-                // Проверяем, есть ли уже запись в user
-                GateValve existingUser = repository.getCustomGateValveByOriginalId(currentValve.getId());
-                if (existingUser != null) {
-                    // Обновляем
-                    updatedValve.setId(existingUser.getId());
-                    updatedValve.setOriginalId(currentValve.getId());
-                    updatedValve.setCustom(true);
-                    repository.updateCustomGateValve(updatedValve);
-                } else {
-                    // Создаём новую
-                    updatedValve.setOriginalId(currentValve.getId());
-                    updatedValve.setCustom(true);
-                    repository.insertCustomGateValve(updatedValve);
-                }
+                repository.updateGateValve(updatedValve);
                 isSaved = true;
                 runOnUiThread(() -> {
                     Toast.makeText(this, "✅ Сохранено", Toast.LENGTH_SHORT).show();
@@ -245,12 +251,13 @@ public class DetailActivity extends AppCompatActivity {
     private boolean hasChanges() {
         if (currentValve == null || originalValve == null) return false;
 
-        return !TextUtils.equals(etName.getText().toString().trim(), originalValve.getName()) ||
-                !TextUtils.equals(etKks.getText().toString().trim(), originalValve.getKks()) ||
-                !TextUtils.equals(etIsy.getText().toString().trim(), originalValve.getIsy()) ||
+        return !TextUtils.equals(etIsy.getText().toString().trim(), originalValve.getIsy()) ||
+                !TextUtils.equals(etName.getText().toString().trim(), originalValve.getName()) ||
                 !TextUtils.equals(etPowerCabinet.getText().toString().trim(), originalValve.getPowerCabinet()) ||
+                !TextUtils.equals(etLocationDescription.getText().toString().trim(), originalValve.getLocationDescription()) ||
                 !TextUtils.equals(etOnPlace.getText().toString().trim(), originalValve.getOnPlace()) ||
                 !TextUtils.equals(etFullName.getText().toString().trim(), originalValve.getFullName()) ||
+                !TextUtils.equals(etKks.getText().toString().trim(), originalValve.getKks()) ||
                 !TextUtils.equals(etNameEng.getText().toString().trim(), originalValve.getNameEng()) ||
                 !TextUtils.equals(etAp50.getText().toString().trim(), originalValve.getAp50()) ||
                 !TextUtils.equals(etMark.getText().toString().trim(), originalValve.getMark()) ||
@@ -281,6 +288,7 @@ public class DetailActivity extends AppCompatActivity {
         copy.setDescriptionBlockingOpen(source.getDescriptionBlockingOpen());
         copy.setDescriptionBlockingClose(source.getDescriptionBlockingClose());
         copy.setDescriptionBlockingPerifer(source.getDescriptionBlockingPerifer());
+        copy.setLocationDescription(source.getLocationDescription());
         return copy;
     }
 }

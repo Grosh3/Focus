@@ -17,13 +17,6 @@ public interface IRepository {
     int updateGateValve(GateValve valve);
     int deleteGateValve(int id);
 
-    // ==================== GATE VALVES USER (правки) ====================
-    List<GateValve> getCustomGateValves();
-    long insertCustomGateValve(GateValve valve);
-    int updateCustomGateValve(GateValve valve);
-    int deleteCustomGateValve(int id);
-    GateValve getCustomGateValveByOriginalId(int originalId);
-
     // ==================== SENSORS ====================
     List<Sensor> getAllSensors();
     Sensor getSensorByKks(String kks);
@@ -32,13 +25,6 @@ public interface IRepository {
     int updateSensor(Sensor sensor);
     int deleteSensor(String kks);
 
-    // ==================== SENSORS USER (правки) ====================
-    List<Sensor> getCustomSensors();
-    long insertCustomSensor(Sensor sensor);
-    int updateCustomSensor(Sensor sensor);
-    int deleteCustomSensor(int id);
-    Sensor getCustomSensorByOriginalKks(String originalKks);
-
     // ==================== SETPOINTS ====================
     List<Setpoint> getAllSetpoints();
     Setpoint getSetpointById(int id);
@@ -46,13 +32,6 @@ public interface IRepository {
     long insertSetpoint(Setpoint setpoint);
     int updateSetpoint(Setpoint setpoint);
     int deleteSetpoint(int id);
-
-    // ==================== SETPOINTS USER (правки) ====================
-    List<Setpoint> getCustomSetpoints();
-    long insertCustomSetpoint(Setpoint setpoint);
-    int updateCustomSetpoint(Setpoint setpoint);
-    int deleteCustomSetpoint(int id);
-    Setpoint getCustomSetpointByOriginalId(int originalId);
 
     // ==================== CONVERTER (термометры/термопары) ====================
     List<com.mikesuvade.focus.domain.models.ConverterPoint> getConverterPoints(String tableName);
@@ -75,5 +54,4 @@ public interface IRepository {
     List<com.mikesuvade.focus.domain.models.ValveItem> getValveItemsBySession(String sessionId);
     int updateValveItem(com.mikesuvade.focus.domain.models.ValveItem item);
     int deleteValveItem(int itemId);
-    List<GateValve> searchCustomGateValves(String query);
 }

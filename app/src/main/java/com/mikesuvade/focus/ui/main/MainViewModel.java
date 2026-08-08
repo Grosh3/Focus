@@ -10,9 +10,7 @@ import com.mikesuvade.focus.domain.models.GateValve;
 import com.mikesuvade.focus.domain.repository.IRepository;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class MainViewModel extends ViewModel {
 
@@ -60,37 +58,14 @@ public class MainViewModel extends ViewModel {
     }
 
     // ==========================================
-    // 🔧 ЗАГРУЗКА ОБЪЕДИНЁННЫХ ДАННЫХ
+    // 🔧 ЗАГРУЗКА ВСЕХ ДАННЫХ
     // ==========================================
     private void loadAllGateValves() {
         new Thread(() -> {
             try {
-                // Получаем все задвижки из основной таблицы
-                List<GateValve> allValves = repository.getAllGateValves();
-
-                // Получаем все пользовательские правки
-                List<GateValve> userValves = repository.getCustomGateValves();
-
-                // Создаём карту для быстрого поиска правок по original_id
-                Map<Integer, GateValve> userMap = new HashMap<>();
-                for (GateValve uv : userValves) {
-                    userMap.put(uv.getOriginalId(), uv);
-                }
-
-                // Объединяем: если есть user-версия — берём её
-                List<GateValve> merged = new ArrayList<>();
-                for (GateValve valve : allValves) {
-                    GateValve userValve = userMap.get(valve.getId());
-                    if (userValve != null) {
-                        merged.add(userValve); // берём user-версию
-                    } else {
-                        merged.add(valve); // оставляем основную
-                    }
-                }
-
-                allGateValves = merged;
+                allGateValves = repository.getAllGateValves();
                 gateValves.postValue(allGateValves);
-                Log.d(TAG, "Загружено " + merged.size() + " задвижек (объединённых)");
+                Log.d(TAG, "Загружено " + allGateValves.size() + " задвижек");
             } catch (Exception e) {
                 Log.e(TAG, "Error loading valves", e);
             }
@@ -122,24 +97,9 @@ public class MainViewModel extends ViewModel {
 
         new Thread(() -> {
             try {
-                // Ищем в основной таблице
                 List<GateValve> results = repository.searchGateValves(trimmedQuery);
-
-                // Ищем в пользовательской таблице
-                List<GateValve> userResults = repository.searchCustomGateValves(trimmedQuery);
-
-                // Объединяем (пользовательские имеют приоритет)
-                Map<Integer, GateValve> resultMap = new HashMap<>();
-                for (GateValve v : results) {
-                    resultMap.put(v.getId(), v);
-                }
-                for (GateValve uv : userResults) {
-                    resultMap.put(uv.getOriginalId(), uv);
-                }
-
-                List<GateValve> mergedResults = new ArrayList<>(resultMap.values());
-                gateValves.postValue(mergedResults);
-                Log.d(TAG, "Найдено " + mergedResults.size() + " задвижек");
+                gateValves.postValue(results);
+                Log.d(TAG, "Найдено " + results.size() + " задвижек");
             } catch (Exception e) {
                 Log.e(TAG, "Search error", e);
             }
@@ -194,7 +154,6 @@ public class MainViewModel extends ViewModel {
     }
 
     public void refreshData() {
-       // loadAllGateValves();
         updateNextListNumber();
     }
 
