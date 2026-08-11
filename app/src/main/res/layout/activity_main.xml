@@ -1,145 +1,290 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="?android:attr/windowBackground">
 
-    <!-- Верхняя панель с кнопками -->
-    <LinearLayout
+    <!-- ========================================== -->
+    <!-- 1️⃣ Верхняя панель (ConstraintLayout) -->
+    <!-- ========================================== -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/topPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="8dp">
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Статус списка (слева) -->
-        <TextView
-            android:id="@+id/tvListStatus"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="НОВЫЙ 17"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
-
-        <!-- Кнопка НОВАЯ ЗАДВИЖКА (видна когда нет записи) -->
+        <!-- 1️⃣ НОВАЯ ЗАДВИЖКА (растягивается) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnNewValve"
             style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="166dp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="➕ НОВАЯ ЗАДВИЖКА" />
+            android:layout_marginEnd="4dp"
+            android:text="@string/new_valve"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnHelp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
-        <!-- Кнопка К СПИСКУ (видна когда есть запись) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnToList"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="📋 К СПИСКУ"
-            android:visibility="gone"
-            android:layout_marginEnd="8dp"
-            style="@style/Widget.Material3.Button" />
-
-        <!-- Справка -->
+        <!-- 2️⃣ СПРАВКА -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHelp"
             style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="73dp"
+            android:layout_width="48dp"
             android:layout_height="wrap_content"
-            android:text="❓" />
+            android:text="❓"
+            app:layout_constraintStart_toEndOf="@id/btnNewValve"
+            app:layout_constraintEnd_toStartOf="@id/btnLists"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
-        <!-- Списки -->
+        <!-- 3️⃣ СПИСКИ -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLists"
             style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="66dp"
+            android:layout_width="48dp"
             android:layout_height="wrap_content"
-            android:text="🗂️" />
+            android:text="🗂️"
+            app:layout_constraintStart_toEndOf="@id/btnHelp"
+            app:layout_constraintEnd_toStartOf="@id/btnSettings"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
-        <!-- Настройки -->
+        <!-- 4️⃣ НАСТРОЙКИ (прижата к правому краю) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSettings"
             style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="60dp"
+            android:layout_width="48dp"
             android:layout_height="wrap_content"
-            android:text="⚙️" />
-    </LinearLayout>
+            android:text="⚙️"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
-    <!-- Поиск -->
-    <com.google.android.material.textfield.TextInputLayout
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- ========================================== -->
+    <!-- 2️⃣ Блок Поиска и Кнопок (Изначально по центру) -->
+    <!-- ========================================== -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/searchContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Поиск задвижек (≥3 символов)..."
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_bias="0.5">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etSearch"
-            android:layout_width="match_parent"
+        <!-- Строка поиска -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/searchLayout"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:inputType="text"
-            android:maxLines="1" />
-    </com.google.android.material.textfield.TextInputLayout>
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:hint="@string/search_hint"
+            app:boxCornerRadiusBottomEnd="16dp"
+            app:boxCornerRadiusBottomStart="16dp"
+            app:boxCornerRadiusTopEnd="16dp"
+            app:boxCornerRadiusTopStart="16dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-    <!-- Список задвижек -->
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSearch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionDone"
+                android:inputType="text"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- 3 кнопки (такой же ширины, как строка поиска) -->
+        <LinearLayout
+            android:id="@+id/bottomButtons"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:gravity="center"
+            android:orientation="vertical"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/searchLayout"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintWidth_percent="0.9">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSetpoints"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="@string/setpoints" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSensors"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="@string/sensors" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnConverter"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/converter" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- ========================================== -->
+    <!-- 3️⃣ RecyclerView (Результаты поиска) -->
+    <!-- ========================================== -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvGateValves"
         android:layout_width="match_parent"
-        android:layout_height="434dp"
+        android:layout_height="0dp"
         android:layout_marginTop="8dp"
-        android:layout_weight="1"
         android:clipToPadding="false"
-        android:paddingBottom="8dp" />
+        android:paddingBottom="4dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/searchContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <!-- Сообщение "Ничего не найдено" -->
     <TextView
         android:id="@+id/tvEmptySearch"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
         android:gravity="center"
-        android:text="🔍 Ничего не найдено\nПопробуйте изменить запрос"
-        android:textSize="18sp"
+        android:text="@string/empty_search"
         android:textColor="@color/on_surface_secondary"
-        android:visibility="gone" />
+        android:textSize="18sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/searchContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-
-
-    <!-- Нижние кнопки (горизонтальные) -->
-    <LinearLayout
-        android:id="@+id/bottomButtons"
+    <!-- ========================================== -->
+    <!-- 4️⃣ ОВЕРЛЕЙ ДЛЯ ПРОСМОТРА СХЕМЫ БЛОКИРОВКИ -->
+    <!-- ========================================== -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/overlayDetail"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_marginTop="8dp">
+        android:layout_height="match_parent"
+        android:background="?android:attr/windowBackground"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSetpoints"
+        <!-- Кнопка Назад (крестик) -->
+        <ImageButton
+            android:id="@+id/btnOverlayBack"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_margin="16dp"
+            android:src="@drawable/ic_close"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Закрыть оверлей"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Заголовок -->
+        <TextView
+            android:id="@+id/tvOverlayTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:text="ЖУРНАЛ УСТАВОК"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="72dp"
+            android:text="Блокировка"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:maxLines="2"
+            android:ellipsize="end"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/btnOverlayBack"
+            app:layout_constraintTop_toTopOf="@id/btnOverlayBack"
+            app:layout_constraintBottom_toBottomOf="@id/btnOverlayBack" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSensors"
+        <!-- Изображение схемы (Упирается снизу строго в карточку описания) -->
+        <ImageView
+            android:id="@+id/ivOverlayImage"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true"
+            android:background="@android:color/white"
+            android:contentDescription="Фрагмент схемы"
+            app:layout_constraintTop_toBottomOf="@id/btnOverlayBack"
+            app:layout_constraintBottom_toTopOf="@id/cardOverlayDescription"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Прогресс-бар (центрирован по картинке) -->
+        <ProgressBar
+            android:id="@+id/progressOverlay"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:indeterminate="true"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@id/ivOverlayImage"
+            app:layout_constraintEnd_toEndOf="@id/ivOverlayImage"
+            app:layout_constraintStart_toStartOf="@id/ivOverlayImage"
+            app:layout_constraintTop_toTopOf="@id/ivOverlayImage" />
+
+        <!-- Карточка с описанием (Фундамент низа) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardOverlayDescription"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:text="СПИСОК ДАТЧИКОВ"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            app:cardElevation="8dp"
+            app:cardCornerRadius="12dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnConverter"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="ЗАМЕР ТЕМПЕРАТУРЫ"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
-    </LinearLayout>
+            <TextView
+                android:id="@+id/tvOverlayDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:text="Описание блокировки"
+                android:textSize="14sp"
+                android:textColor="?android:attr/textColorPrimary" />
+        </com.google.android.material.card.MaterialCardView>
 
-</LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

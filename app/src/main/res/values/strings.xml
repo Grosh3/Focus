@@ -1,3 +1,51 @@
 <resources>
     <string name="app_name">Focus</string>
+
+    <!-- MainActivity -->
+    <string name="new_valve">НОВ. ЗАДВИЖКА</string>
+    <string name="to_list">К СПИСКУ (%d)</string>  <!-- ← ДОЛЖНО БЫТЬ С %d -->
+    <string name="search_hint">Поиск арматуры</string>
+    <string name="empty_search">🔍 Ничего не найдено\nПопробуйте изменить запрос</string>
+    <!-- Detail Activity -->
+    <string name="detail_title">Редактир.</string>
+    <string name="isy">ИСУ</string>
+    <string name="name">Название</string>
+    <string name="power_cabinet">Сборка</string>
+    <string name="location_description">Расположение сборки</string>
+    <string name="on_place">Расположение по месту</string>
+    <string name="full_name">Описание</string>
+    <string name="kks">KKS</string>
+    <string name="name_eng">name_eng</string>
+    <string name="ap50">ap_50</string>
+    <string name="mark">mark</string>
+    <string name="cda_cabinet">cda_cabinet</string>
+    <string name="cda_cabinet_position">cda_cabinet_position</string>
+    <string name="slot">slot</string>
+    <string name="toggle_extra_fields">▶ Дополнительные поля</string>
+    <string name="hide_extra_fields">▼ Скрыть дополнительные поля</string>
+    <string name="save">Сохранить</string>
+    <string name="saved_success">✅ Сохранено</string>
+    <string name="save_error">❌ Ошибка сохранения</string>
+    <string name="unsaved_changes">❌ Изменения не сохранены</string>
+    <string name="valve_not_found">Задвижка не найдена</string>
+    <string name="error_loading_data">Ошибка загрузки данных</string>
+    <string name="valve_id_not_passed">Ошибка: ID задвижки не передан</string>
+    <string name="no_name">Без названия</string>
+    <!-- Кнопки нижнего меню -->
+    <string name="setpoints">ЖУРНАЛ УСТАВОК</string>
+    <string name="sensors">СПИСОК ДАТЧИКОВ</string>
+    <string name="converter">ЗАМЕР ТЕМПЕРАТУРЫ</string>
+
+    <!-- Toast сообщения -->
+    <string name="toast_open_lists">Открыть сохранённые списки</string>
+    <string name="toast_open_help">Открыть справку</string>
+    <string name="toast_open_settings">Открыть настройки</string>
+    <string name="toast_open_setpoints">Открыть журнал уставок</string>
+    <string name="toast_open_sensors">Открыть список датчиков</string>
+    <string name="toast_open_converter">Открыть замер температуры</string>
+    <string name="toast_open_new_valve">Открыть создание новой задвижки</string>
+    <string name="toast_open_list">Открыть список (%d шт.)</string>
+    <string name="toast_added">Добавлено: %s</string>
+    <string name="toast_removed">Удалено: %s</string>
+    <string name="toast_blocking">Блокировка: %s для %s</string>
 </resources>

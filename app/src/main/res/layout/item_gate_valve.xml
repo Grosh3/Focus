@@ -14,7 +14,7 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-        <!-- Верхняя строка: ISY + Name (жирным) -->
+        <!-- Верхняя строка: ISY + Name + CheckBox -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -41,14 +41,13 @@
                 android:textStyle="bold"
                 android:textColor="?android:attr/textColorPrimary" />
 
-            <!-- Кнопка + (добавить в список) -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAddToList"
+            <!-- CheckBox для добавления в список -->
+            <CheckBox
+                android:id="@+id/cbAddToList"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:text="+"
-                android:textSize="24sp"
-                style="@style/Widget.Material3.Button.TextButton" />
+                android:gravity="center"
+                android:buttonTint="?attr/colorPrimary" />
         </LinearLayout>
 
         <!-- Сборка + Местоположение (объединённые) -->
@@ -90,41 +89,47 @@
             android:textColor="?android:attr/textColorSecondary"
             android:layout_marginBottom="4dp" />
 
-        <!-- Разворачиваемая часть (блокировки) -->
+        <!-- ========================================== -->
+        <!-- Разворачиваемая часть (блокировки) - ВЕРТИКАЛЬНО -->
+        <!-- ========================================== -->
         <LinearLayout
             android:id="@+id/expandedContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
+            android:orientation="vertical"
             android:layout_marginTop="8dp"
             android:visibility="gone">
 
+            <!-- Блокировка открытия -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBlockingOpen"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
+                android:layout_marginBottom="4dp"
                 android:text="Открытие-блокировки"
-                style="@style/Widget.Material3.Button.OutlinedButton" />
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:visibility="gone" />
 
+            <!-- Блокировка закрытия -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBlockingClose"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
+                android:layout_marginBottom="4dp"
                 android:text="Закрытие-блокировки"
-                style="@style/Widget.Material3.Button.OutlinedButton" />
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:visibility="gone" />
 
+            <!-- Внешние цепи -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnExternalChain"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:layout_marginBottom="4dp"
                 android:text="Внешние цепи"
-                style="@style/Widget.Material3.Button.OutlinedButton" />
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:visibility="gone" />
+
         </LinearLayout>
 
     </LinearLayout>

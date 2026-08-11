@@ -1,18 +1,25 @@
 package com.mikesuvade.focus.ui.detail;
 
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewTreeObserver;
+import android.view.Window;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
@@ -26,11 +33,15 @@ import java.util.Locale;
 public class DetailActivity extends AppCompatActivity {
 
     public static final String EXTRA_VALVE_ID = "valve_id";
+    public static final String EXTRA_IS_NEW = "is_new";
 
     private IRepository repository;
     private GateValve currentValve;
     private GateValve originalValve;
     private int valveId;
+    private boolean isNewValve = false;
+    private boolean isSaved = false;
+    private boolean isDeleting = false;
 
     // UI
     private TextView tvValveTitle;
@@ -49,40 +60,54 @@ public class DetailActivity extends AppCompatActivity {
     private LinearLayout extraFieldsContainer;
     private View btnToggleExtra;
     private TextView tvStatus;
+    private EditText etLocationDescription;
 
     private boolean isExtraVisible = false;
-    private boolean isSaved = false;
-    private EditText etLocationDescription;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        androidx.activity.EdgeToEdge.enable(this);
         setContentView(R.layout.activity_detail);
 
-        // Настройка Toolbar
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("Редактирование задвижки");
         }
 
         repository = ((MyApp) getApplication()).getRepository();
         initViews();
+        fixToolbarPadding(toolbar);
+        setStatusBarIconsDark(true);
         setupListeners();
+        setupKeyboardAutoScroll();
 
+        // ==========================================
+        // 🔥 ПРОВЕРЯЕМ — НОВАЯ ИЛИ РЕДАКТИРОВАНИЕ
+        // ==========================================
+        isNewValve = getIntent().getBooleanExtra(EXTRA_IS_NEW, false);
         valveId = getIntent().getIntExtra(EXTRA_VALVE_ID, -1);
-        if (valveId == -1) {
-            Toast.makeText(this, "Ошибка: ID задвижки не передан", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
 
-        loadValveData();
+        if (isNewValve) {
+            getSupportActionBar().setTitle("Новая задвижка");
+            if (tvStatus != null) {
+                tvStatus.setVisibility(View.GONE);
+            }
+            currentValve = new GateValve();
+            originalValve = new GateValve();
+            displayValveData();
+        } else {
+            if (valveId == -1) {
+                Toast.makeText(this, R.string.valve_id_not_passed, Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
+            loadValveData();
+        }
     }
 
     private void initViews() {
-       // tvValveTitle = findViewById(R.id.tvValveTitle);
         etName = findViewById(R.id.etName);
         etKks = findViewById(R.id.etKks);
         etIsy = findViewById(R.id.etIsy);
@@ -98,24 +123,34 @@ public class DetailActivity extends AppCompatActivity {
         extraFieldsContainer = findViewById(R.id.extraFieldsContainer);
         btnToggleExtra = findViewById(R.id.btnToggleExtra);
         tvStatus = findViewById(R.id.tvStatus);
-      //  etLocationDescription = findViewById(R.id.etLocationDescription);
         etLocationDescription = findViewById(R.id.etLocationDescription);
-        tvValveTitle = findViewById(R.id.tvValveTitle);
+
     }
 
     private void setupListeners() {
         btnToggleExtra.setOnClickListener(v -> {
             isExtraVisible = !isExtraVisible;
             extraFieldsContainer.setVisibility(isExtraVisible ? View.VISIBLE : View.GONE);
-            String text = isExtraVisible ? "▼ Скрыть дополнительные поля" : "▶ Дополнительные поля";
+            String text = isExtraVisible
+                    ? getString(R.string.hide_extra_fields)
+                    : getString(R.string.toggle_extra_fields);
             ((android.widget.Button) btnToggleExtra).setText(text);
+
+            ScrollView scrollView = findViewById(R.id.editScrollView);
+            if (scrollView != null) {
+                scrollView.post(() -> {
+                    scrollView.requestLayout();
+                    btnToggleExtra.post(() -> {
+                        scrollView.smoothScrollTo(0, btnToggleExtra.getBottom() + 50);
+                    });
+                });
+            }
         });
     }
 
     private void loadValveData() {
         new Thread(() -> {
             try {
-                // Загружаем из основной таблицы (user-таблиц больше нет)
                 GateValve valve = repository.getGateValveById(valveId);
                 currentValve = valve;
                 originalValve = copyValve(valve);
@@ -124,14 +159,14 @@ public class DetailActivity extends AppCompatActivity {
                     if (currentValve != null) {
                         displayValveData();
                     } else {
-                        Toast.makeText(this, "Задвижка не найдена", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, R.string.valve_not_found, Toast.LENGTH_SHORT).show();
                         finish();
                     }
                 });
             } catch (Exception e) {
                 e.printStackTrace();
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "Ошибка загрузки данных", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.error_loading_data, Toast.LENGTH_SHORT).show();
                     finish();
                 });
             }
@@ -141,7 +176,14 @@ public class DetailActivity extends AppCompatActivity {
     private void displayValveData() {
         if (currentValve == null) return;
 
-        tvValveTitle.setText(currentValve.getName() != null ? currentValve.getName() : "Без названия");
+        String isy = currentValve.getIsy();
+        if (isy != null && !isy.isEmpty()) {
+            getSupportActionBar().setTitle(isy + " - " + getString(R.string.detail_title));
+        } else {
+            getSupportActionBar().setTitle(R.string.detail_title);
+        }
+
+
         etName.setText(currentValve.getName());
         etKks.setText(currentValve.getKks());
         etIsy.setText(currentValve.getIsy());
@@ -178,57 +220,128 @@ public class DetailActivity extends AppCompatActivity {
     private void saveChanges() {
         if (currentValve == null) return;
 
-        // Собираем данные с полей
-        GateValve updatedValve = new GateValve();
-        updatedValve.setId(currentValve.getId());
+        String isy = etIsy.getText().toString().trim();
+        String name = etName.getText().toString().trim();
+        String powerCabinet = etPowerCabinet.getText().toString().trim();
+        String locationDescription = etLocationDescription.getText().toString().trim();
+        String onPlace = etOnPlace.getText().toString().trim();
+        String fullName = etFullName.getText().toString().trim();
+        String kks = etKks.getText().toString().trim();
+        String nameEng = etNameEng.getText().toString().trim();
+        String ap50 = etAp50.getText().toString().trim();
+        String mark = etMark.getText().toString().trim();
+        String cdaCabinet = etCdaCabinet.getText().toString().trim();
+        String cdaCabinetPosition = etCdaCabinetPosition.getText().toString().trim();
+        String slot = etSlot.getText().toString().trim();
 
-        // ==========================================
-        // 1️⃣ Основные поля (в порядке отображения)
-        // ==========================================
-        updatedValve.setIsy(etIsy.getText().toString().trim());
-        updatedValve.setName(etName.getText().toString().trim());
-        updatedValve.setPowerCabinet(etPowerCabinet.getText().toString().trim());
-        updatedValve.setLocationDescription(etLocationDescription.getText().toString().trim());
-        updatedValve.setOnPlace(etOnPlace.getText().toString().trim());
-        updatedValve.setFullName(etFullName.getText().toString().trim());
+        boolean allFieldsEmpty = isy.isEmpty() &&
+                name.isEmpty() &&
+                powerCabinet.isEmpty() &&
+                locationDescription.isEmpty() &&
+                onPlace.isEmpty() &&
+                fullName.isEmpty() &&
+                kks.isEmpty() &&
+                nameEng.isEmpty() &&
+                ap50.isEmpty() &&
+                mark.isEmpty() &&
+                cdaCabinet.isEmpty() &&
+                cdaCabinetPosition.isEmpty() &&
+                slot.isEmpty();
 
-        // ==========================================
-        // 2️⃣ Дополнительные поля (включая KKS)
-        // ==========================================
-        updatedValve.setKks(etKks.getText().toString().trim());
-        updatedValve.setNameEng(etNameEng.getText().toString().trim());
-        updatedValve.setAp50(etAp50.getText().toString().trim());
-        updatedValve.setMark(etMark.getText().toString().trim());
-        updatedValve.setCdaCabinet(etCdaCabinet.getText().toString().trim());
-        updatedValve.setCdaCabinetPosition(etCdaCabinetPosition.getText().toString().trim());
-        updatedValve.setSlot(etSlot.getText().toString().trim());
+        if (allFieldsEmpty) {
+            if (isNewValve) {
+                Toast.makeText(this, "Создание отменено", Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
 
-        // Копируем BLOB-поля из оригинальной задвижки
-        updatedValve.setNameSpaceViewOpen(currentValve.getNameSpaceViewOpen());
-        updatedValve.setNamespaceViewClose(currentValve.getNamespaceViewClose());
-        updatedValve.setNamespaceViewPerifer(currentValve.getNamespaceViewPerifer());
-        updatedValve.setDescriptionBlockingOpen(currentValve.getDescriptionBlockingOpen());
-        updatedValve.setDescriptionBlockingClose(currentValve.getDescriptionBlockingClose());
-        updatedValve.setDescriptionBlockingPerifer(currentValve.getDescriptionBlockingPerifer());
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("Удалить задвижку?")
+                    .setMessage("Все поля очищены. Удалить задвижку \"" + currentValve.getName() + "\"?")
+                    .setPositiveButton("Удалить", (dialog, which) -> {
+                        deleteValve();
+                    })
+                    .setNegativeButton("Отмена", (dialog, which) -> {
+                        dialog.dismiss();
+                    })
+                    .show();
+            return;
+        }
 
-        // Устанавливаем флаг редактирования и дату
-        updatedValve.setIsEdited(1);
+        GateValve valveToSave = new GateValve();
+        valveToSave.setIsy(isy);
+        valveToSave.setName(name);
+        valveToSave.setPowerCabinet(powerCabinet);
+        valveToSave.setLocationDescription(locationDescription);
+        valveToSave.setOnPlace(onPlace);
+        valveToSave.setFullName(fullName);
+        valveToSave.setKks(kks);
+        valveToSave.setNameEng(nameEng);
+        valveToSave.setAp50(ap50);
+        valveToSave.setMark(mark);
+        valveToSave.setCdaCabinet(cdaCabinet);
+        valveToSave.setCdaCabinetPosition(cdaCabinetPosition);
+        valveToSave.setSlot(slot);
+
+        if (!isNewValve && currentValve != null) {
+            valveToSave.setNameSpaceViewOpen(currentValve.getNameSpaceViewOpen());
+            valveToSave.setNamespaceViewClose(currentValve.getNamespaceViewClose());
+            valveToSave.setNamespaceViewPerifer(currentValve.getNamespaceViewPerifer());
+            valveToSave.setDescriptionBlockingOpen(currentValve.getDescriptionBlockingOpen());
+            valveToSave.setDescriptionBlockingClose(currentValve.getDescriptionBlockingClose());
+            valveToSave.setDescriptionBlockingPerifer(currentValve.getDescriptionBlockingPerifer());
+        }
+
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        updatedValve.setEditedAtValve(sdf.format(new Date()));
+        valveToSave.setEditedAtValve(sdf.format(new Date()));
 
-        // Сохраняем напрямую в основную таблицу
         new Thread(() -> {
             try {
-                repository.updateGateValve(updatedValve);
-                isSaved = true;
+                if (isNewValve) {
+                    long id = repository.insertGateValve(valveToSave);
+                    if (id > 0) {
+                        isSaved = true;
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "✅ Создано", Toast.LENGTH_SHORT).show();
+                            finish();
+                        });
+                    } else {
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "❌ Ошибка создания", Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                } else {
+                    valveToSave.setId(currentValve.getId());
+                    valveToSave.setIsEdited(1);
+                    repository.updateGateValve(valveToSave);
+                    isSaved = true;
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, R.string.saved_success, Toast.LENGTH_SHORT).show();
+                        finish();
+                    });
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "✅ Сохранено", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.save_error, Toast.LENGTH_SHORT).show();
+                });
+            }
+        }).start();
+    }
+
+    private void deleteValve() {
+        isDeleting = true;
+        new Thread(() -> {
+            try {
+                repository.deleteGateValve(currentValve.getId());
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Удалено", Toast.LENGTH_SHORT).show();
                     finish();
                 });
             } catch (Exception e) {
                 e.printStackTrace();
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "❌ Ошибка сохранения", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "❌ Ошибка удаления", Toast.LENGTH_SHORT).show();
                 });
             }
         }).start();
@@ -236,14 +349,13 @@ public class DetailActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if (isSaved) {
+        if (isSaved || isDeleting) {
             super.onBackPressed();
             return;
         }
 
-        // Проверяем, были ли изменения
         if (hasChanges()) {
-            Toast.makeText(this, "❌ Изменения не сохранены", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.unsaved_changes, Toast.LENGTH_SHORT).show();
         }
         super.onBackPressed();
     }
@@ -290,5 +402,70 @@ public class DetailActivity extends AppCompatActivity {
         copy.setDescriptionBlockingPerifer(source.getDescriptionBlockingPerifer());
         copy.setLocationDescription(source.getLocationDescription());
         return copy;
+    }
+
+    private void fixToolbarPadding(View toolbarView) {
+        if (toolbarView == null) return;
+
+        ViewCompat.setOnApplyWindowInsetsListener(toolbarView, (view, windowInsets) -> {
+            int statusBarHeight = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            int leftPadding = view.getPaddingLeft();
+            int rightPadding = view.getPaddingRight();
+            int bottomPadding = view.getPaddingBottom();
+            int topPadding = view.getPaddingTop();
+
+            view.setPadding(leftPadding, statusBarHeight + topPadding, rightPadding, bottomPadding);
+            ViewCompat.setOnApplyWindowInsetsListener(view, null);
+            return windowInsets;
+        });
+    }
+
+    private void setStatusBarIconsDark(boolean dark) {
+        Window window = getWindow();
+        if (window != null) {
+            WindowInsetsControllerCompat controller =
+                    new WindowInsetsControllerCompat(window, window.getDecorView());
+            controller.setAppearanceLightStatusBars(dark);
+        }
+    }
+
+    private void setupKeyboardAutoScroll() {
+        ScrollView scrollView = findViewById(R.id.editScrollView);
+        if (scrollView == null) return;
+
+        View rootView = findViewById(android.R.id.content);
+
+        rootView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            private int previousHeight = 0;
+
+            @Override
+            public void onGlobalLayout() {
+                Rect rect = new Rect();
+                rootView.getWindowVisibleDisplayFrame(rect);
+
+                int screenHeight = rootView.getHeight();
+                int keypadHeight = screenHeight - rect.bottom;
+
+                if (keypadHeight != previousHeight) {
+                    previousHeight = keypadHeight;
+
+                    float density = getResources().getDisplayMetrics().density;
+                    int basePaddingPx = (int) (16 * density);
+
+                    int bottomPadding = keypadHeight > 0 ? keypadHeight + basePaddingPx : basePaddingPx;
+
+                    scrollView.setPadding(
+                            scrollView.getPaddingLeft(),
+                            scrollView.getPaddingTop(),
+                            scrollView.getPaddingRight(),
+                            bottomPadding
+                    );
+
+                    if (keypadHeight > 0) {
+                        scrollView.post(() -> scrollView.smoothScrollTo(0, scrollView.getHeight()));
+                    }
+                }
+            }
+        });
     }
 }

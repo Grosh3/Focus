@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -21,11 +22,14 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
 
     private List<GateValve> valves = new ArrayList<>();
     private List<Integer> expandedPositions = new ArrayList<>();
+    private List<Integer> selectedPositions = new ArrayList<>();
 
     private OnItemClickListener listener;
     private OnItemLongClickListener longClickListener;
-    private OnAddToListClickListener addToListListener;
+    private OnCheckBoxClickListener checkBoxListener;
     private OnBlockingClickListener blockingClickListener;
+
+    private boolean isUpdating = false;
 
     // ==================== INTERFACES ====================
 
@@ -34,15 +38,15 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
     }
 
     public interface OnItemLongClickListener {
-        void onItemLongClick(GateValve valve);
+        boolean onItemLongClick(GateValve valve);  // ← ИЗМЕНЕНО: void → boolean
     }
 
-    public interface OnAddToListClickListener {
-        void onAddToListClick(GateValve valve);
+    public interface OnCheckBoxClickListener {
+        void onCheckBoxClick(GateValve valve, int position, boolean isChecked);
     }
 
     public interface OnBlockingClickListener {
-        void onBlockingClick(GateValve valve, String type); // "open", "close", "external"
+        void onBlockingClick(GateValve valve, String type);
     }
 
     // ==================== SETTERS ====================
@@ -55,8 +59,8 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
         this.longClickListener = listener;
     }
 
-    public void setOnAddToListClickListener(OnAddToListClickListener listener) {
-        this.addToListListener = listener;
+    public void setOnCheckBoxClickListener(OnCheckBoxClickListener listener) {
+        this.checkBoxListener = listener;
     }
 
     public void setOnBlockingClickListener(OnBlockingClickListener listener) {
@@ -66,7 +70,12 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
     public void setValves(List<GateValve> valves) {
         this.valves = valves != null ? valves : new ArrayList<>();
         expandedPositions.clear();
+        selectedPositions.clear();
         notifyDataSetChanged();
+    }
+
+    public List<GateValve> getValves() {
+        return valves;
     }
 
     public void setExpanded(int position, boolean expanded) {
@@ -85,6 +94,26 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
         notifyDataSetChanged();
     }
 
+    public void setSelectedPositions(List<Integer> positions) {
+        if (isUpdating) return;
+        isUpdating = true;
+
+        boolean changed = selectedPositions.size() != positions.size() ||
+                !selectedPositions.equals(positions);
+
+        if (changed) {
+            selectedPositions.clear();
+            selectedPositions.addAll(positions);
+            notifyDataSetChanged();
+        }
+
+        isUpdating = false;
+    }
+
+    public boolean isSelected(int position) {
+        return selectedPositions.contains(position);
+    }
+
     // ==================== ADAPTER METHODS ====================
 
     @NonNull
@@ -99,49 +128,10 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         GateValve valve = valves.get(position);
         boolean isExpanded = expandedPositions.contains(position);
-        holder.bind(valve, isExpanded);
+        boolean isSelected = selectedPositions.contains(position);
 
-        // Короткий тап - развернуть/свернуть
-        holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onItemClick(valve, position);
-            }
-        });
-
-        // Длинный тап - редактировать
-        holder.itemView.setOnLongClickListener(v -> {
-            if (longClickListener != null) {
-                longClickListener.onItemLongClick(valve);
-                return true;
-            }
-            return false;
-        });
-
-        // Кнопка + добавить в список
-        holder.btnAddToList.setOnClickListener(v -> {
-            if (addToListListener != null) {
-                addToListListener.onAddToListClick(valve);
-            }
-        });
-
-        // Блокировки
-        holder.btnBlockingOpen.setOnClickListener(v -> {
-            if (blockingClickListener != null) {
-                blockingClickListener.onBlockingClick(valve, "open");
-            }
-        });
-
-        holder.btnBlockingClose.setOnClickListener(v -> {
-            if (blockingClickListener != null) {
-                blockingClickListener.onBlockingClick(valve, "close");
-            }
-        });
-
-        holder.btnExternalChain.setOnClickListener(v -> {
-            if (blockingClickListener != null) {
-                blockingClickListener.onBlockingClick(valve, "external");
-            }
-        });
+        holder.bind(valve, isExpanded, isSelected,
+                listener, longClickListener, checkBoxListener, blockingClickListener, position);
     }
 
     @Override
@@ -158,7 +148,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
         private final TextView tvOnPlace;
         private final TextView tvFullName;
         private final TextView tvKks;
-        private final Button btnAddToList;
+        private final CheckBox cbAddToList;
         private final LinearLayout expandedContent;
         private final Button btnBlockingOpen;
         private final Button btnBlockingClose;
@@ -172,20 +162,26 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
             tvOnPlace = itemView.findViewById(R.id.tvOnPlace);
             tvFullName = itemView.findViewById(R.id.tvFullName);
             tvKks = itemView.findViewById(R.id.tvKks);
-            btnAddToList = itemView.findViewById(R.id.btnAddToList);
+            cbAddToList = itemView.findViewById(R.id.cbAddToList);
             expandedContent = itemView.findViewById(R.id.expandedContent);
             btnBlockingOpen = itemView.findViewById(R.id.btnBlockingOpen);
             btnBlockingClose = itemView.findViewById(R.id.btnBlockingClose);
             btnExternalChain = itemView.findViewById(R.id.btnExternalChain);
         }
-        void bind(GateValve valve, boolean isExpanded) {
+
+        void bind(GateValve valve, boolean isExpanded, boolean isSelected,
+                  OnItemClickListener listener,
+                  OnItemLongClickListener longClickListener,
+                  OnCheckBoxClickListener checkBoxListener,
+                  OnBlockingClickListener blockingClickListener,
+                  int position) {
+
             // ==========================================
-            // ISY и NAME — если ISY пустой, NAME занимает его место
+            // ISY и NAME
             // ==========================================
             String isy = valve.getIsy();
             String name = valve.getName();
 
-            // Если name пустой — используем kks
             if (name == null || name.isEmpty()) {
                 name = valve.getKks();
             }
@@ -211,7 +207,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
             }
 
             // ==========================================
-            // СБОРКА + МЕСТОПОЛОЖЕНИЕ (объединённые)
+            // СБОРКА + МЕСТОПОЛОЖЕНИЕ
             // ==========================================
             String powerCabinet = valve.getPowerCabinet();
             String locationDescription = valve.getLocationDescription();
@@ -267,10 +263,93 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
             }
 
             // ==========================================
-            // РАЗВОРАЧИВАЕМАЯ ЧАСТЬ (блокировки)
+            // CHECKBOX
             // ==========================================
-            expandedContent.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
-        }
+            cbAddToList.setOnCheckedChangeListener(null);
+            cbAddToList.setChecked(isSelected);
+            cbAddToList.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (checkBoxListener != null) {
+                    checkBoxListener.onCheckBoxClick(valve, position, isChecked);
+                }
+            });
 
+            // ==========================================
+            // 🔒 БЛОКИРОВКИ - ТОЛЬКО ПО НАЛИЧИЮ ФОТО
+            // ==========================================
+
+            // 1. БЛОКИРОВКИ "ОТКРЫТИЕ"
+            byte[] nsOpen = valve.getNameSpaceViewOpen();
+            if (nsOpen != null && nsOpen.length > 0) {
+                btnBlockingOpen.setVisibility(View.VISIBLE);
+                btnBlockingOpen.setText("БЛОКИРОВКИ \"ОТКРЫТИЕ\"");
+                btnBlockingOpen.setOnClickListener(v -> {
+                    if (blockingClickListener != null) {
+                        blockingClickListener.onBlockingClick(valve, "open");
+                    }
+                });
+            } else {
+                btnBlockingOpen.setVisibility(View.GONE);
+            }
+
+            // 2. БЛОКИРОВКИ "ЗАКРЫТИЕ"
+            byte[] nsClose = valve.getNamespaceViewClose();
+            if (nsClose != null && nsClose.length > 0) {
+                btnBlockingClose.setVisibility(View.VISIBLE);
+                btnBlockingClose.setText("БЛОКИРОВКИ \"ЗАКРЫТИЕ\"");
+                btnBlockingClose.setOnClickListener(v -> {
+                    if (blockingClickListener != null) {
+                        blockingClickListener.onBlockingClick(valve, "close");
+                    }
+                });
+            } else {
+                btnBlockingClose.setVisibility(View.GONE);
+            }
+
+            // 3. ВНЕШНИЕ ЦЕПИ
+            byte[] nsPerifer = valve.getNamespaceViewPerifer();
+            if (nsPerifer != null && nsPerifer.length > 0) {
+                btnExternalChain.setVisibility(View.VISIBLE);
+                btnExternalChain.setText("ВНЕШНИЕ ЦЕПИ");
+                btnExternalChain.setOnClickListener(v -> {
+                    if (blockingClickListener != null) {
+                        blockingClickListener.onBlockingClick(valve, "external");
+                    }
+                });
+            } else {
+                btnExternalChain.setVisibility(View.GONE);
+            }
+
+            // ==========================================
+            // РАЗВОРАЧИВАЕМАЯ ЧАСТЬ
+            // ==========================================
+            boolean hasAnyBlocking = (nsOpen != null && nsOpen.length > 0) ||
+                    (nsClose != null && nsClose.length > 0) ||
+                    (nsPerifer != null && nsPerifer.length > 0);
+
+            if (hasAnyBlocking && isExpanded) {
+                expandedContent.setVisibility(View.VISIBLE);
+            } else {
+                expandedContent.setVisibility(View.GONE);
+            }
+
+            // ==========================================
+            // СЛУШАТЕЛИ
+            // ==========================================
+
+            // Короткий тап
+            itemView.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onItemClick(valve, position);
+                }
+            });
+
+            // Длинный тап
+            itemView.setOnLongClickListener(v -> {
+                if (longClickListener != null) {
+                    return longClickListener.onItemLongClick(valve);  // ← ИСПРАВЛЕНО
+                }
+                return false;
+            });
+        }
     }
 }

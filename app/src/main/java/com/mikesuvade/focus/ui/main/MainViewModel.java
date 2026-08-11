@@ -196,4 +196,20 @@ public class MainViewModel extends ViewModel {
             }
         }).start();
     }
+    public void setRecording(boolean recording) {
+        isRecording.setValue(recording);
+    }
+
+    public void removeFromCurrentList(GateValve valve) {
+        for (int i = 0; i < currentList.size(); i++) {
+            if (currentList.get(i).getId() == valve.getId()) {
+                currentList.remove(i);
+                currentListSize.setValue(currentList.size());
+                if (currentList.isEmpty()) {
+                    isRecording.setValue(false);
+                }
+                return;
+            }
+        }
+    }
 }
