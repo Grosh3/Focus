@@ -9,7 +9,7 @@
     <!-- Detail Activity -->
     <string name="detail_title">Редактир.</string>
     <string name="isy">ИСУ</string>
-    <string name="name">Название</string>
+    <string name="name">Наименование</string>
     <string name="power_cabinet">Сборка</string>
     <string name="location_description">Расположение сборки</string>
     <string name="on_place">Расположение по месту</string>

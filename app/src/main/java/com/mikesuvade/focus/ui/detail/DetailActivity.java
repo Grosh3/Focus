@@ -293,16 +293,19 @@ public class DetailActivity extends AppCompatActivity {
         }
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        valveToSave.setEditedAtValve(sdf.format(new Date()));
+        String currentDateTime = sdf.format(new Date());
+        valveToSave.setEditedAtValve(currentDateTime);
 
         new Thread(() -> {
             try {
                 if (isNewValve) {
+                    valveToSave.setIsEdited(1);
                     long id = repository.insertGateValve(valveToSave);
                     if (id > 0) {
                         isSaved = true;
                         runOnUiThread(() -> {
                             Toast.makeText(this, "✅ Создано", Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_OK);  // ← ДОБАВЛЕНО
                             finish();
                         });
                     } else {
@@ -317,6 +320,7 @@ public class DetailActivity extends AppCompatActivity {
                     isSaved = true;
                     runOnUiThread(() -> {
                         Toast.makeText(this, R.string.saved_success, Toast.LENGTH_SHORT).show();
+                        setResult(RESULT_OK);  // ← ДОБАВЛЕНО
                         finish();
                     });
                 }
@@ -336,6 +340,7 @@ public class DetailActivity extends AppCompatActivity {
                 repository.deleteGateValve(currentValve.getId());
                 runOnUiThread(() -> {
                     Toast.makeText(this, "Удалено", Toast.LENGTH_SHORT).show();
+                    setResult(RESULT_OK);  // ← ДОБАВИТЬ (чтобы обновить список после удаления)
                     finish();
                 });
             } catch (Exception e) {

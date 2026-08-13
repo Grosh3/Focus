@@ -60,7 +60,7 @@ public class MainViewModel extends ViewModel {
     // ==========================================
     // 🔧 ЗАГРУЗКА ВСЕХ ДАННЫХ
     // ==========================================
-    private void loadAllGateValves() {
+    public void loadAllGateValves() {
         new Thread(() -> {
             try {
                 allGateValves = repository.getAllGateValves();
@@ -130,6 +130,19 @@ public class MainViewModel extends ViewModel {
         }
     }
 
+    public void removeFromCurrentList(GateValve valve) {
+        for (int i = 0; i < currentList.size(); i++) {
+            if (currentList.get(i).getId() == valve.getId()) {
+                currentList.remove(i);
+                currentListSize.setValue(currentList.size());
+                if (currentList.isEmpty()) {
+                    isRecording.setValue(false);
+                }
+                return;
+            }
+        }
+    }
+
     public void clearCurrentList() {
         currentList.clear();
         currentListSize.setValue(0);
@@ -151,6 +164,10 @@ public class MainViewModel extends ViewModel {
             }
         }
         return false;
+    }
+
+    public void setRecording(boolean recording) {
+        isRecording.setValue(recording);
     }
 
     public void refreshData() {
@@ -195,21 +212,5 @@ public class MainViewModel extends ViewModel {
                 Log.e("DB_CHECK", "Ошибка", e);
             }
         }).start();
-    }
-    public void setRecording(boolean recording) {
-        isRecording.setValue(recording);
-    }
-
-    public void removeFromCurrentList(GateValve valve) {
-        for (int i = 0; i < currentList.size(); i++) {
-            if (currentList.get(i).getId() == valve.getId()) {
-                currentList.remove(i);
-                currentListSize.setValue(currentList.size());
-                if (currentList.isEmpty()) {
-                    isRecording.setValue(false);
-                }
-                return;
-            }
-        }
     }
 }

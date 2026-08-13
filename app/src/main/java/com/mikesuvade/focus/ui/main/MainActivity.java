@@ -21,6 +21,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -82,6 +84,17 @@ public class MainActivity extends AppCompatActivity {
     private int statusBarHeightPx = 0;
     private int navigationBarHeight = 0;
 
+    // ==========================================
+    // 🔥 ACTIVITY RESULT API
+    // ==========================================
+    private final ActivityResultLauncher<Intent> detailResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    refreshData();
+                }
+            }
+    );
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -182,7 +195,7 @@ public class MainActivity extends AppCompatActivity {
                         .setPositiveButton("Редактировать", (dialog, which) -> {
                             Intent intent = new Intent(MainActivity.this, DetailActivity.class);
                             intent.putExtra("valve_id", valve.getId());
-                            startActivity(intent);
+                            detailResultLauncher.launch(intent);
                         })
                         .setNegativeButton("Отмена", (dialog, which) -> {
                             dialog.dismiss();
@@ -523,7 +536,7 @@ public class MainActivity extends AppCompatActivity {
                 btnNewValve.setOnClickListener(v -> {
                     Intent intent = new Intent(MainActivity.this, DetailActivity.class);
                     intent.putExtra(DetailActivity.EXTRA_IS_NEW, true);
-                    startActivity(intent);
+                    detailResultLauncher.launch(intent);
                 });
             }
             syncAdapterSelection();
@@ -644,6 +657,19 @@ public class MainActivity extends AppCompatActivity {
             ViewCompat.setOnApplyWindowInsetsListener(view, null);
             return windowInsets;
         });
+    }
+
+    // ==========================================
+    // 🔄 ОБНОВЛЕНИЕ ДАННЫХ
+    // ==========================================
+
+    private void refreshData() {
+        String query = etSearch.getText().toString().trim();
+        if (query.length() >= 2) {
+            viewModel.search(query);
+        } else {
+            viewModel.search("");
+        }
     }
 
     @Override
