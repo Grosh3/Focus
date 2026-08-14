@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="4dp"
+    app:cardElevation="2dp"
+    app:cardCornerRadius="6dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <!-- Верхняя строка: Чекбокс + ISY + NAME -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <CheckBox
+                android:id="@+id/cbChecked"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:buttonTint="?attr/colorPrimary" />
+
+            <TextView
+                android:id="@+id/tvIsy"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ISY"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/tvName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Задвижка"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary"
+                android:maxLines="2"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <!-- Строка статуса собрано/разобрано -->
+        <TextView
+            android:id="@+id/tvAssembleStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="36dp"
+            android:layout_marginTop="2dp"
+            android:text="СОБРАТЬ"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/holo_green_dark"
+            android:maxLines="1" />
+
+        <!-- Строка статуса двигателя (новая строка!) -->
+        <TextView
+            android:id="@+id/tvMotorStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="36dp"
+            android:layout_marginTop="2dp"
+            android:text="подключен эл.двигатель"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/holo_red_dark"
+            android:maxLines="1"
+            android:visibility="gone" />
+
+        <!-- Строка статуса ККВ (новая строка!) -->
+        <TextView
+            android:id="@+id/tvBoxStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="36dp"
+            android:layout_marginTop="2dp"
+            android:text="установлена ККВ"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/holo_orange_dark"
+            android:maxLines="1"
+            android:visibility="gone" />
+
+        <!-- Дата выполнения -->
+        <TextView
+            android:id="@+id/tvCheckedAt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="✅ 14.08.2026 15:30"
+            android:textSize="11sp"
+            android:textColor="@android:color/holo_green_dark"
+            android:layout_marginStart="36dp"
+            android:visibility="gone" />
+
+        <!-- Кнопки действий -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginTop="4dp"
+            android:layout_marginStart="36dp">
+
+            <ImageButton
+                android:id="@+id/btnMove"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_swap"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Переместить"
+                android:scaleType="centerInside"
+                app:tint="?android:attr/textColorSecondary" />
+
+            <ImageButton
+                android:id="@+id/btnMotor"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_motor"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Отключить двигатель"
+                android:scaleType="centerInside"
+                app:tint="#888888" />
+
+            <ImageButton
+                android:id="@+id/btnBox"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_box"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Снять ККВ"
+                android:scaleType="centerInside"
+                app:tint="#888888" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

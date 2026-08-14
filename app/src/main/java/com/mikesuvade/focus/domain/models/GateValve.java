@@ -1,6 +1,9 @@
 package com.mikesuvade.focus.domain.models;
 
-public class GateValve {
+import java.io.Serializable;  // ← ДОБАВЛЯЕМ ИМПОРТ
+
+public class GateValve implements Serializable {  // ← ДОБАВЛЯЕМ implements Serializable
+
     private int id;
     private String nameEng;
     private String kks;
@@ -20,17 +23,13 @@ public class GateValve {
     private String descriptionBlockingClose;
     private byte[] namespaceViewPerifer;
     private String descriptionBlockingPerifer;
-
-    // ==========================================
-    // 🔧 НОВОЕ ПОЛЕ — МЕСТОПОЛОЖЕНИЕ
-    // ==========================================
     private String locationDescription;
 
     // Для пользовательских таблиц
     private int originalId;
     private String editedAt;
     private boolean isCustom;
-    private int isEdited;  // 0 = не редактировалась, 1 = редактировалась
+    private int isEdited;
     private String editedAtValve;
 
     // Конструкторы
@@ -41,7 +40,7 @@ public class GateValve {
         this.kks = kks;
     }
 
-    // Геттеры и сеттеры
+    // Все геттеры и сеттеры (без изменений)
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -99,9 +98,6 @@ public class GateValve {
     public String getDescriptionBlockingPerifer() { return descriptionBlockingPerifer; }
     public void setDescriptionBlockingPerifer(String descriptionBlockingPerifer) { this.descriptionBlockingPerifer = descriptionBlockingPerifer; }
 
-    // ==========================================
-    // 🔧 НОВЫЙ ГЕТТЕР И СЕТТЕР
-    // ==========================================
     public String getLocationDescription() {
         return locationDescription;
     }
@@ -118,6 +114,7 @@ public class GateValve {
 
     public boolean isCustom() { return isCustom; }
     public void setCustom(boolean custom) { isCustom = custom; }
+
     public int getIsEdited() { return isEdited; }
     public void setIsEdited(int isEdited) { this.isEdited = isEdited; }
 

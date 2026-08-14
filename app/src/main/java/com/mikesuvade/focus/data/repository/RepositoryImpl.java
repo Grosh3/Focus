@@ -18,6 +18,11 @@ import com.mikesuvade.focus.domain.repository.IRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.text.SimpleDateFormat;      // ← ДОБАВИТЬ
+import java.util.ArrayList;             // ← ДОБАВИТЬ
+import java.util.Date;                  // ← ДОБАВИТЬ
+import java.util.List;                  // ← ДОБАВИТЬ
+import java.util.Locale;
 
 public class RepositoryImpl implements IRepository {
 
@@ -672,20 +677,42 @@ public class RepositoryImpl implements IRepository {
         return session;
     }
 
+    // В RepositoryImpl.java
+
     private ValveItem cursorToValveItem(Cursor cursor) {
         ValveItem item = new ValveItem();
         item.setItemId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_ITEM_ID)));
         item.setParentSessionId(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_PARENT_SESSION_ID)));
         item.setName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_NAME)));
-        item.setNameEng(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_NAME_ENG)));
         item.setIsy(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_ISY)));
-        item.setHasMotor(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_HAS_MOTOR)) == 1);
-        item.setAssembled(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_IS_ASSEMBLED)) == 1);
-        item.setChecked(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_IS_CHECKED)) == 1);
+        item.setHasMotor(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_HAS_MOTOR)));
+        item.setIsAssembled(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_IS_ASSEMBLED)));
+        item.setMotorDisabled(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_MOTOR_DISABLED)));
+        item.setBoxRemoved(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_BOX_REMOVED)));
+        item.setIsChecked(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_IS_CHECKED)));
+        item.setCheckedAt(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_CHECKED_AT)));
         item.setOperationTimestamp(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_OPERATION_TIMESTAMP)));
         return item;
     }
 
+
+// В RepositoryImpl.java - УДАЛЯЕМ ДУБЛИКАТ
+
+    // Оставляем ОДИН метод valveItemToContentValues (правильный):
+    private ContentValues valveItemToContentValues(ValveItem item) {
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_PARENT_SESSION_ID, item.getParentSessionId());
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_NAME, item.getName());
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_ISY, item.getIsy());
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_HAS_MOTOR, item.getHasMotor());
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_IS_ASSEMBLED, item.getIsAssembled());
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_MOTOR_DISABLED, item.getMotorDisabled());
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_BOX_REMOVED, item.getBoxRemoved());
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_IS_CHECKED, item.getIsChecked());
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_CHECKED_AT, item.getCheckedAt());
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_OPERATION_TIMESTAMP, item.getOperationTimestamp());
+        return values;
+    }
     // ==================== HELPERS: Object to ContentValues ====================
 
     private ContentValues gateValveToContentValues(GateValve valve) {
@@ -786,16 +813,40 @@ public class RepositoryImpl implements IRepository {
         return values;
     }
 
-    private ContentValues valveItemToContentValues(ValveItem item) {
+
+
+    @Override
+    public int updateValveItemStatus(int itemId, int isAssembled, int motorDisabled, int boxRemoved) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();
-        values.put(DatabaseContract.ValveItemsEntry.COLUMN_PARENT_SESSION_ID, item.getParentSessionId());
-        values.put(DatabaseContract.ValveItemsEntry.COLUMN_NAME, item.getName());
-        values.put(DatabaseContract.ValveItemsEntry.COLUMN_NAME_ENG, item.getNameEng());
-        values.put(DatabaseContract.ValveItemsEntry.COLUMN_ISY, item.getIsy());
-        values.put(DatabaseContract.ValveItemsEntry.COLUMN_HAS_MOTOR, item.isHasMotor() ? 1 : 0);
-        values.put(DatabaseContract.ValveItemsEntry.COLUMN_IS_ASSEMBLED, item.isAssembled() ? 1 : 0);
-        values.put(DatabaseContract.ValveItemsEntry.COLUMN_IS_CHECKED, item.isChecked() ? 1 : 0);
-        values.put(DatabaseContract.ValveItemsEntry.COLUMN_OPERATION_TIMESTAMP, item.getOperationTimestamp());
-        return values;
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_IS_ASSEMBLED, isAssembled);
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_MOTOR_DISABLED, motorDisabled);
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_BOX_REMOVED, boxRemoved);
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_OPERATION_TIMESTAMP,
+                new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
+
+        return db.update(
+                DatabaseContract.ValveItemsEntry.TABLE_NAME,
+                values,
+                DatabaseContract.ValveItemsEntry.COLUMN_ITEM_ID + " = ?",
+                new String[]{String.valueOf(itemId)}
+        );
+    }
+
+    @Override
+    public int updateValveItemChecked(int itemId, int isChecked, String checkedAt) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_IS_CHECKED, isChecked);
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_CHECKED_AT, checkedAt);
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_OPERATION_TIMESTAMP,
+                new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
+
+        return db.update(
+                DatabaseContract.ValveItemsEntry.TABLE_NAME,
+                values,
+                DatabaseContract.ValveItemsEntry.COLUMN_ITEM_ID + " = ?",
+                new String[]{String.valueOf(itemId)}
+        );
     }
 }

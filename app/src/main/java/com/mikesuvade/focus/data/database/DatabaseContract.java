@@ -133,16 +133,19 @@ public final class DatabaseContract {
     }
 
     // ==================== VALVE ITEMS ====================
+
     public static class ValveItemsEntry implements BaseColumns {
         public static final String TABLE_NAME = "valve_items";
         public static final String COLUMN_ITEM_ID = "item_id";
         public static final String COLUMN_PARENT_SESSION_ID = "parent_session_id";
         public static final String COLUMN_NAME = "name";
-        public static final String COLUMN_NAME_ENG = "name_eng";
         public static final String COLUMN_ISY = "isy";
         public static final String COLUMN_HAS_MOTOR = "has_motor";
         public static final String COLUMN_IS_ASSEMBLED = "is_assembled";
+        public static final String COLUMN_MOTOR_DISABLED = "motor_disabled";    // НОВОЕ
+        public static final String COLUMN_BOX_REMOVED = "box_removed";          // НОВОЕ
         public static final String COLUMN_IS_CHECKED = "is_checked";
+        public static final String COLUMN_CHECKED_AT = "checked_at";            // НОВОЕ
         public static final String COLUMN_OPERATION_TIMESTAMP = "operation_timestamp";
     }
 

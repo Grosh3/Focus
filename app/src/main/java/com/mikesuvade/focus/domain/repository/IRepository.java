@@ -54,4 +54,6 @@ public interface IRepository {
     List<com.mikesuvade.focus.domain.models.ValveItem> getValveItemsBySession(String sessionId);
     int updateValveItem(com.mikesuvade.focus.domain.models.ValveItem item);
     int deleteValveItem(int itemId);
+    int updateValveItemStatus(int itemId, int isAssembled, int motorDisabled, int boxRemoved);
+    int updateValveItemChecked(int itemId, int isChecked, String checkedAt);
 }

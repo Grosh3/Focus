@@ -40,6 +40,7 @@ import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.GateValve;
 import com.mikesuvade.focus.domain.repository.IRepository;
 import com.mikesuvade.focus.ui.detail.DetailActivity;
+import com.mikesuvade.focus.ui.list.ListDetailActivity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -93,6 +94,21 @@ public class MainActivity extends AppCompatActivity {
                 if (result.getResultCode() == RESULT_OK) {
                     refreshData();
                 }
+            }
+    );
+
+    private final ActivityResultLauncher<Intent> listDetailResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    viewModel.clearCurrentList();
+                    Toast.makeText(this, "Список сохранён!", Toast.LENGTH_SHORT).show();
+                } else {
+                    viewModel.clearCurrentList();
+                    Toast.makeText(this, "Список не сохранён", Toast.LENGTH_SHORT).show();
+                }
+                refreshData();
+                syncAdapterSelection();
             }
     );
 
@@ -474,7 +490,9 @@ public class MainActivity extends AppCompatActivity {
     private void setupListeners() {
         btnOverlayBack.setOnClickListener(v -> hideOverlay());
 
+        // Кнопка СПИСКИ (🗂️)
         btnLists.setOnClickListener(v -> {
+            // TODO: Открыть список сохранённых сессий
             Toast.makeText(this, "Открыть сохранённые списки", Toast.LENGTH_SHORT).show();
         });
 
@@ -529,7 +547,10 @@ public class MainActivity extends AppCompatActivity {
                 int size = viewModel.getCurrentListSize();
                 btnNewValve.setText(getString(R.string.to_list, size));
                 btnNewValve.setOnClickListener(v -> {
-                    Toast.makeText(this, "Открыть список (" + size + " шт.)", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(MainActivity.this, ListDetailActivity.class);
+                    ArrayList<GateValve> list = new ArrayList<>(viewModel.getCurrentList());
+                    intent.putExtra("valve_list", list);
+                    listDetailResultLauncher.launch(intent);
                 });
             } else {
                 btnNewValve.setText(R.string.new_valve);

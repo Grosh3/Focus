@@ -4,13 +4,22 @@ public class ValveItem {
     private int itemId;
     private String parentSessionId;
     private String name;
-    private String nameEng;
     private String isy;
-    private boolean hasMotor;
-    private boolean isAssembled;
-    private boolean isChecked;
+    private int hasMotor;           // 0 или 1
+
+    // Статусы (назначаются мастером)
+    private int isAssembled;        // 1=Собрать, 0=Разобрать
+    private int motorDisabled;      // 1=двигатель отключён
+    private int boxRemoved;         // 1=коробка КВ снята
+
+    // Выполнение
+    private int isChecked;          // 0=не выполнено, 1=выполнено
+    private String checkedAt;       // дата выполнения
+
+    // Служебное
     private String operationTimestamp;
 
+    // Геттеры и сеттеры
     public int getItemId() { return itemId; }
     public void setItemId(int itemId) { this.itemId = itemId; }
 
@@ -20,20 +29,26 @@ public class ValveItem {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public String getNameEng() { return nameEng; }
-    public void setNameEng(String nameEng) { this.nameEng = nameEng; }
-
     public String getIsy() { return isy; }
     public void setIsy(String isy) { this.isy = isy; }
 
-    public boolean isHasMotor() { return hasMotor; }
-    public void setHasMotor(boolean hasMotor) { this.hasMotor = hasMotor; }
+    public int getHasMotor() { return hasMotor; }
+    public void setHasMotor(int hasMotor) { this.hasMotor = hasMotor; }
 
-    public boolean isAssembled() { return isAssembled; }
-    public void setAssembled(boolean assembled) { isAssembled = assembled; }
+    public int getIsAssembled() { return isAssembled; }
+    public void setIsAssembled(int isAssembled) { this.isAssembled = isAssembled; }
 
-    public boolean isChecked() { return isChecked; }
-    public void setChecked(boolean checked) { isChecked = checked; }
+    public int getMotorDisabled() { return motorDisabled; }
+    public void setMotorDisabled(int motorDisabled) { this.motorDisabled = motorDisabled; }
+
+    public int getBoxRemoved() { return boxRemoved; }
+    public void setBoxRemoved(int boxRemoved) { this.boxRemoved = boxRemoved; }
+
+    public int getIsChecked() { return isChecked; }
+    public void setIsChecked(int isChecked) { this.isChecked = isChecked; }
+
+    public String getCheckedAt() { return checkedAt; }
+    public void setCheckedAt(String checkedAt) { this.checkedAt = checkedAt; }
 
     public String getOperationTimestamp() { return operationTimestamp; }
     public void setOperationTimestamp(String operationTimestamp) { this.operationTimestamp = operationTimestamp; }

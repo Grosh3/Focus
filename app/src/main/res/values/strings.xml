@@ -3,9 +3,10 @@
 
     <!-- MainActivity -->
     <string name="new_valve">НОВ. ЗАДВИЖКА</string>
-    <string name="to_list">К СПИСКУ (%d)</string>  <!-- ← ДОЛЖНО БЫТЬ С %d -->
+    <string name="to_list">К СПИСКУ (%d)</string>
     <string name="search_hint">Поиск арматуры</string>
     <string name="empty_search">🔍 Ничего не найдено\nПопробуйте изменить запрос</string>
+
     <!-- Detail Activity -->
     <string name="detail_title">Редактир.</string>
     <string name="isy">ИСУ</string>
@@ -31,6 +32,40 @@
     <string name="error_loading_data">Ошибка загрузки данных</string>
     <string name="valve_id_not_passed">Ошибка: ID задвижки не передан</string>
     <string name="no_name">Без названия</string>
+
+    <!-- ListDetailActivity -->
+    <string name="list_title">Список работ</string>
+    <string name="list_empty">Список пуст</string>
+    <string name="btn_assemble">◀ СОБРАТЬ</string>
+    <string name="btn_disassemble">РАЗОБРАТЬ ▶</string>
+    <string name="btn_save">СОХРАНИТЬ</string>
+    <string name="btn_cancel">ОТМЕНА</string>
+    <string name="btn_back_description">Закрыть</string>
+    <string name="status_assemble">СОБРАТЬ</string>
+    <string name="status_disassemble">РАЗОБРАТЬ</string>
+    <string name="status_assembled">✅ СОБРАНА</string>
+    <string name="status_disassembled">✅ РАЗОБРАНА</string>
+    <string name="status_motor_connected">ДВ.подкл.</string>
+    <string name="status_motor_disconnected">отключен эл.двигатель</string>
+    <string name="status_box_installed">установлена ККВ</string>
+    <string name="status_box_removed">снята ККВ</string>
+    <string name="dialog_save_title">Сохранить список</string>
+    <string name="dialog_save_hint">Введите название списка</string>
+    <string name="dialog_save_positive">Сохранить</string>
+    <string name="dialog_save_negative">Отмена</string>
+    <string name="toast_saved">Список сохранён!</string>
+    <string name="toast_not_saved">Список не сохранён</string>
+    <string name="dialog_exit_title">Выйти без сохранения?</string>
+    <string name="dialog_exit_message">Список не будет сохранён. Продолжить?</string>
+    <string name="dialog_exit_positive">Да</string>
+    <string name="dialog_exit_negative">Нет</string>
+    <string name="default_list_name">Список</string>
+    <string name="content_description_move">Переместить</string>
+    <string name="content_description_motor_on">Отключить двигатель</string>
+    <string name="content_description_motor_off">Подключить двигатель</string>
+    <string name="content_description_box_on">Снять ККВ</string>
+    <string name="content_description_box_off">Установить ККВ</string>
+
     <!-- Кнопки нижнего меню -->
     <string name="setpoints">ЖУРНАЛ УСТАВОК</string>
     <string name="sensors">СПИСОК ДАТЧИКОВ</string>
