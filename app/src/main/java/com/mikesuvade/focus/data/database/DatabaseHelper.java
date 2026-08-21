@@ -45,8 +45,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Для pre-populated DB правильнее заменить файл целиком
-        Log.w(TAG, "onUpgrade: replacing DB file from assets (v" + oldVersion + " -> " + newVersion + ")");
+        db.close();
         try {
             copyDatabaseFromAssets();
         } catch (IOException e) {
@@ -54,7 +53,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             throw new RuntimeException(e);
         }
     }
-
     public boolean isDatabaseReady() {
         File dbFile = context.getDatabasePath(DATABASE_NAME);
         return dbFile.exists() && dbFile.length() > 0;

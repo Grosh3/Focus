@@ -24,6 +24,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.constraintlayout.widget.ConstraintSet;
@@ -38,12 +39,21 @@ import androidx.transition.TransitionManager;
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.GateValve;
+import com.mikesuvade.focus.domain.models.ValveItem;
+import com.mikesuvade.focus.domain.models.ValveWorkSession;
 import com.mikesuvade.focus.domain.repository.IRepository;
 import com.mikesuvade.focus.ui.detail.DetailActivity;
 import com.mikesuvade.focus.ui.list.ListDetailActivity;
+import com.mikesuvade.focus.ui.saved.SavedListsActivity;
+import com.mikesuvade.focus.ui.saved.SavedMeasurementsActivity;
+import com.mikesuvade.focus.ui.temperature.TemperatureActivity;
+import com.mikesuvade.focus.utils.AppState;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -101,14 +111,18 @@ public class MainActivity extends AppCompatActivity {
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK) {
-                    viewModel.clearCurrentList();
                     Toast.makeText(this, "Список сохранён!", Toast.LENGTH_SHORT).show();
                 } else {
-                    viewModel.clearCurrentList();
-                    Toast.makeText(this, "Список не сохранён", Toast.LENGTH_SHORT).show();
+                    if (!AppState.getInstance().hasActiveSession()) {
+                        AppState.getInstance().clearSession();
+                        viewModel.clearCurrentList();
+                        Toast.makeText(this, "Список не сохранён", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "Возврат к списку", Toast.LENGTH_SHORT).show();
+                    }
                 }
                 refreshData();
-                syncAdapterSelection();
+                updateButtonState();
             }
     );
 
@@ -157,6 +171,18 @@ public class MainActivity extends AppCompatActivity {
         tvOverlayDescription = findViewById(R.id.tvOverlayDescription);
         progressOverlay = findViewById(R.id.progressOverlay);
         cardOverlayDescription = findViewById(R.id.cardOverlayDescription);
+
+        // ✅ ДОЛГИЙ ТАП ПО КНОПКЕ
+        btnNewValve.setOnLongClickListener(v -> {
+            if (AppState.getInstance().hasActiveSession()) {
+                showCloseListDialog();
+                return true;
+            } else if (viewModel.getIsRecording().getValue() != null && viewModel.getIsRecording().getValue()) {
+                showClearSelectionDialog();
+                return true;
+            }
+            return false;
+        });
     }
 
     private void setupViewModel() {
@@ -175,6 +201,55 @@ public class MainActivity extends AppCompatActivity {
         ).get(MainViewModel.class);
     }
 
+    // ==========================================
+    // 📋 ДОЛГИЙ ТАП ПО КНОПКЕ
+    // ==========================================
+
+    private void showCloseListDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_close_list_title)
+                .setPositiveButton(R.string.dialog_close_list_positive, (dialog, which) -> {
+                    closeCurrentList();
+                })
+                .setNegativeButton(R.string.dialog_close_list_negative, (dialog, which) -> dialog.dismiss())
+                .show();
+    }
+
+    private void closeCurrentList() {
+        Log.d("MAIN_DEBUG", "=== closeCurrentList ===");
+
+        AppState.getInstance().clearSession();
+        viewModel.clearCurrentList();
+        viewModel.setRecording(false);
+
+        updateButtonState();
+        syncAdapterSelection();
+
+        Toast.makeText(this, R.string.toast_list_closed, Toast.LENGTH_SHORT).show();
+    }
+
+    private void showClearSelectionDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_clear_selection_title)
+                .setPositiveButton(R.string.dialog_clear_selection_positive, (dialog, which) -> {
+                    clearSelection();
+                })
+                .setNegativeButton(R.string.dialog_clear_selection_negative, (dialog, which) -> dialog.dismiss())
+                .show();
+    }
+
+    private void clearSelection() {
+        Log.d("MAIN_DEBUG", "=== clearSelection ===");
+
+        viewModel.clearCurrentList();
+        viewModel.setRecording(false);
+
+        updateButtonState();
+        syncAdapterSelection();
+
+        Toast.makeText(this, R.string.toast_selection_cleared, Toast.LENGTH_SHORT).show();
+    }
+
     private void setupRecyclerView() {
         rvGateValves.setLayoutManager(new LinearLayoutManager(this));
         adapter = new GateValveAdapter();
@@ -188,12 +263,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Короткий тап - развернуть/свернуть
         adapter.setOnItemClickListener((valve, position) -> {
             toggleExpanded(position);
         });
 
-        // Длинный тап - диалог подтверждения редактирования
         adapter.setOnItemLongClickListener(new GateValveAdapter.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(GateValve valve) {
@@ -205,7 +278,7 @@ public class MainActivity extends AppCompatActivity {
                     displayName = "Без названия";
                 }
 
-                new androidx.appcompat.app.AlertDialog.Builder(MainActivity.this)
+                new AlertDialog.Builder(MainActivity.this)
                         .setTitle("Редактировать задвижку?")
                         .setMessage("Вы хотите отредактировать \"" + displayName + "\"?")
                         .setPositiveButton("Редактировать", (dialog, which) -> {
@@ -221,20 +294,29 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // CheckBox - добавление/удаление из списка
         adapter.setOnCheckBoxClickListener((valve, position, isChecked) -> {
             if (isChecked) {
-                if (!viewModel.isInCurrentList(valve)) {
-                    viewModel.addToCurrentList(valve);
-                    Toast.makeText(this, "Добавлено: " + valve.getName(), Toast.LENGTH_SHORT).show();
+                if (viewModel.isInCurrentList(valve)) {
+                    Toast.makeText(this, "Задвижка уже в списке", Toast.LENGTH_SHORT).show();
+                    syncAdapterSelection();
+                    updateButtonState();
+                    return;
                 }
+                if (AppState.getInstance().hasActiveSession()) {
+                    viewModel.addToActiveSession(valve);
+                    viewModel.addToCurrentList(valve);
+                } else {
+                    viewModel.addToCurrentList(valve);
+                }
+                Toast.makeText(this, "Добавлено: " + valve.getName(), Toast.LENGTH_SHORT).show();
             } else {
                 viewModel.removeFromCurrentList(valve);
                 Toast.makeText(this, "Удалено: " + valve.getName(), Toast.LENGTH_SHORT).show();
             }
+            syncAdapterSelection();
+            updateButtonState();
         });
 
-        // Блокировки - показываем оверлей
         adapter.setOnBlockingClickListener((valve, type) -> {
             String title = valve.getName() + " - ";
             byte[] imageData = null;
@@ -487,13 +569,16 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // ==========================================
+    // 📋 СЛУШАТЕЛИ
+    // ==========================================
+
     private void setupListeners() {
         btnOverlayBack.setOnClickListener(v -> hideOverlay());
 
-        // Кнопка СПИСКИ (🗂️)
         btnLists.setOnClickListener(v -> {
-            // TODO: Открыть список сохранённых сессий
-            Toast.makeText(this, "Открыть сохранённые списки", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(MainActivity.this, SavedListsActivity.class);
+            startActivity(intent);
         });
 
         btnHelp.setOnClickListener(v -> {
@@ -509,12 +594,32 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnSensors.setOnClickListener(v -> {
-            Toast.makeText(this, "Открыть список датчиков", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(MainActivity.this, SavedMeasurementsActivity.class);
+            startActivity(intent);
         });
 
+        // ✅ ЗАМЕР ТЕМПЕРАТУРЫ → ДИАЛОГ ВЫБОРА
         btnConverter.setOnClickListener(v -> {
-            Toast.makeText(this, "Открыть замер температуры", Toast.LENGTH_SHORT).show();
+            showMeasurementTypeDialog();
         });
+    }
+
+    // ==========================================
+    // 📋 ДИАЛОГ ВЫБОРА РЕЖИМА ЗАМЕРА
+    // ==========================================
+
+    private void showMeasurementTypeDialog() {
+        String[] options = {"мВ (Термопары)", "Ом (Термосопротивления)"};
+
+        new AlertDialog.Builder(this)
+                .setTitle("Выберите тип замера")
+                .setItems(options, (dialog, which) -> {
+                    String mode = (which == 0) ? "MV" : "OHM";
+                    Intent intent = new Intent(MainActivity.this, TemperatureActivity.class);
+                    intent.putExtra("MODE", mode);
+                    startActivity(intent);
+                })
+                .show();
     }
 
     // ==========================================
@@ -523,58 +628,35 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupObservers() {
         viewModel.getGateValves().observe(this, valves -> {
+            Log.d("MAIN_DEBUG", "=== getGateValves observer ===");
+            Log.d("MAIN_DEBUG", "valves size = " + (valves != null ? valves.size() : 0));
+
             if (valves != null && !valves.isEmpty()) {
-                adapter.setValves(valves);
+                List<Integer> selectedPositions = new ArrayList<>();
+                List<GateValve> currentList = viewModel.getCurrentListLive().getValue();
+                if (currentList == null) currentList = new ArrayList<>();
+
+                for (int i = 0; i < valves.size(); i++) {
+                    GateValve valve = valves.get(i);
+                    for (GateValve v : currentList) {
+                        if (v.getId() == valve.getId()) {
+                            selectedPositions.add(i);
+                            break;
+                        }
+                    }
+                }
+
+                adapter.updateData(valves, selectedPositions);
                 rvGateValves.setVisibility(View.VISIBLE);
                 tvEmptySearch.setVisibility(View.GONE);
                 expandedPositions.clear();
-                syncAdapterSelection();
             } else {
-                adapter.setValves(new ArrayList<>());
+                adapter.updateData(new ArrayList<>(), new ArrayList<>());
                 rvGateValves.setVisibility(View.GONE);
-
                 String query = etSearch.getText().toString().trim();
-                if (query.length() >= 2) {
-                    tvEmptySearch.setVisibility(View.VISIBLE);
-                } else {
-                    tvEmptySearch.setVisibility(View.GONE);
-                }
+                tvEmptySearch.setVisibility(query.length() >= 2 ? View.VISIBLE : View.GONE);
             }
-        });
-
-        viewModel.getIsRecording().observe(this, isRecording -> {
-            if (isRecording) {
-                int size = viewModel.getCurrentListSize();
-                btnNewValve.setText(getString(R.string.to_list, size));
-                btnNewValve.setOnClickListener(v -> {
-                    Intent intent = new Intent(MainActivity.this, ListDetailActivity.class);
-                    ArrayList<GateValve> list = new ArrayList<>(viewModel.getCurrentList());
-                    intent.putExtra("valve_list", list);
-                    listDetailResultLauncher.launch(intent);
-                });
-            } else {
-                btnNewValve.setText(R.string.new_valve);
-                btnNewValve.setOnClickListener(v -> {
-                    Intent intent = new Intent(MainActivity.this, DetailActivity.class);
-                    intent.putExtra(DetailActivity.EXTRA_IS_NEW, true);
-                    detailResultLauncher.launch(intent);
-                });
-            }
-            syncAdapterSelection();
-        });
-
-        viewModel.getCurrentListSizeLiveData().observe(this, size -> {
-            if (viewModel.getIsRecording().getValue() != null && viewModel.getIsRecording().getValue()) {
-                btnNewValve.setText(getString(R.string.to_list, size));
-            }
-            if (size == 0 && viewModel.getIsRecording().getValue() != null && viewModel.getIsRecording().getValue()) {
-                viewModel.setRecording(false);
-            }
-            syncAdapterSelection();
-        });
-
-        viewModel.getListName().observe(this, name -> {
-            // можно использовать для отображения имени
+            Log.d("MAIN_DEBUG", "=== getGateValves observer END ===");
         });
     }
 
@@ -588,14 +670,20 @@ public class MainActivity extends AppCompatActivity {
             List<GateValve> currentValves = adapter.getValves();
 
             if (currentValves != null) {
+                List<GateValve> currentList = viewModel.getCurrentListLive().getValue();
+                if (currentList == null) currentList = new ArrayList<>();
+
                 for (int i = 0; i < currentValves.size(); i++) {
                     GateValve valve = currentValves.get(i);
-                    if (viewModel.isInCurrentList(valve)) {
-                        selectedPositions.add(i);
+                    for (GateValve v : currentList) {
+                        if (v.getId() == valve.getId()) {
+                            selectedPositions.add(i);
+                            break;
+                        }
                     }
                 }
             }
-            adapter.setSelectedPositions(selectedPositions);
+            adapter.updateData(adapter.getValves(), selectedPositions);
         });
     }
 
@@ -693,9 +781,186 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void updateButtonState() {
+        AppState appState = AppState.getInstance();
+
+        if (appState.hasActiveSession()) {
+            String name = appState.getLastOpenedSessionName();
+            int size = viewModel.getCurrentListSize();
+            if (name != null && !name.isEmpty()) {
+                btnNewValve.setText(name + " (" + size + ")");
+            } else {
+                btnNewValve.setText("Список (" + size + ")");
+            }
+            btnNewValve.setOnClickListener(v -> openSession());
+            return;
+        }
+
+        if (viewModel.getIsRecording().getValue() != null && viewModel.getIsRecording().getValue()) {
+            int size = viewModel.getCurrentListSize();
+            btnNewValve.setText(getString(R.string.to_list, size));
+            btnNewValve.setOnClickListener(v -> openNewList());
+            return;
+        }
+
+        btnNewValve.setText(R.string.new_valve);
+        btnNewValve.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, DetailActivity.class);
+            intent.putExtra(DetailActivity.EXTRA_IS_NEW, true);
+            detailResultLauncher.launch(intent);
+        });
+    }
+
+    private void createNewSession() {
+        Toast.makeText(this, "createNewSession START", Toast.LENGTH_SHORT).show();
+
+        String name = "Новый список";
+        ValveWorkSession session = new ValveWorkSession();
+        session.setSessionId("SESSION_" + System.currentTimeMillis());
+        session.setEquipmentDescription(name);
+        session.setSaveDate(getCurrentDateTime());
+
+        AppState.getInstance().setActiveSession(session);
+        AppState.getInstance().setHasUnsavedChanges(true);
+
+        Intent intent = new Intent(MainActivity.this, ListDetailActivity.class);
+        intent.putExtra("is_new_session", true);
+        startActivity(intent);
+
+        Toast.makeText(this, "createNewSession END", Toast.LENGTH_SHORT).show();
+    }
+
+    private void openSession() {
+        String sessionId = AppState.getInstance().getLastOpenedSessionId();
+        if (sessionId != null && !sessionId.isEmpty()) {
+            Intent intent = new Intent(MainActivity.this, ListDetailActivity.class);
+            intent.putExtra("session_id", sessionId);
+            listDetailResultLauncher.launch(intent);
+        } else {
+            Toast.makeText(this, "Сессия не найдена", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showSaveChangesDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Сохранить изменения?")
+                .setMessage("Вы редактируете список. Сохранить изменения перед выходом?")
+                .setPositiveButton("Сохранить", (dialog, which) -> {
+                    saveCurrentSession();
+                    openSavedLists();
+                })
+                .setNegativeButton("Отмена", (dialog, which) -> {
+                    dialog.dismiss();
+                })
+                .show();
+    }
+
+    private void saveCurrentSession() {
+        ValveWorkSession session = AppState.getInstance().getActiveSession();
+        if (session != null) {
+            viewModel.saveSessionToDb(session);
+            AppState.getInstance().setHasUnsavedChanges(false);
+            Toast.makeText(this, "Список сохранён", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void openSavedLists() {
+        Intent intent = new Intent(MainActivity.this, SavedListsActivity.class);
+        startActivity(intent);
+    }
+
+    private String getCurrentDateTime() {
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+    }
+
+    private void restoreLastSession() {
+        Log.d("DUPLICATE", "=== restoreLastSession START ===");
+        AppState appState = AppState.getInstance();
+        Log.d("DUPLICATE", "hasActiveSession = " + appState.hasActiveSession());
+
+        if (appState.hasActiveSession()) {
+            Log.d("DUPLICATE", "sessionId = " + appState.getLastOpenedSessionId());
+            new Thread(() -> {
+                try {
+                    List<ValveItem> items = ((MyApp) getApplication())
+                            .getRepository()
+                            .getValveItemsBySession(appState.getLastOpenedSessionId());
+
+                    Log.d("DUPLICATE", "items size = " + items.size());
+
+                    runOnUiThread(() -> {
+                        viewModel.clearCurrentList();
+                        for (ValveItem item : items) {
+                            Log.d("RESTORE", "item: gateValveId=" + item.getGateValveId());
+
+                            GateValve valve = ((MyApp) getApplication())
+                                    .getRepository()
+                                    .getGateValveById(item.getGateValveId());
+
+                            Log.d("RESTORE", "valve found: " + (valve != null ? valve.getName() : "null"));
+
+                            if (valve != null) {
+                                valve.setId(item.getGateValveId());
+                                viewModel.addToCurrentList(valve);
+                            }
+                        }
+                        viewModel.updateCurrentListSize(items.size());
+                        updateButtonState();
+                        Log.d("DUPLICATE", "currentList size after restore = " + viewModel.getCurrentListSize());
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        } else {
+            Log.d("DUPLICATE", "Нет активной сессии");
+        }
+        Log.d("DUPLICATE", "=== restoreLastSession END ===");
+    }
+
+    private void openNewList() {
+        List<GateValve> currentList = viewModel.getCurrentListLive().getValue();
+        if (currentList == null || currentList.isEmpty()) {
+            Toast.makeText(this, R.string.list_empty, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ArrayList<Integer> ids = new ArrayList<>();
+        ArrayList<String> names = new ArrayList<>();
+        ArrayList<String> isys = new ArrayList<>();
+
+        for (GateValve valve : currentList) {
+            ids.add(valve.getId());
+            names.add(valve.getName() != null ? valve.getName() : "");
+            isys.add(valve.getIsy() != null ? valve.getIsy() : "");
+        }
+
+        Intent intent = new Intent(MainActivity.this, ListDetailActivity.class);
+        intent.putIntegerArrayListExtra("valve_ids", ids);
+        intent.putStringArrayListExtra("valve_names", names);
+        intent.putStringArrayListExtra("valve_isys", isys);
+
+        Log.d("MYTITLE", "=== openNewList ===");
+        Log.d("MYTITLE", "ids size: " + ids.size());
+        Log.d("MYTITLE", "names size: " + names.size());
+
+        listDetailResultLauncher.launch(intent);
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
+        Log.d("MAIN_DEBUG", "=== onResume START ===");
+
+        if (!AppState.getInstance().hasActiveSession()) {
+            viewModel.clearCurrentList();
+            Log.d("MAIN_DEBUG", "No active session, cleared current list");
+        } else {
+            restoreLastSession();
+        }
+
         viewModel.refreshData();
+        updateButtonState();
+        Log.d("MAIN_DEBUG", "=== onResume END ===");
     }
 }

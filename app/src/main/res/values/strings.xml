@@ -6,6 +6,18 @@
     <string name="to_list">К СПИСКУ (%d)</string>
     <string name="search_hint">Поиск арматуры</string>
     <string name="empty_search">🔍 Ничего не найдено\nПопробуйте изменить запрос</string>
+    <!-- Диалоги для долгого тапа по кнопке -->
+    <!-- Диалог отмены нового списка -->
+    <string name="dialog_clear_selection_title">Отменить новый список?</string>
+    <string name="dialog_clear_selection_positive">Да</string>
+    <string name="dialog_clear_selection_negative">Нет</string>
+    <string name="toast_selection_cleared">Выбор очищен</string>
+
+    <!-- Диалог закрытия списка -->
+    <string name="dialog_close_list_title">Закрыть список БЛ 3?</string>
+    <string name="dialog_close_list_positive">Да</string>
+    <string name="dialog_close_list_negative">Нет</string>
+    <string name="toast_list_closed">Список закрыт</string>
 
     <!-- Detail Activity -->
     <string name="detail_title">Редактир.</string>
@@ -34,7 +46,7 @@
     <string name="no_name">Без названия</string>
 
     <!-- ListDetailActivity -->
-    <string name="list_title">Список работ</string>
+    <string name="list_title">Список</string>
     <string name="list_empty">Список пуст</string>
     <string name="btn_assemble">◀ СОБРАТЬ</string>
     <string name="btn_disassemble">РАЗОБРАТЬ ▶</string>
@@ -83,4 +95,28 @@
     <string name="toast_added">Добавлено: %s</string>
     <string name="toast_removed">Удалено: %s</string>
     <string name="toast_blocking">Блокировка: %s для %s</string>
+
+    <string name="saved_lists_title">Сохранённые списки</string>
+    <string name="saved_lists_empty">📭 Нет сохранённых списков</string>
+    <string name="saved_lists_delete_title">Удалить список?</string>
+    <string name="saved_lists_delete_message">Удалить список "%s"?</string>
+    <string name="saved_lists_deleted">Список удалён</string>
+
+    <string name="dialog_rename_title">Переименовать список</string>
+    <string name="dialog_rename_positive">Сохранить</string>
+    <string name="dialog_rename_negative">Отмена</string>
+    <string name="toast_renamed">Список переименован</string>
+    <!-- SavedMeasurementsActivity -->
+    <string name="saved_measurements_title">Сохранённые замеры</string>
+    <string name="saved_measurements_empty">📭 Нет сохранённых замеров</string>
+    <string name="saved_measurements_delete_title">Удалить замер?</string>
+    <string name="saved_measurements_delete_message">Удалить замер "%s"?</string>
+    <string name="saved_measurements_deleted">Замер удалён</string>
+    <string name="saved_measurements_rename_title">Переименовать замер</string>
+    <string name="saved_measurements_renamed">Замер переименован</string>
+    <string name="saved_measurements_rename_positive">Сохранить</string>
+    <string name="saved_measurements_rename_negative">Отмена</string>
+    <string name="saved_measurements_options_rename">Переименовать</string>
+    <string name="saved_measurements_options_delete">Удалить</string>
+
 </resources>

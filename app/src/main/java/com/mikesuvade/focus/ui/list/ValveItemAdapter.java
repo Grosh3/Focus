@@ -2,6 +2,7 @@ package com.mikesuvade.focus.ui.list;
 
 import android.content.Context;
 import android.graphics.Paint;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,11 +13,16 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
+import com.mikesuvade.focus.domain.models.GateValve;
 import com.mikesuvade.focus.domain.models.ValveItem;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.ViewHolder> {
 
@@ -28,7 +34,8 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
         void onMoveClick(ValveItem item);
         void onMotorClick(ValveItem item);
         void onBoxClick(ValveItem item);
-        void onCheckedClick(ValveItem item);
+        void onCheckedClick(ValveItem item, boolean isChecked);
+        void onItemLongClick(ValveItem item);
     }
 
     public ValveItemAdapter(Context context) {
@@ -36,8 +43,18 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
     }
 
     public void setItems(List<ValveItem> items) {
+        Log.d("LIST_DEBUG", "=== ValveItemAdapter.setItems ===");
+        Log.d("LIST_DEBUG", "New items size: " + (items != null ? items.size() : 0));
+        if (items != null) {
+            for (ValveItem item : items) {
+                Log.d("LIST_DEBUG", "  item: gateValveId=" + item.getGateValveId() +
+                        ", assembled=" + item.getIsAssembled() +
+                        ", checked=" + item.getIsChecked());
+            }
+        }
         this.items = items != null ? items : new ArrayList<>();
         notifyDataSetChanged();
+        Log.d("LIST_DEBUG", "=== ValveItemAdapter.setItems END ===");
     }
 
     public void setListener(OnItemClickListener listener) {
@@ -55,7 +72,10 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         ValveItem item = items.get(position);
-        holder.bind(item, listener, context);
+        GateValve valve = ((MyApp) context.getApplicationContext())
+                .getRepository()
+                .getGateValveById(item.getGateValveId());
+        holder.bind(item, valve, listener, context, position);
     }
 
     @Override
@@ -89,25 +109,35 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
             btnBox = itemView.findViewById(R.id.btnBox);
         }
 
-        void bind(ValveItem item, OnItemClickListener listener, Context context) {
-            // ISY
-            String isy = item.getIsy();
-            if (isy != null && !isy.isEmpty()) {
-                tvIsy.setVisibility(View.VISIBLE);
-                tvIsy.setText(isy);
-            } else {
-                tvIsy.setVisibility(View.GONE);
-            }
-
-            // NAME
-            String name = item.getName();
-            if (name == null || name.isEmpty()) {
-                name = context.getString(R.string.no_name);
-            }
-            tvName.setText(name);
+        void bind(ValveItem item, GateValve valve, OnItemClickListener listener, Context context, int position) {
+            Log.d("LIST_DEBUG", "=== bind ===");
+            Log.d("LIST_DEBUG", "position=" + position + ", gateValveId=" + item.getGateValveId() +
+                    ", isChecked=" + item.getIsChecked());
 
             // ==========================================
-            // СТАТУСЫ
+            // ISY и NAME из GateValve
+            // ==========================================
+            if (valve != null) {
+                String isy = valve.getIsy();
+                if (isy != null && !isy.isEmpty()) {
+                    tvIsy.setVisibility(View.VISIBLE);
+                    tvIsy.setText(isy);
+                } else {
+                    tvIsy.setVisibility(View.GONE);
+                }
+
+                String name = valve.getName();
+                if (name == null || name.isEmpty()) {
+                    name = context.getString(R.string.no_name);
+                }
+                tvName.setText(name);
+            } else {
+                tvIsy.setVisibility(View.GONE);
+                tvName.setText(context.getString(R.string.no_name));
+            }
+
+            // ==========================================
+            // СТАТУСЫ (из ValveItem)
             // ==========================================
 
             // 1. Статус собрано/разобрано
@@ -186,25 +216,38 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
             }
 
             // Дата выполнения
+            // Дата выполнения - только время (ЧЧ:ММ)
             if (item.getCheckedAt() != null && !item.getCheckedAt().isEmpty()) {
-                tvCheckedAt.setVisibility(View.VISIBLE);
-                tvCheckedAt.setText("✅ " + item.getCheckedAt());
+                try {
+                    // Парсим полную дату из БД (yyyy-MM-dd HH:mm:ss)
+                    SimpleDateFormat fullFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+                    Date date = fullFormat.parse(item.getCheckedAt());
+
+                    // Форматируем только время (HH:mm)
+                    SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                    String timeOnly = timeFormat.format(date);
+
+                    tvCheckedAt.setVisibility(View.VISIBLE);
+                    tvCheckedAt.setText("✅ " + timeOnly);
+                } catch (Exception e) {
+                    // Если не удалось распарсить, показываем как есть
+                    tvCheckedAt.setVisibility(View.VISIBLE);
+                    tvCheckedAt.setText("✅ " + item.getCheckedAt());
+                }
             } else {
                 tvCheckedAt.setVisibility(View.GONE);
             }
-
             // ==========================================
             // КНОПКИ
             // ==========================================
 
-            btnMove.setVisibility(View.VISIBLE);
+            btnMove.setOnClickListener(null);
             btnMove.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onMoveClick(item);
                 }
             });
 
-            btnMotor.setVisibility(View.VISIBLE);
             if (item.getMotorDisabled() == 1) {
                 btnMotor.setColorFilter(0xFFFF0000);
                 btnMotor.setContentDescription(context.getString(R.string.content_description_motor_off));
@@ -212,13 +255,13 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 btnMotor.setColorFilter(0xFF888888);
                 btnMotor.setContentDescription(context.getString(R.string.content_description_motor_on));
             }
+            btnMotor.setOnClickListener(null);
             btnMotor.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onMotorClick(item);
                 }
             });
 
-            btnBox.setVisibility(View.VISIBLE);
             if (item.getBoxRemoved() == 1) {
                 btnBox.setColorFilter(0xFFFF8800);
                 btnBox.setContentDescription(context.getString(R.string.content_description_box_off));
@@ -226,17 +269,46 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 btnBox.setColorFilter(0xFF888888);
                 btnBox.setContentDescription(context.getString(R.string.content_description_box_on));
             }
+            btnBox.setOnClickListener(null);
             btnBox.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onBoxClick(item);
                 }
             });
 
-            cbChecked.setOnClickListener(v -> {
+            // ==========================================
+            // ✅ CHECKBOX - ИСПРАВЛЕННАЯ ВЕРСИЯ
+            // ==========================================
+            // Отключаем слушатель перед установкой
+            cbChecked.setOnCheckedChangeListener(null);
+
+            // Устанавливаем состояние из item
+            cbChecked.setChecked(item.getIsChecked() == 1);
+            Log.d("LIST_DEBUG", "CheckBox setChecked = " + (item.getIsChecked() == 1));
+
+            // Включаем слушатель
+            cbChecked.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                Log.d("LIST_DEBUG", "=== CheckBox clicked ===");
+                Log.d("LIST_DEBUG", "position=" + position + ", gateValveId=" + item.getGateValveId());
+                Log.d("LIST_DEBUG", "isChecked=" + isChecked);
+
                 if (listener != null) {
-                    listener.onCheckedClick(item);
+                    // ❌ НЕ ОБНОВЛЯЕМ ЗДЕСЬ! Это делает ViewModel
+                    listener.onCheckedClick(item, isChecked);
                 }
             });
+
+            // ==========================================
+            // ДЛИННЫЙ ТАП
+            // ==========================================
+            itemView.setOnLongClickListener(v -> {
+                if (listener != null) {
+                    listener.onItemLongClick(item);
+                }
+                return true;
+            });
+
+            Log.d("LIST_DEBUG", "=== bind END ===");
         }
     }
 }

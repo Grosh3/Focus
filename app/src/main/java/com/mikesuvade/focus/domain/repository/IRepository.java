@@ -4,6 +4,7 @@ import com.mikesuvade.focus.domain.models.GateValve;
 import com.mikesuvade.focus.domain.models.Sensor;
 import com.mikesuvade.focus.domain.models.Setpoint;
 import com.mikesuvade.focus.domain.models.Measurement;
+import com.mikesuvade.focus.domain.models.ValveWorkSession;
 
 import java.util.List;
 
@@ -56,4 +57,13 @@ public interface IRepository {
     int deleteValveItem(int itemId);
     int updateValveItemStatus(int itemId, int isAssembled, int motorDisabled, int boxRemoved);
     int updateValveItemChecked(int itemId, int isChecked, String checkedAt);
+    // В IRepository.java
+
+    int updateWorkSession(ValveWorkSession session);
+    int updateWorkSessionDate(String sessionId, String saveDate);
+    ValveWorkSession getWorkSessionById(String sessionId);
+    int updateWorkSessionName(String sessionId, String newName);
+    int updateMeasurementDescription(int id, String description);
+    // Добавь этот метод в интерфейс
+    double getSignalFromTemperature(String tableName, double temperature);
 }

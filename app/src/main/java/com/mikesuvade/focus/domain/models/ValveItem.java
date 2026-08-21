@@ -3,20 +3,13 @@ package com.mikesuvade.focus.domain.models;
 public class ValveItem {
     private int itemId;
     private String parentSessionId;
-    private String name;
-    private String isy;
-    private int hasMotor;           // 0 или 1
+    private int gateValveId;
 
-    // Статусы (назначаются мастером)
-    private int isAssembled;        // 1=Собрать, 0=Разобрать
-    private int motorDisabled;      // 1=двигатель отключён
-    private int boxRemoved;         // 1=коробка КВ снята
-
-    // Выполнение
-    private int isChecked;          // 0=не выполнено, 1=выполнено
-    private String checkedAt;       // дата выполнения
-
-    // Служебное
+    private int isAssembled;
+    private int motorDisabled;
+    private int boxRemoved;
+    private int isChecked;
+    private String checkedAt;
     private String operationTimestamp;
 
     // Геттеры и сеттеры
@@ -26,14 +19,8 @@ public class ValveItem {
     public String getParentSessionId() { return parentSessionId; }
     public void setParentSessionId(String parentSessionId) { this.parentSessionId = parentSessionId; }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public String getIsy() { return isy; }
-    public void setIsy(String isy) { this.isy = isy; }
-
-    public int getHasMotor() { return hasMotor; }
-    public void setHasMotor(int hasMotor) { this.hasMotor = hasMotor; }
+    public int getGateValveId() { return gateValveId; }
+    public void setGateValveId(int gateValveId) { this.gateValveId = gateValveId; }
 
     public int getIsAssembled() { return isAssembled; }
     public void setIsAssembled(int isAssembled) { this.isAssembled = isAssembled; }
@@ -52,4 +39,5 @@ public class ValveItem {
 
     public String getOperationTimestamp() { return operationTimestamp; }
     public void setOperationTimestamp(String operationTimestamp) { this.operationTimestamp = operationTimestamp; }
+    
 }

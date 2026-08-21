@@ -130,6 +130,7 @@ public final class DatabaseContract {
         public static final String COLUMN_SESSION_ID = "session_id";
         public static final String COLUMN_SAVE_DATE = "save_date";
         public static final String COLUMN_EQUIPMENT_DESCRIPTION = "equipment_description";
+
     }
 
     // ==================== VALVE ITEMS ====================
@@ -138,14 +139,12 @@ public final class DatabaseContract {
         public static final String TABLE_NAME = "valve_items";
         public static final String COLUMN_ITEM_ID = "item_id";
         public static final String COLUMN_PARENT_SESSION_ID = "parent_session_id";
-        public static final String COLUMN_NAME = "name";
-        public static final String COLUMN_ISY = "isy";
-        public static final String COLUMN_HAS_MOTOR = "has_motor";
+        public static final String COLUMN_GATE_VALVE_ID = "gate_valve_id";
         public static final String COLUMN_IS_ASSEMBLED = "is_assembled";
-        public static final String COLUMN_MOTOR_DISABLED = "motor_disabled";    // НОВОЕ
-        public static final String COLUMN_BOX_REMOVED = "box_removed";          // НОВОЕ
+        public static final String COLUMN_MOTOR_DISABLED = "motor_disabled";
+        public static final String COLUMN_BOX_REMOVED = "box_removed";
         public static final String COLUMN_IS_CHECKED = "is_checked";
-        public static final String COLUMN_CHECKED_AT = "checked_at";            // НОВОЕ
+        public static final String COLUMN_CHECKED_AT = "checked_at";
         public static final String COLUMN_OPERATION_TIMESTAMP = "operation_timestamp";
     }
 

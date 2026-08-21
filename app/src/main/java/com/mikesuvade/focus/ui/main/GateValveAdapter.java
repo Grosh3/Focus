@@ -38,7 +38,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
     }
 
     public interface OnItemLongClickListener {
-        boolean onItemLongClick(GateValve valve);  // ← ИЗМЕНЕНО: void → boolean
+        boolean onItemLongClick(GateValve valve);
     }
 
     public interface OnCheckBoxClickListener {
@@ -67,11 +67,23 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
         this.blockingClickListener = listener;
     }
 
-    public void setValves(List<GateValve> valves) {
-        this.valves = valves != null ? valves : new ArrayList<>();
-        expandedPositions.clear();
-        selectedPositions.clear();
+    // ✅ ГЛАВНЫЙ МЕТОД - обновляет данные и выделение за один раз
+    public void updateData(List<GateValve> newValves, List<Integer> newSelectedPositions) {
+        this.valves = newValves != null ? newValves : new ArrayList<>();
+        this.expandedPositions.clear();
+        this.selectedPositions.clear();
+        if (newSelectedPositions != null) {
+            this.selectedPositions.addAll(newSelectedPositions);
+        }
         notifyDataSetChanged();
+    }
+
+    public void setValves(List<GateValve> valves) {
+        updateData(valves, this.selectedPositions);
+    }
+
+    public void setSelectedPositions(List<Integer> positions) {
+        updateData(this.valves, positions);
     }
 
     public List<GateValve> getValves() {
@@ -92,22 +104,6 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
     public void clearExpanded() {
         expandedPositions.clear();
         notifyDataSetChanged();
-    }
-
-    public void setSelectedPositions(List<Integer> positions) {
-        if (isUpdating) return;
-        isUpdating = true;
-
-        boolean changed = selectedPositions.size() != positions.size() ||
-                !selectedPositions.equals(positions);
-
-        if (changed) {
-            selectedPositions.clear();
-            selectedPositions.addAll(positions);
-            notifyDataSetChanged();
-        }
-
-        isUpdating = false;
     }
 
     public boolean isSelected(int position) {
@@ -176,9 +172,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                   OnBlockingClickListener blockingClickListener,
                   int position) {
 
-            // ==========================================
             // ISY и NAME
-            // ==========================================
             String isy = valve.getIsy();
             String name = valve.getName();
 
@@ -206,9 +200,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 tvName.setGravity(Gravity.START);
             }
 
-            // ==========================================
             // СБОРКА + МЕСТОПОЛОЖЕНИЕ
-            // ==========================================
             String powerCabinet = valve.getPowerCabinet();
             String locationDescription = valve.getLocationDescription();
 
@@ -229,9 +221,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 tvLocation.setVisibility(View.GONE);
             }
 
-            // ==========================================
             // ОПИСАНИЕ
-            // ==========================================
             String fullName = valve.getFullName();
             if (fullName != null && !fullName.isEmpty()) {
                 tvFullName.setVisibility(View.VISIBLE);
@@ -240,9 +230,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 tvFullName.setVisibility(View.GONE);
             }
 
-            // ==========================================
             // РАСПОЛОЖЕНИЕ
-            // ==========================================
             String onPlace = valve.getOnPlace();
             if (onPlace != null && !onPlace.isEmpty()) {
                 tvOnPlace.setVisibility(View.VISIBLE);
@@ -251,9 +239,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 tvOnPlace.setVisibility(View.GONE);
             }
 
-            // ==========================================
             // KKS
-            // ==========================================
             String kks = valve.getKks();
             if (kks != null && !kks.isEmpty()) {
                 tvKks.setVisibility(View.VISIBLE);
@@ -262,9 +248,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 tvKks.setVisibility(View.GONE);
             }
 
-            // ==========================================
-            // CHECKBOX
-            // ==========================================
+            // ✅ CHECKBOX - отключаем слушатель, устанавливаем состояние, включаем слушатель
             cbAddToList.setOnCheckedChangeListener(null);
             cbAddToList.setChecked(isSelected);
             cbAddToList.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -273,11 +257,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 }
             });
 
-            // ==========================================
-            // 🔒 БЛОКИРОВКИ - ТОЛЬКО ПО НАЛИЧИЮ ФОТО
-            // ==========================================
-
-            // 1. БЛОКИРОВКИ "ОТКРЫТИЕ"
+            // БЛОКИРОВКИ
             byte[] nsOpen = valve.getNameSpaceViewOpen();
             if (nsOpen != null && nsOpen.length > 0) {
                 btnBlockingOpen.setVisibility(View.VISIBLE);
@@ -291,7 +271,6 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 btnBlockingOpen.setVisibility(View.GONE);
             }
 
-            // 2. БЛОКИРОВКИ "ЗАКРЫТИЕ"
             byte[] nsClose = valve.getNamespaceViewClose();
             if (nsClose != null && nsClose.length > 0) {
                 btnBlockingClose.setVisibility(View.VISIBLE);
@@ -305,7 +284,6 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 btnBlockingClose.setVisibility(View.GONE);
             }
 
-            // 3. ВНЕШНИЕ ЦЕПИ
             byte[] nsPerifer = valve.getNamespaceViewPerifer();
             if (nsPerifer != null && nsPerifer.length > 0) {
                 btnExternalChain.setVisibility(View.VISIBLE);
@@ -319,9 +297,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 btnExternalChain.setVisibility(View.GONE);
             }
 
-            // ==========================================
             // РАЗВОРАЧИВАЕМАЯ ЧАСТЬ
-            // ==========================================
             boolean hasAnyBlocking = (nsOpen != null && nsOpen.length > 0) ||
                     (nsClose != null && nsClose.length > 0) ||
                     (nsPerifer != null && nsPerifer.length > 0);
@@ -332,21 +308,16 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                 expandedContent.setVisibility(View.GONE);
             }
 
-            // ==========================================
             // СЛУШАТЕЛИ
-            // ==========================================
-
-            // Короткий тап
             itemView.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onItemClick(valve, position);
                 }
             });
 
-            // Длинный тап
             itemView.setOnLongClickListener(v -> {
                 if (longClickListener != null) {
-                    return longClickListener.onItemLongClick(valve);  // ← ИСПРАВЛЕНО
+                    return longClickListener.onItemLongClick(valve);
                 }
                 return false;
             });

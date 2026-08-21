@@ -421,7 +421,34 @@ public class RepositoryImpl implements IRepository {
         double ratio = (resistance - lower.getSignalValue()) / (upper.getSignalValue() - lower.getSignalValue());
         return lower.getTemperature() + ratio * (upper.getTemperature() - lower.getTemperature());
     }
+    @Override
+    public double getSignalFromTemperature(String tableName, double temperature) {
+        List<ConverterPoint> points = getConverterPoints(tableName);
+        if (points.isEmpty()) return 0;
 
+        ConverterPoint lower = null;
+        ConverterPoint upper = null;
+
+        for (ConverterPoint point : points) {
+            if (point.getTemperature() <= temperature) {
+                lower = point;
+            }
+            if (point.getTemperature() >= temperature && upper == null) {
+                upper = point;
+            }
+        }
+
+        if (lower == null && upper != null) return upper.getSignalValue();
+        if (lower != null && upper == null) return lower.getSignalValue();
+        if (lower == null && upper == null) return 0;
+
+        if (lower.getTemperature() == upper.getTemperature()) {
+            return lower.getSignalValue();
+        }
+
+        double ratio = (temperature - lower.getTemperature()) / (upper.getTemperature() - lower.getTemperature());
+        return lower.getSignalValue() + ratio * (upper.getSignalValue() - lower.getSignalValue());
+    }
     @Override
     public List<String> getConverterTableNames() {
         List<String> tables = new ArrayList<>();
@@ -511,7 +538,9 @@ public class RepositoryImpl implements IRepository {
         );
 
         while (cursor.moveToNext()) {
-            sessions.add(cursorToWorkSession(cursor));
+            ValveWorkSession session = cursorToWorkSession(cursor);
+            Log.d("MYTITLE", "Loaded session: id=" + session.getSessionId() + ", name=" + session.getEquipmentDescription());
+            sessions.add(session);
         }
         cursor.close();
         return sessions;
@@ -546,7 +575,7 @@ public class RepositoryImpl implements IRepository {
                 DatabaseContract.ValveItemsEntry.COLUMN_PARENT_SESSION_ID + " = ?",
                 new String[]{sessionId},
                 null, null,
-                DatabaseContract.ValveItemsEntry.COLUMN_NAME + " ASC"
+                DatabaseContract.ValveItemsEntry.COLUMN_ITEM_ID + " ASC"
         );
 
         while (cursor.moveToNext()) {
@@ -609,8 +638,7 @@ public class RepositoryImpl implements IRepository {
         valve.setDescriptionBlockingPerifer(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_DESCRIPTION_BLOCKING_PERIFER)));
         valve.setLocationDescription(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_LOCATION_DESCRIPTION)));
         valve.setIsEdited(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_IS_EDITED)));
-        valve.setEditedAtValve(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_EDITED_AT)));  // ← ИСПРАВЛЕНО!
-        valve.setEditedAtValve(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_EDITED_AT)));
+        valve.setEditedAtValve(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.GateValvesEntry.COLUMN_EDITED_AT)));  // ← ТОЛЬКО ОДНА СТРОКА!
         return valve;
     }
     private Sensor cursorToSensor(Cursor cursor) {
@@ -683,9 +711,7 @@ public class RepositoryImpl implements IRepository {
         ValveItem item = new ValveItem();
         item.setItemId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_ITEM_ID)));
         item.setParentSessionId(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_PARENT_SESSION_ID)));
-        item.setName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_NAME)));
-        item.setIsy(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_ISY)));
-        item.setHasMotor(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_HAS_MOTOR)));
+        item.setGateValveId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_GATE_VALVE_ID)));
         item.setIsAssembled(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_IS_ASSEMBLED)));
         item.setMotorDisabled(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_MOTOR_DISABLED)));
         item.setBoxRemoved(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.ValveItemsEntry.COLUMN_BOX_REMOVED)));
@@ -702,9 +728,7 @@ public class RepositoryImpl implements IRepository {
     private ContentValues valveItemToContentValues(ValveItem item) {
         ContentValues values = new ContentValues();
         values.put(DatabaseContract.ValveItemsEntry.COLUMN_PARENT_SESSION_ID, item.getParentSessionId());
-        values.put(DatabaseContract.ValveItemsEntry.COLUMN_NAME, item.getName());
-        values.put(DatabaseContract.ValveItemsEntry.COLUMN_ISY, item.getIsy());
-        values.put(DatabaseContract.ValveItemsEntry.COLUMN_HAS_MOTOR, item.getHasMotor());
+        values.put(DatabaseContract.ValveItemsEntry.COLUMN_GATE_VALVE_ID, item.getGateValveId());
         values.put(DatabaseContract.ValveItemsEntry.COLUMN_IS_ASSEMBLED, item.getIsAssembled());
         values.put(DatabaseContract.ValveItemsEntry.COLUMN_MOTOR_DISABLED, item.getMotorDisabled());
         values.put(DatabaseContract.ValveItemsEntry.COLUMN_BOX_REMOVED, item.getBoxRemoved());
@@ -849,4 +873,83 @@ public class RepositoryImpl implements IRepository {
                 new String[]{String.valueOf(itemId)}
         );
     }
+    // В RepositoryImpl.java
+
+    @Override
+    public int updateWorkSession(ValveWorkSession session) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.ValveWorkSessionsEntry.COLUMN_SAVE_DATE, session.getSaveDate());
+        values.put(DatabaseContract.ValveWorkSessionsEntry.COLUMN_EQUIPMENT_DESCRIPTION, session.getEquipmentDescription());
+
+        return db.update(
+                DatabaseContract.ValveWorkSessionsEntry.TABLE_NAME,
+                values,
+                DatabaseContract.ValveWorkSessionsEntry.COLUMN_SESSION_ID + " = ?",
+                new String[]{session.getSessionId()}
+        );
+    }
+    @Override
+    public int updateWorkSessionDate(String sessionId, String saveDate) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.ValveWorkSessionsEntry.COLUMN_SAVE_DATE, saveDate);
+        // ❌ НЕ ТРОГАЕМ COLUMN_EQUIPMENT_DESCRIPTION!
+
+        return db.update(
+                DatabaseContract.ValveWorkSessionsEntry.TABLE_NAME,
+                values,
+                DatabaseContract.ValveWorkSessionsEntry.COLUMN_SESSION_ID + " = ?",
+                new String[]{sessionId}
+        );
+    }
+    @Override
+    public ValveWorkSession getWorkSessionById(String sessionId) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = db.query(
+                DatabaseContract.ValveWorkSessionsEntry.TABLE_NAME,
+                null,
+                DatabaseContract.ValveWorkSessionsEntry.COLUMN_SESSION_ID + " = ?",
+                new String[]{sessionId},
+                null, null, null
+        );
+
+        ValveWorkSession session = null;
+        if (cursor.moveToFirst()) {
+            session = cursorToWorkSession(cursor);
+            Log.d("MYTITLE", "getWorkSessionById: found session, name=" + session.getEquipmentDescription());
+        } else {
+            Log.d("MYTITLE", "getWorkSessionById: session NOT found for id=" + sessionId);
+        }
+        cursor.close();
+        return session;
+    }
+    @Override
+    public int updateWorkSessionName(String sessionId, String newName) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.ValveWorkSessionsEntry.COLUMN_EQUIPMENT_DESCRIPTION, newName);
+        // ❌ НЕ ТРОГАЕМ COLUMN_SAVE_DATE!
+
+        return db.update(
+                DatabaseContract.ValveWorkSessionsEntry.TABLE_NAME,
+                values,
+                DatabaseContract.ValveWorkSessionsEntry.COLUMN_SESSION_ID + " = ?",
+                new String[]{sessionId}
+        );
+    }
+    @Override
+    public int updateMeasurementDescription(int id, String description) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DatabaseContract.MeasurementsEntry.COLUMN_DESCRIPTION, description);
+
+        return db.update(
+                DatabaseContract.MeasurementsEntry.TABLE_NAME,
+                values,
+                DatabaseContract.MeasurementsEntry._ID + " = ?",
+                new String[]{String.valueOf(id)}
+        );
+    }
+
 }
