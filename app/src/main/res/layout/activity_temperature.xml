@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -33,21 +34,23 @@
             android:textStyle="bold"
             android:gravity="center" />
 
-        <Button
+        <!-- ✅ КНОПКА СПРАВКА (как в MainActivity) -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHelp"
+            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_height="wrap_content"
             android:text="❓"
-            android:textSize="20sp"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+            android:textSize="20sp" />
 
-        <Button
+        <!-- ✅ КНОПКА СПИСОК ЗАМЕРОВ (как в MainActivity) -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSavedMeasurements"
+            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_height="wrap_content"
             android:text="📋"
-            android:textSize="20sp"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+            android:textSize="20sp" />
 
     </LinearLayout>
 
@@ -68,6 +71,7 @@
 
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Единицы измерения -->
     <TextView
         android:id="@+id/tvUnit"
         android:layout_width="match_parent"
@@ -78,24 +82,43 @@
         android:gravity="end"
         android:layout_marginTop="4dp" />
 
-    <!-- ✅ ПОЛЕ ХОЛОДНОГО СПАЯ (только для мВ) -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilColdJunction"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+    <!-- ✅ ПОЛЕ ХОЛОДНОГО СПАЯ (только для мВ) с единицами измерения -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:hint="Температура холодного спая (°C)"
-        android:visibility="gone">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etColdJunction"
-            android:layout_width="match_parent"
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilColdJunction"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:inputType="numberSigned|numberDecimal"
-            android:maxLines="1" />
+            android:layout_weight="1"
+            android:hint="Т холодного спая"
+            android:visibility="gone">
 
-    </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etColdJunction"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberSigned|numberDecimal"
+                android:maxLines="1" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:id="@+id/tvColdJunctionUnit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="°C"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginStart="8dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
 
     <!-- Чекбокс -->
     <CheckBox
@@ -106,7 +129,6 @@
         android:text="Учитывать сопротивление линии"
         android:textSize="14sp" />
 
-    <!-- Сопротивление линии -->
     <!-- Сопротивление линии -->
     <com.google.android.material.textfield.TextInputLayout
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
@@ -121,9 +143,7 @@
             android:layout_height="wrap_content"
             android:inputType="numberSigned|numberDecimal"
             android:maxLines="1"
-            android:hint="Напр. 0.15" />  <!-- ← УБРАТЬ android:text="0" -->
-
-
+            android:hint="Напр. 0.15" />
 
     </com.google.android.material.textfield.TextInputLayout>
 

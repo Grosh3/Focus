@@ -465,9 +465,24 @@ public class RepositoryImpl implements IRepository {
 
     @Override
     public long insertMeasurement(Measurement measurement) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = measurementToContentValues(measurement);
-        return db.insert(DatabaseContract.MeasurementsEntry.TABLE_NAME, null, values);
+        Log.d("TEMP_DEBUG", "=== insertMeasurement() START ===");
+        try {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            ContentValues values = measurementToContentValues(measurement);
+
+            Log.d("TEMP_DEBUG", "ContentValues: " + values.toString());
+
+            long result = db.insert(DatabaseContract.MeasurementsEntry.TABLE_NAME, null, values);
+            Log.d("TEMP_DEBUG", "insert result: " + result);
+
+            if (result == -1) {
+                Log.e("TEMP_DEBUG", "Insert failed! Check table structure and column names.");
+            }
+            return result;
+        } catch (Exception e) {
+            Log.e("TEMP_DEBUG", "ERROR in insertMeasurement", e);
+            throw e;
+        }
     }
 
     @Override
@@ -826,6 +841,10 @@ public class RepositoryImpl implements IRepository {
         values.put(DatabaseContract.MeasurementsEntry.COLUMN_TEMPERATURE, measurement.getTemperature());
         values.put(DatabaseContract.MeasurementsEntry.COLUMN_SENSOR_TYPE, measurement.getSensorType());
         values.put(DatabaseContract.MeasurementsEntry.COLUMN_DESCRIPTION, measurement.getDescription());
+
+        // ✅ ДОБАВЛЯЕМ created_at!
+        values.put(DatabaseContract.MeasurementsEntry.COLUMN_CREATED_AT, measurement.getCreatedAt());
+
         return values;
     }
 

@@ -148,7 +148,6 @@ public class ListDetailActivity extends AppCompatActivity {
             }
         });
     }
-
     private void setupRecyclerViews() {
         RecyclerView rvLeft = findViewById(R.id.rvLeft);
         rvLeft.setLayoutManager(new LinearLayoutManager(this));
@@ -184,9 +183,6 @@ public class ListDetailActivity extends AppCompatActivity {
                 hasChanges = true;
                 viewModel.toggleChecked(item);
 
-                // ❌ НЕ ВЫЗЫВАТЬ notifyDataSetChanged() ЗДЕСЬ!
-                // Обновление происходит через Observer
-
                 Log.d("LIST_DEBUG", "=== onCheckedClick LEFT END ===");
             }
 
@@ -194,6 +190,12 @@ public class ListDetailActivity extends AppCompatActivity {
             public void onItemLongClick(ValveItem item) {
                 hasChanges = true;
                 showDeleteDialog(item);
+            }
+
+            // ✅ ДОБАВЛЕНО: КОРОТКИЙ ТАП ПО КАРТОЧКЕ
+            @Override
+            public void onItemClick(ValveItem item) {
+                showValveInfoDialog(item);
             }
         });
         rvLeft.setAdapter(leftAdapter);
@@ -232,9 +234,6 @@ public class ListDetailActivity extends AppCompatActivity {
                 hasChanges = true;
                 viewModel.toggleChecked(item);
 
-                // ❌ НЕ ВЫЗЫВАТЬ notifyDataSetChanged() ЗДЕСЬ!
-                // Обновление происходит через Observer
-
                 Log.d("LIST_DEBUG", "=== onCheckedClick RIGHT END ===");
             }
 
@@ -242,6 +241,12 @@ public class ListDetailActivity extends AppCompatActivity {
             public void onItemLongClick(ValveItem item) {
                 hasChanges = true;
                 showDeleteDialog(item);
+            }
+
+            // ✅ ДОБАВЛЕНО: КОРОТКИЙ ТАП ПО КАРТОЧКЕ
+            @Override
+            public void onItemClick(ValveItem item) {
+                showValveInfoDialog(item);
             }
         });
         rvRight.setAdapter(rightAdapter);
@@ -377,5 +382,59 @@ public class ListDetailActivity extends AppCompatActivity {
             }
         });
         alertDialog.show();
+    }
+    private void showValveInfoDialog(ValveItem item) {
+        GateValve valve = ((MyApp) getApplication()).getRepository().getGateValveById(item.getGateValveId());
+        if (valve == null) {
+            Toast.makeText(this, "Задвижка не найдена", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        StringBuilder info = new StringBuilder();
+
+        String isy = valve.getIsy();
+        String name = valve.getName();
+
+        // Сборка с дефисом
+        String powerCabinet = valve.getPowerCabinet();
+        String locationDescription = valve.getLocationDescription();
+        if (powerCabinet != null && !powerCabinet.isEmpty()) {
+            info.append("- ").append(powerCabinet);
+            if (locationDescription != null && !locationDescription.isEmpty()) {
+                info.append(" ").append(locationDescription);
+            }
+            info.append("\n");
+        } else if (locationDescription != null && !locationDescription.isEmpty()) {
+            info.append("- ").append(locationDescription).append("\n");
+        }
+
+        // Месторасположение с дефисом
+        String onPlace = valve.getOnPlace();
+        if (onPlace != null && !onPlace.isEmpty()) {
+            info.append("- ").append(onPlace).append("\n");
+        }
+
+        // Если нет данных
+        if (info.length() == 0) {
+            info.append("Нет данных о задвижке");
+        }
+
+        // Заголовок: ИСУ + Название (жирным)
+        String title = "";
+        if (isy != null && !isy.isEmpty()) {
+            title += isy + "    ";
+        }
+        if (name != null && !name.isEmpty()) {
+            title += name;
+        }
+        if (title.isEmpty()) {
+            title = "Задвижка";
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(info.toString().trim())
+                .setPositiveButton("Закрыть", (dialog, which) -> dialog.dismiss())
+                .show();
     }
 }

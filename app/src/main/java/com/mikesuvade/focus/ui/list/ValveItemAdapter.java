@@ -36,6 +36,7 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
         void onBoxClick(ValveItem item);
         void onCheckedClick(ValveItem item, boolean isChecked);
         void onItemLongClick(ValveItem item);
+        void onItemClick(ValveItem item);  // ← ДОБАВЛЕНО
     }
 
     public ValveItemAdapter(Context context) {
@@ -215,28 +216,25 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 tvAssembleStatus.setAlpha(1.0f);
             }
 
-            // Дата выполнения
             // Дата выполнения - только время (ЧЧ:ММ)
             if (item.getCheckedAt() != null && !item.getCheckedAt().isEmpty()) {
                 try {
-                    // Парсим полную дату из БД (yyyy-MM-dd HH:mm:ss)
                     SimpleDateFormat fullFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
                     Date date = fullFormat.parse(item.getCheckedAt());
 
-                    // Форматируем только время (HH:mm)
                     SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
                     String timeOnly = timeFormat.format(date);
 
                     tvCheckedAt.setVisibility(View.VISIBLE);
                     tvCheckedAt.setText("✅ " + timeOnly);
                 } catch (Exception e) {
-                    // Если не удалось распарсить, показываем как есть
                     tvCheckedAt.setVisibility(View.VISIBLE);
                     tvCheckedAt.setText("✅ " + item.getCheckedAt());
                 }
             } else {
                 tvCheckedAt.setVisibility(View.GONE);
             }
+
             // ==========================================
             // КНОПКИ
             // ==========================================
@@ -277,24 +275,28 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
             });
 
             // ==========================================
-            // ✅ CHECKBOX - ИСПРАВЛЕННАЯ ВЕРСИЯ
+            // ✅ CHECKBOX
             // ==========================================
-            // Отключаем слушатель перед установкой
             cbChecked.setOnCheckedChangeListener(null);
-
-            // Устанавливаем состояние из item
             cbChecked.setChecked(item.getIsChecked() == 1);
             Log.d("LIST_DEBUG", "CheckBox setChecked = " + (item.getIsChecked() == 1));
 
-            // Включаем слушатель
             cbChecked.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 Log.d("LIST_DEBUG", "=== CheckBox clicked ===");
                 Log.d("LIST_DEBUG", "position=" + position + ", gateValveId=" + item.getGateValveId());
                 Log.d("LIST_DEBUG", "isChecked=" + isChecked);
 
                 if (listener != null) {
-                    // ❌ НЕ ОБНОВЛЯЕМ ЗДЕСЬ! Это делает ViewModel
                     listener.onCheckedClick(item, isChecked);
+                }
+            });
+
+            // ==========================================
+            // ✅ КОРОТКИЙ ТАП ПО КАРТОЧКЕ (НОВОЕ!)
+            // ==========================================
+            itemView.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onItemClick(item);
                 }
             });
 

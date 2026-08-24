@@ -1,13 +1,18 @@
 package com.mikesuvade.focus.ui.temperature;
 
+import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,7 +24,13 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
+import com.mikesuvade.focus.domain.models.Measurement;
+import com.mikesuvade.focus.domain.models.TemperatureResult;
 import com.mikesuvade.focus.ui.saved.SavedMeasurementsActivity;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class TemperatureActivity extends AppCompatActivity {
 
@@ -33,17 +44,19 @@ public class TemperatureActivity extends AppCompatActivity {
     private RecyclerView rvResults;
 
     private String mode; // "MV" или "OHM"
-    private EditText etColdJunction;// ← добавить поле
+    private EditText etColdJunction;
     private View tilColdJunction;
+    private TextView tvColdJunctionUnit;
+    private View rootLayout;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_temperature);
 
-        // ✅ ПОЛУЧАЕМ РЕЖИМ ИЗ INTENT
         mode = getIntent().getStringExtra("MODE");
         if (mode == null) {
-            mode = "OHM"; // значение по умолчанию
+            mode = "OHM";
         }
 
         viewModel = new ViewModelProvider(
@@ -64,6 +77,7 @@ public class TemperatureActivity extends AppCompatActivity {
         setupRecyclerView();
         setupListeners();
         setupObservers();
+        setupHideKeyboardOnTouch();
     }
 
     private void initViews() {
@@ -74,25 +88,31 @@ public class TemperatureActivity extends AppCompatActivity {
         rvResults = findViewById(R.id.rvResults);
         etColdJunction = findViewById(R.id.etColdJunction);
         tilColdJunction = findViewById(R.id.tilColdJunction);
-        Log.d("TEMP_DEBUG", "etColdJunction found: " + (etColdJunction != null));// ← ДОБАВИТЬ!
+        tvColdJunctionUnit = findViewById(R.id.tvColdJunctionUnit);
+        rootLayout = findViewById(R.id.rootLayout);
 
-        // ✅ НАСТРАИВАЕМ UI В ЗАВИСИМОСТИ ОТ РЕЖИМА
+        Log.d("TEMP_DEBUG", "etColdJunction found: " + (etColdJunction != null));
+
         if ("MV".equals(mode)) {
             tvUnit.setText("мВ");
             etValue.setHint("Введите значение в мВ");
             cbLineResistance.setVisibility(View.GONE);
             etLineResistance.setVisibility(View.GONE);
-            tilColdJunction.setVisibility(View.VISIBLE);   // ← ПОКАЗЫВАЕМ холодный спай
+            tilColdJunction.setVisibility(View.VISIBLE);
+            tvColdJunctionUnit.setVisibility(View.VISIBLE);
+            etColdJunction.setHint("Т холодного спая");
             etColdJunction.setText("");
         } else {
             tvUnit.setText("Ом");
             etValue.setHint("Введите значение в Ом");
             cbLineResistance.setVisibility(View.VISIBLE);
             etLineResistance.setVisibility(View.VISIBLE);
-            tilColdJunction.setVisibility(View.GONE);//← СКРЫВАЕМ холодный спай
+            tilColdJunction.setVisibility(View.GONE);
+            tvColdJunctionUnit.setVisibility(View.GONE);
             cbLineResistance.setChecked(true);
             etLineResistance.setEnabled(true);
             etLineResistance.setText("");
+            etLineResistance.setHint("Напр. 0.15");
         }
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
@@ -106,9 +126,31 @@ public class TemperatureActivity extends AppCompatActivity {
             startActivity(intent);
         });
     }
+
+    private void setupHideKeyboardOnTouch() {
+        if (rootLayout != null) {
+            rootLayout.setOnTouchListener((v, event) -> {
+                hideKeyboard();
+                return false;
+            });
+        }
+    }
+
+    private void hideKeyboard() {
+        View view = getCurrentFocus();
+        if (view != null) {
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                view.clearFocus();
+            }
+        }
+    }
+
     private void setupRecyclerView() {
         rvResults.setLayoutManager(new LinearLayoutManager(this));
         adapter = new TemperatureResultAdapter();
+        adapter.setOnSaveClickListener(this::showSaveDialog);
         rvResults.setAdapter(adapter);
     }
 
@@ -143,6 +185,7 @@ public class TemperatureActivity extends AppCompatActivity {
             etLineResistance.setEnabled(isChecked);
             calculate();
         });
+
         etColdJunction.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -164,9 +207,6 @@ public class TemperatureActivity extends AppCompatActivity {
         });
     }
 
-
-
-    // В calculate():
     private void calculate() {
         String valueStr = etValue.getText().toString().trim();
         Log.d("TEMP_DEBUG", "=== calculate() START ===");
@@ -182,14 +222,14 @@ public class TemperatureActivity extends AppCompatActivity {
         double value = parseDouble(valueStr);
         Log.d("TEMP_DEBUG", "parsed value = " + value);
 
-        if (value == 0 && !valueStr.equals("0") && !valueStr.equals("0.0")) {
-            Log.d("TEMP_DEBUG", "parsing error, value=0 but string is not '0'");
+        if (valueStr.length() > 0 && value == 0 && !valueStr.matches("0(\\.0*)?")) {
+            Log.d("TEMP_DEBUG", "parsing error, invalid number format");
             viewModel.clearResults();
             Toast.makeText(this, "Некорректный ввод", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        double coldJunctionTemp = -999;  // ← флаг "НЕ ЗАДАНО"
+        double coldJunctionTemp = -999;
         double lineResistance = 0;
 
         if ("MV".equals(mode)) {
@@ -199,7 +239,7 @@ public class TemperatureActivity extends AppCompatActivity {
                 coldJunctionTemp = parseDouble(coldStr);
                 Log.d("TEMP_DEBUG", "parsed coldJunctionTemp = " + coldJunctionTemp);
             } else {
-                Log.d("TEMP_DEBUG", "coldStr is empty, using flag -999 (not set)");
+                Log.d("TEMP_DEBUG", "coldStr is empty, using flag -999");
             }
         }
 
@@ -219,6 +259,7 @@ public class TemperatureActivity extends AppCompatActivity {
         viewModel.calculate(value, mode, coldJunctionTemp, lineResistance);
         Log.d("TEMP_DEBUG", "=== calculate() END ===");
     }
+
     private double parseDouble(String value) {
         if (value == null || value.isEmpty()) return 0;
         value = value.replace(',', '.');
@@ -226,6 +267,103 @@ public class TemperatureActivity extends AppCompatActivity {
             return Double.parseDouble(value);
         } catch (NumberFormatException e) {
             return 0;
+        }
+    }
+
+    // ==========================================
+    // 💾 СОХРАНЕНИЕ ЗАМЕРА
+    // ==========================================
+
+    private void showSaveDialog(TemperatureResult result) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Сохранить замер");
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(48, 32, 48, 32);
+
+        final EditText inputDescription = new EditText(this);
+        inputDescription.setHint("Описание (необязательно)");
+        inputDescription.setInputType(InputType.TYPE_CLASS_TEXT);
+        layout.addView(inputDescription);
+
+        TextView info = new TextView(this);
+        String infoText = result.getSensorName() + "   " +
+                result.getUserValue() + " " + result.getUnit() + " → " +
+                String.format("%.2f", result.getTemperature()) + " °C";
+        info.setText(infoText);
+        info.setPadding(0, 24, 0, 0);
+        info.setTextSize(14);
+        layout.addView(info);
+
+        builder.setView(layout);
+
+        builder.setPositiveButton("Сохранить", (dialog, which) -> {
+            String description = inputDescription.getText().toString().trim();
+            if (description.isEmpty()) {
+                description = result.getSensorName() + " " + result.getUserValue() + result.getUnit();
+            }
+            saveMeasurement(result, description);
+        });
+
+        builder.setNegativeButton("Отмена", (dialog, which) -> dialog.dismiss());
+        builder.show();
+    }
+
+    private void saveMeasurement(TemperatureResult result, String description) {
+        Log.d("TEMP_DEBUG", "=== saveMeasurement() START ===");
+
+        try {
+            Measurement measurement = new Measurement();
+            measurement.setSensorType(result.getSensorName());
+            measurement.setValue(result.getUserValue());
+            measurement.setUnit(result.getUnit());
+
+            double roundedTemperature = Math.round(result.getTemperature() * 100.0) / 100.0;
+            measurement.setTemperature(roundedTemperature);
+
+            measurement.setDescription(description);
+
+            String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+            String currentDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+
+            measurement.setMeasurementDate(currentDate);
+            measurement.setCreatedAt(currentDateTime);
+
+            Log.d("TEMP_DEBUG", "sensorType: " + measurement.getSensorType());
+            Log.d("TEMP_DEBUG", "value: " + measurement.getValue());
+            Log.d("TEMP_DEBUG", "unit: " + measurement.getUnit());
+            Log.d("TEMP_DEBUG", "temperature: " + measurement.getTemperature());
+            Log.d("TEMP_DEBUG", "description: " + measurement.getDescription());
+            Log.d("TEMP_DEBUG", "measurementDate: " + measurement.getMeasurementDate());
+            Log.d("TEMP_DEBUG", "createdAt: " + measurement.getCreatedAt());
+
+            new Thread(() -> {
+                try {
+                    Log.d("TEMP_DEBUG", "Inserting measurement into DB...");
+                    long id = ((MyApp) getApplication()).getRepository().insertMeasurement(measurement);
+                    Log.d("TEMP_DEBUG", "insertMeasurement returned: " + id);
+
+                    runOnUiThread(() -> {
+                        if (id > 0) {
+                            Toast.makeText(this, "Замер сохранён!", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(this, "Ошибка сохранения (id = " + id + ")", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } catch (Exception e) {
+                    Log.e("TEMP_DEBUG", "ERROR in thread", e);
+                    e.printStackTrace();
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }).start();
+
+        } catch (Exception e) {
+            Log.e("TEMP_DEBUG", "ERROR in saveMeasurement", e);
+            e.printStackTrace();
+            Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 }
