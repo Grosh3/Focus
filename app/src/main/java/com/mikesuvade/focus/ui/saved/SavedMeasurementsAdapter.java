@@ -44,7 +44,7 @@ public class SavedMeasurementsAdapter extends RecyclerView.Adapter<SavedMeasurem
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Measurement item = items.get(position);
-        holder.bind(item, listener);
+        holder.bind(item, listener);  // ← ПЕРЕДАЁМ listener В КАЧЕСТВЕ ПАРАМЕТРА
     }
 
     @Override
@@ -64,7 +64,7 @@ public class SavedMeasurementsAdapter extends RecyclerView.Adapter<SavedMeasurem
             tvDate = itemView.findViewById(R.id.tvDate);
         }
 
-        void bind(Measurement measurement, OnItemClickListener listener) {
+        void bind(Measurement measurement, OnItemClickListener listener) {  // ← ПРИНИМАЕМ listener
             // Описание
             String description = measurement.getDescription();
             if (description != null && !description.isEmpty()) {
@@ -74,11 +74,22 @@ public class SavedMeasurementsAdapter extends RecyclerView.Adapter<SavedMeasurem
                 tvDescription.setVisibility(View.GONE);
             }
 
-            // Информация: Тип датчика, значение → температура
-            String unit = measurement.getUnit() != null ? measurement.getUnit() : "";
-            String info = measurement.getSensorType() + "   " +
-                    measurement.getValue() + " " + unit + " → " +
-                    measurement.getTemperature() + " °C";
+            // Информация о замере
+            String info;
+            if ("мВ".equals(measurement.getUnit())) {
+                info = "(" + measurement.getInputValue() + " + " +
+                        String.format("%.2f", measurement.getColdJunctionMv()) + ") мВ → " +
+                        String.format("%.2f", measurement.getTemperature()) + " °C";
+            } else {
+                if (measurement.getLineResistance() > 0.001) {
+                    info = "(" + measurement.getInputValue() + " + " +
+                            String.format("%.2f", measurement.getLineResistance()) + ") Ом → " +
+                            String.format("%.2f", measurement.getTemperature()) + " °C";
+                } else {
+                    info = measurement.getInputValue() + " Ом → " +
+                            String.format("%.2f", measurement.getTemperature()) + " °C";
+                }
+            }
             tvInfo.setText(info);
 
             // Дата
@@ -90,7 +101,7 @@ public class SavedMeasurementsAdapter extends RecyclerView.Adapter<SavedMeasurem
                 tvDate.setVisibility(View.GONE);
             }
 
-            // Клики
+            // ✅ КЛИКИ — используем переданный listener
             itemView.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onItemClick(measurement);

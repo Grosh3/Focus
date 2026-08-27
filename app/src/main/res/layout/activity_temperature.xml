@@ -34,7 +34,6 @@
             android:textStyle="bold"
             android:gravity="center" />
 
-        <!-- ✅ КНОПКА СПРАВКА (как в MainActivity) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHelp"
             style="@style/Widget.Material3.Button.TextButton"
@@ -43,7 +42,6 @@
             android:text="❓"
             android:textSize="20sp" />
 
-        <!-- ✅ КНОПКА СПИСОК ЗАМЕРОВ (как в MainActivity) -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSavedMeasurements"
             style="@style/Widget.Material3.Button.TextButton"
@@ -82,7 +80,7 @@
         android:gravity="end"
         android:layout_marginTop="4dp" />
 
-    <!-- ✅ ПОЛЕ ХОЛОДНОГО СПАЯ (только для мВ) с единицами измерения -->
+    <!-- ПОЛЕ ХОЛОДНОГО СПАЯ -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -164,10 +162,12 @@
         android:textStyle="bold"
         android:layout_marginBottom="8dp" />
 
+    <!-- ✅ RecyclerView с корректной высотой -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvResults"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingBottom="8dp" />
 

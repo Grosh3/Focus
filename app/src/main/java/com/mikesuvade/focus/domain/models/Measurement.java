@@ -3,14 +3,20 @@ package com.mikesuvade.focus.domain.models;
 public class Measurement {
     private int id;
     private String measurementDate;
-    private double value;
+    private double value;               // для совместимости со старыми записями
+    private double inputValue;          // введённое пользователем
     private String unit;
     private double temperature;
     private String sensorType;
     private String description;
     private String createdAt;
+    private double coldJunctionMv;      // для термопар (мВ)
+    private double lineResistance;      // для термосопротивлений (Ом)
 
-    // Геттеры и сеттеры
+    // ==========================================
+    // ГЕТТЕРЫ И СЕТТЕРЫ
+    // ==========================================
+
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -19,6 +25,9 @@ public class Measurement {
 
     public double getValue() { return value; }
     public void setValue(double value) { this.value = value; }
+
+    public double getInputValue() { return inputValue; }
+    public void setInputValue(double inputValue) { this.inputValue = inputValue; }
 
     public String getUnit() { return unit; }
     public void setUnit(String unit) { this.unit = unit; }
@@ -34,4 +43,10 @@ public class Measurement {
 
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
+    public double getColdJunctionMv() { return coldJunctionMv; }
+    public void setColdJunctionMv(double coldJunctionMv) { this.coldJunctionMv = coldJunctionMv; }
+
+    public double getLineResistance() { return lineResistance; }
+    public void setLineResistance(double lineResistance) { this.lineResistance = lineResistance; }
 }

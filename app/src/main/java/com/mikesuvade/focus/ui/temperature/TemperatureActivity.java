@@ -149,11 +149,21 @@ public class TemperatureActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         rvResults.setLayoutManager(new LinearLayoutManager(this));
+
+        // ✅ СКРЫВАЕМ КЛАВИАТУРУ ПРИ СКРОЛЛЕ
+        rvResults.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                if (newState == RecyclerView.SCROLL_STATE_DRAGGING) {
+                    hideKeyboard();
+                }
+            }
+        });
+
         adapter = new TemperatureResultAdapter();
         adapter.setOnSaveClickListener(this::showSaveDialog);
         rvResults.setAdapter(adapter);
     }
-
     private void setupListeners() {
         etValue.addTextChangedListener(new TextWatcher() {
             @Override
@@ -311,59 +321,50 @@ public class TemperatureActivity extends AppCompatActivity {
     }
 
     private void saveMeasurement(TemperatureResult result, String description) {
-        Log.d("TEMP_DEBUG", "=== saveMeasurement() START ===");
+        Measurement measurement = new Measurement();
+        measurement.setSensorType(result.getSensorName());
+        measurement.setInputValue(result.getUserValue());
+        measurement.setValue(result.getUserValue());  // для совместимости
+        measurement.setUnit(result.getUnit());
 
-        try {
-            Measurement measurement = new Measurement();
-            measurement.setSensorType(result.getSensorName());
-            measurement.setValue(result.getUserValue());
-            measurement.setUnit(result.getUnit());
+        double roundedTemperature = Math.round(result.getTemperature() * 100.0) / 100.0;
+        measurement.setTemperature(roundedTemperature);
+        measurement.setDescription(description);
 
-            double roundedTemperature = Math.round(result.getTemperature() * 100.0) / 100.0;
-            measurement.setTemperature(roundedTemperature);
-
-            measurement.setDescription(description);
-
-            String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-            String currentDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
-
-            measurement.setMeasurementDate(currentDate);
-            measurement.setCreatedAt(currentDateTime);
-
-            Log.d("TEMP_DEBUG", "sensorType: " + measurement.getSensorType());
-            Log.d("TEMP_DEBUG", "value: " + measurement.getValue());
-            Log.d("TEMP_DEBUG", "unit: " + measurement.getUnit());
-            Log.d("TEMP_DEBUG", "temperature: " + measurement.getTemperature());
-            Log.d("TEMP_DEBUG", "description: " + measurement.getDescription());
-            Log.d("TEMP_DEBUG", "measurementDate: " + measurement.getMeasurementDate());
-            Log.d("TEMP_DEBUG", "createdAt: " + measurement.getCreatedAt());
-
-            new Thread(() -> {
-                try {
-                    Log.d("TEMP_DEBUG", "Inserting measurement into DB...");
-                    long id = ((MyApp) getApplication()).getRepository().insertMeasurement(measurement);
-                    Log.d("TEMP_DEBUG", "insertMeasurement returned: " + id);
-
-                    runOnUiThread(() -> {
-                        if (id > 0) {
-                            Toast.makeText(this, "Замер сохранён!", Toast.LENGTH_SHORT).show();
-                        } else {
-                            Toast.makeText(this, "Ошибка сохранения (id = " + id + ")", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                } catch (Exception e) {
-                    Log.e("TEMP_DEBUG", "ERROR in thread", e);
-                    e.printStackTrace();
-                    runOnUiThread(() -> {
-                        Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    });
-                }
-            }).start();
-
-        } catch (Exception e) {
-            Log.e("TEMP_DEBUG", "ERROR in saveMeasurement", e);
-            e.printStackTrace();
-            Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        // ✅ ДЛЯ ТЕРМОПАР
+        if ("мВ".equals(result.getUnit())) {
+            measurement.setColdJunctionMv(result.getColdJunctionMv());
+            measurement.setLineResistance(0);
+        } else {
+            // ✅ ДЛЯ ТЕРМОСОПРОТИВЛЕНИЙ
+            double lineResistance = result.getUserValue() - result.getCorrectedValue();
+            measurement.setColdJunctionMv(0);
+            measurement.setLineResistance(lineResistance > 0 ? lineResistance : 0);
         }
+
+        String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+        String currentDateTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+
+        measurement.setMeasurementDate(currentDate);
+        measurement.setCreatedAt(currentDateTime);
+
+        new Thread(() -> {
+            try {
+                long id = ((MyApp) getApplication()).getRepository().insertMeasurement(measurement);
+                runOnUiThread(() -> {
+                    if (id > 0) {
+                        Toast.makeText(this, "Замер сохранён!", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "Ошибка сохранения", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } catch (Exception e) {
+                Log.e("TEMP_DEBUG", "ERROR saving measurement", e);
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+            }
+        }).start();
     }
+
 }

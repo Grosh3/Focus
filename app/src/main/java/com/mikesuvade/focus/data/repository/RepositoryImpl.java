@@ -704,11 +704,14 @@ public class RepositoryImpl implements IRepository {
         measurement.setId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.MeasurementsEntry._ID)));
         measurement.setMeasurementDate(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.MeasurementsEntry.COLUMN_MEASUREMENT_DATE)));
         measurement.setValue(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.MeasurementsEntry.COLUMN_VALUE)));
+        measurement.setInputValue(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.MeasurementsEntry.COLUMN_INPUT_VALUE)));
         measurement.setUnit(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.MeasurementsEntry.COLUMN_UNIT)));
         measurement.setTemperature(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.MeasurementsEntry.COLUMN_TEMPERATURE)));
         measurement.setSensorType(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.MeasurementsEntry.COLUMN_SENSOR_TYPE)));
         measurement.setDescription(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.MeasurementsEntry.COLUMN_DESCRIPTION)));
         measurement.setCreatedAt(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.MeasurementsEntry.COLUMN_CREATED_AT)));
+        measurement.setColdJunctionMv(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.MeasurementsEntry.COLUMN_COLD_JUNCTION_MV)));
+        measurement.setLineResistance(cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseContract.MeasurementsEntry.COLUMN_LINE_RESISTANCE)));
         return measurement;
     }
 
@@ -837,14 +840,14 @@ public class RepositoryImpl implements IRepository {
         ContentValues values = new ContentValues();
         values.put(DatabaseContract.MeasurementsEntry.COLUMN_MEASUREMENT_DATE, measurement.getMeasurementDate());
         values.put(DatabaseContract.MeasurementsEntry.COLUMN_VALUE, measurement.getValue());
+        values.put(DatabaseContract.MeasurementsEntry.COLUMN_INPUT_VALUE, measurement.getInputValue());
         values.put(DatabaseContract.MeasurementsEntry.COLUMN_UNIT, measurement.getUnit());
         values.put(DatabaseContract.MeasurementsEntry.COLUMN_TEMPERATURE, measurement.getTemperature());
         values.put(DatabaseContract.MeasurementsEntry.COLUMN_SENSOR_TYPE, measurement.getSensorType());
         values.put(DatabaseContract.MeasurementsEntry.COLUMN_DESCRIPTION, measurement.getDescription());
-
-        // ✅ ДОБАВЛЯЕМ created_at!
         values.put(DatabaseContract.MeasurementsEntry.COLUMN_CREATED_AT, measurement.getCreatedAt());
-
+        values.put(DatabaseContract.MeasurementsEntry.COLUMN_COLD_JUNCTION_MV, measurement.getColdJunctionMv());
+        values.put(DatabaseContract.MeasurementsEntry.COLUMN_LINE_RESISTANCE, measurement.getLineResistance());
         return values;
     }
 

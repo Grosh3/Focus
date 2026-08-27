@@ -153,10 +153,13 @@ public final class DatabaseContract {
         public static final String TABLE_NAME = "measurements";
         public static final String COLUMN_MEASUREMENT_DATE = "measurement_date";
         public static final String COLUMN_VALUE = "value";
+        public static final String COLUMN_INPUT_VALUE = "input_value";
         public static final String COLUMN_UNIT = "unit";
         public static final String COLUMN_TEMPERATURE = "temperature";
         public static final String COLUMN_SENSOR_TYPE = "sensor_type";
         public static final String COLUMN_DESCRIPTION = "description";
         public static final String COLUMN_CREATED_AT = "created_at";
+        public static final String COLUMN_COLD_JUNCTION_MV = "cold_junction_mv";
+        public static final String COLUMN_LINE_RESISTANCE = "line_resistance";
     }
 }
