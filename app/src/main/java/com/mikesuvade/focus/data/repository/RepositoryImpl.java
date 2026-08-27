@@ -169,7 +169,7 @@ public class RepositoryImpl implements IRepository {
         );
     }
 
-    // ==================== SENSORS ====================
+// ==================== SENSORS ====================
 
     @Override
     public List<Sensor> getAllSensors() {
@@ -178,7 +178,7 @@ public class RepositoryImpl implements IRepository {
         Cursor cursor = db.query(
                 DatabaseContract.SensorScheduleEntry.TABLE_NAME,
                 null, null, null, null, null,
-                DatabaseContract.SensorScheduleEntry.COLUMN_NAME + " ASC"
+                DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + " ASC"
         );
 
         while (cursor.moveToNext()) {
@@ -212,15 +212,41 @@ public class RepositoryImpl implements IRepository {
         List<Sensor> sensors = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
-        String selection = DatabaseContract.SensorScheduleEntry.COLUMN_NAME + " LIKE ? OR " +
-                DatabaseContract.SensorScheduleEntry.COLUMN_KKS + " LIKE ? OR " +
-                DatabaseContract.SensorScheduleEntry.COLUMN_FULL_NAME + " LIKE ?";
+        // Очищаем запрос от пробелов, дефисов, точек для поиска по ст_маркир
+        String cleanQuery = query.replaceAll("[\\s\\-.]", "");
+        String prefixQuery = query + "%";
+
+        // Для поиска по KKS: если есть цифровой префикс (50HAJ52CT003), ищем без него
+        String kksWithoutPrefix = query.replaceAll("^[0-9]{2,3}", "");
+
+        Log.d("SENSOR_SEARCH", "Query: " + query + ", clean: " + cleanQuery + ", kksWithoutPrefix: " + kksWithoutPrefix);
+
+        String selection =
+                "(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_FULL_NAME + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_LOCATION + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_KKS + ") LIKE LOWER(?)" +
+                        ") OR " +
+                        "(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + ") LIKE LOWER(?))";
 
         String[] args = new String[]{
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%"
+                "%" + query + "%",           // st_marking LIKE %query%
+                "%" + query + "%",           // full_name LIKE %query%
+                "%" + query + "%",           // location LIKE %query%
+                "%" + query + "%",           // name LIKE %query%
+                "%" + query + "%",           // kks LIKE %query%
+                "%" + cleanQuery + "%"       // st_marking LIKE %cleanQuery% (без пробелов)
         };
+
+        // Если есть KKS без префикса и он отличается от исходного запроса
+        if (!kksWithoutPrefix.equals(query) && !kksWithoutPrefix.isEmpty()) {
+            selection += " OR LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_KKS + ") LIKE LOWER(?)";
+            String[] newArgs = new String[args.length + 1];
+            System.arraycopy(args, 0, newArgs, 0, args.length);
+            newArgs[args.length] = "%" + kksWithoutPrefix + "%";
+            args = newArgs;
+        }
 
         Cursor cursor = db.query(
                 DatabaseContract.SensorScheduleEntry.TABLE_NAME,
@@ -228,8 +254,10 @@ public class RepositoryImpl implements IRepository {
                 selection,
                 args,
                 null, null,
-                DatabaseContract.SensorScheduleEntry.COLUMN_NAME + " ASC"
+                DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + " ASC"
         );
+
+        Log.d("SENSOR_SEARCH", "Found: " + cursor.getCount() + " sensors");
 
         while (cursor.moveToNext()) {
             sensors.add(cursorToSensor(cursor));
@@ -267,7 +295,7 @@ public class RepositoryImpl implements IRepository {
         );
     }
 
-    // ==================== SETPOINTS ====================
+// ==================== SETPOINTS ====================
 
     @Override
     public List<Setpoint> getAllSetpoints() {
@@ -276,7 +304,7 @@ public class RepositoryImpl implements IRepository {
         Cursor cursor = db.query(
                 DatabaseContract.SetpointScheduleEntry.TABLE_NAME,
                 null, null, null, null, null,
-                DatabaseContract.SetpointScheduleEntry.COLUMN_NAME + " ASC"
+                DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + " ASC"
         );
 
         while (cursor.moveToNext()) {
@@ -310,14 +338,27 @@ public class RepositoryImpl implements IRepository {
         List<Setpoint> setpoints = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
-        String selection = DatabaseContract.SetpointScheduleEntry.COLUMN_NAME + " LIKE ? OR " +
-                DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + " LIKE ? OR " +
-                DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP + " LIKE ?";
+        // Очищаем запрос от пробелов, дефисов, точек для поиска по position_name
+        String cleanQuery = query.replaceAll("[\\s\\-.]", "");
+
+        Log.d("SETPOINT_SEARCH", "Query: " + query + ", clean: " + cleanQuery);
+
+        String selection =
+                "(LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_SETPOINT_VALUE + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_OPERATION + ") LIKE LOWER(?) OR " +
+                        "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_LOCATION + ") LIKE LOWER(?)" +
+                        ") OR " +
+                        "(LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + ") LIKE LOWER(?))";
 
         String[] args = new String[]{
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%"
+                "%" + query + "%",           // position_name LIKE %query%
+                "%" + query + "%",           // name LIKE %query%
+                "%" + query + "%",           // setpoint_value LIKE %query%
+                "%" + query + "%",           // operation LIKE %query%
+                "%" + query + "%",           // location LIKE %query%
+                "%" + cleanQuery + "%"       // position_name LIKE %cleanQuery% (без пробелов)
         };
 
         Cursor cursor = db.query(
@@ -326,8 +367,10 @@ public class RepositoryImpl implements IRepository {
                 selection,
                 args,
                 null, null,
-                DatabaseContract.SetpointScheduleEntry.COLUMN_NAME + " ASC"
+                DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + " ASC"
         );
+
+        Log.d("SETPOINT_SEARCH", "Found: " + cursor.getCount() + " setpoints");
 
         while (cursor.moveToNext()) {
             setpoints.add(cursorToSetpoint(cursor));
@@ -364,7 +407,36 @@ public class RepositoryImpl implements IRepository {
                 new String[]{String.valueOf(id)}
         );
     }
+    @Override
+    public List<Setpoint> searchSetpointsByGroup(String group) {
+        List<Setpoint> setpoints = new ArrayList<>();
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
 
+        // Убираем пробелы для поиска
+        String cleanGroup = group.replaceAll("\\s+", "");
+
+        String selection =
+                "REPLACE(LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP + "), ' ', '') LIKE LOWER(?)";
+
+        String[] args = new String[]{
+                "%" + cleanGroup + "%"
+        };
+
+        Cursor cursor = db.query(
+                DatabaseContract.SetpointScheduleEntry.TABLE_NAME,
+                null,
+                selection,
+                args,
+                null, null,
+                DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + " ASC"
+        );
+
+        while (cursor.moveToNext()) {
+            setpoints.add(cursorToSetpoint(cursor));
+        }
+        cursor.close();
+        return setpoints;
+    }
     // ==================== CONVERTER ====================
 
     @Override
@@ -687,7 +759,7 @@ public class RepositoryImpl implements IRepository {
 
     private Setpoint cursorToSetpoint(Cursor cursor) {
         Setpoint setpoint = new Setpoint();
-        setpoint.setId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry._ID)));
+        setpoint.setId(cursor.getInt(cursor.getColumnIndexOrThrow("id")));
         setpoint.setName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_NAME)));
         setpoint.setPositionName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME)));
         setpoint.setLocation(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SetpointScheduleEntry.COLUMN_LOCATION)));

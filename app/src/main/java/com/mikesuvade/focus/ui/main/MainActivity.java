@@ -36,6 +36,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.transition.TransitionManager;
 
+import com.google.android.material.textfield.TextInputLayout;
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.GateValve;
@@ -54,10 +55,18 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import com.mikesuvade.focus.domain.models.Sensor;
+import com.mikesuvade.focus.domain.models.Setpoint;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
+    private static final int MODE_MAIN = 0;
+    private static final int MODE_SENSORS = 1;
+    private static final int MODE_SETPOINTS = 2;
+    private int currentMode = MODE_MAIN;
+
+
 
     // UI элементы
     private ConstraintLayout rootLayout;
@@ -87,6 +96,8 @@ public class MainActivity extends AppCompatActivity {
 
     // Адаптер и ViewModel
     private GateValveAdapter adapter;
+    private SensorAdapter sensorAdapter;
+    private SetpointAdapter setpointAdapter;
     private MainViewModel viewModel;
 
     // Списки для хранения состояния раскрытия элементов
@@ -145,6 +156,7 @@ public class MainActivity extends AppCompatActivity {
         setupListeners();
         setupObservers();
         setupEmptySearchKeyboardPadding();
+        updateSearchHint();
     }
 
     private void initViews() {
@@ -172,6 +184,10 @@ public class MainActivity extends AppCompatActivity {
         progressOverlay = findViewById(R.id.progressOverlay);
         cardOverlayDescription = findViewById(R.id.cardOverlayDescription);
 
+        // 🔥 ИНИЦИАЛИЗАЦИЯ АДАПТЕРОВ
+        sensorAdapter = new SensorAdapter();
+        setpointAdapter = new SetpointAdapter();
+
         // ✅ ДОЛГИЙ ТАП ПО КНОПКЕ
         btnNewValve.setOnLongClickListener(v -> {
             if (AppState.getInstance().hasActiveSession()) {
@@ -184,7 +200,6 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
     }
-
     private void setupViewModel() {
         IRepository repository = ((MyApp) getApplication()).getRepository();
 
@@ -253,6 +268,8 @@ public class MainActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         rvGateValves.setLayoutManager(new LinearLayoutManager(this));
         adapter = new GateValveAdapter();
+        sensorAdapter = new SensorAdapter();
+        setpointAdapter = new SetpointAdapter();
 
         rvGateValves.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -263,35 +280,35 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // ==========================================
+        // 1️⃣ АДАПТЕР ЗАДВИЖЕК
+        // ==========================================
         adapter.setOnItemClickListener((valve, position) -> {
             toggleExpanded(position);
         });
 
-        adapter.setOnItemLongClickListener(new GateValveAdapter.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(GateValve valve) {
-                String displayName = valve.getIsy();
-                if (displayName == null || displayName.isEmpty()) {
-                    displayName = valve.getName();
-                }
-                if (displayName == null || displayName.isEmpty()) {
-                    displayName = "Без названия";
-                }
-
-                new AlertDialog.Builder(MainActivity.this)
-                        .setTitle("Редактировать задвижку?")
-                        .setMessage("Вы хотите отредактировать \"" + displayName + "\"?")
-                        .setPositiveButton("Редактировать", (dialog, which) -> {
-                            Intent intent = new Intent(MainActivity.this, DetailActivity.class);
-                            intent.putExtra("valve_id", valve.getId());
-                            detailResultLauncher.launch(intent);
-                        })
-                        .setNegativeButton("Отмена", (dialog, which) -> {
-                            dialog.dismiss();
-                        })
-                        .show();
-                return true;
+        adapter.setOnItemLongClickListener(valve -> {
+            String displayName = valve.getIsy();
+            if (displayName == null || displayName.isEmpty()) {
+                displayName = valve.getName();
             }
+            if (displayName == null || displayName.isEmpty()) {
+                displayName = "Без названия";
+            }
+
+            new AlertDialog.Builder(MainActivity.this)
+                    .setTitle("Редактировать задвижку?")
+                    .setMessage("Вы хотите отредактировать \"" + displayName + "\"?")
+                    .setPositiveButton("Редактировать", (dialog, which) -> {
+                        Intent intent = new Intent(MainActivity.this, DetailActivity.class);
+                        intent.putExtra("valve_id", valve.getId());
+                        detailResultLauncher.launch(intent);
+                    })
+                    .setNegativeButton("Отмена", (dialog, which) -> {
+                        dialog.dismiss();
+                    })
+                    .show();
+            return true;
         });
 
         adapter.setOnCheckBoxClickListener((valve, position, isChecked) -> {
@@ -343,29 +360,114 @@ public class MainActivity extends AppCompatActivity {
             showOverlay(title, imageData, description);
         });
 
+        // ==========================================
+        // 2️⃣ АДАПТЕР ДАТЧИКОВ (НОВЫЙ)
+        // ==========================================
+        sensorAdapter.setOnItemClickListener((sensor, position) -> {
+            Log.d("EXPAND_SENSOR", "onItemClick: position=" + position + ", name=" + sensor.getFullName());
+            toggleExpanded(position);
+        });
+
+        sensorAdapter.setOnItemLongClickListener((sensor, position) -> {
+            new AlertDialog.Builder(this)
+                    .setTitle("Редактировать датчик?")
+                    .setMessage("Вы хотите отредактировать \"" + sensor.getStMarkir() + "\"?")
+                    .setPositiveButton("Редактировать", (dialog, which) -> {
+                        Toast.makeText(this, "Редактирование датчика", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton("Удалить", (dialog, which) -> {
+                        Toast.makeText(this, "Удаление датчика", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNeutralButton("Отмена", null)
+                    .show();
+            return true;
+        });
+
+        // ==========================================
+        // 3️⃣ АДАПТЕР УСТАВОК (НОВЫЙ)
+        // ==========================================
+        setpointAdapter.setOnItemClickListener((setpoint, position) -> {
+            Log.d("EXPAND_SETPOINT", "onItemClick: position=" + position + ", name=" + setpoint.getName());
+            toggleExpanded(position);
+        });
+
+        setpointAdapter.setOnItemLongClickListener((setpoint, position) -> {
+            new AlertDialog.Builder(this)
+                    .setTitle("Редактировать уставку?")
+                    .setMessage("Вы хотите отредактировать \"" + setpoint.getPositionName() + "\"?")
+                    .setPositiveButton("Редактировать", (dialog, which) -> {
+                        Toast.makeText(this, "Редактирование уставки", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton("Удалить", (dialog, which) -> {
+                        Toast.makeText(this, "Удаление уставки", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNeutralButton("Отмена", null)
+                    .show();
+            return true;
+        });
+
+        // По умолчанию устанавливаем адаптер задвижек
         rvGateValves.setAdapter(adapter);
     }
 
     private void toggleExpanded(int position) {
+        Log.d("EXPAND_1", "=== toggleExpanded START ===");
+        Log.d("EXPAND", "position = " + position);
+        Log.d("EXPAND", "currentMode = " + currentMode);
+        Log.d("EXPAND", "expandedPositions = " + expandedPositions);
+
         if (expandedPositions.contains(position)) {
+            Log.d("EXPAND", "position already expanded, collapsing");
             expandedPositions.remove(Integer.valueOf(position));
-            adapter.setExpanded(position, false);
+            if (currentMode == MODE_SENSORS) {
+                Log.d("EXPAND_SENSOR", "collapsing sensor at position " + position);
+                sensorAdapter.setExpanded(position, false);
+            } else if (currentMode == MODE_SETPOINTS) {
+                Log.d("EXPAND_SETPOINT", "collapsing setpoint at position " + position);
+                setpointAdapter.setExpanded(position, false);
+            } else {
+                Log.d("EXPAND_VALVE", "collapsing valve at position " + position);
+                adapter.setExpanded(position, false);
+            }
             return;
         }
 
         int previousExpanded = -1;
         if (!expandedPositions.isEmpty()) {
             previousExpanded = expandedPositions.get(0);
+            Log.d("EXPAND", "previousExpanded = " + previousExpanded);
         }
 
         expandedPositions.clear();
+        Log.d("EXPAND", "cleared expandedPositions");
 
         if (previousExpanded != -1 && previousExpanded != position) {
-            adapter.setExpanded(previousExpanded, false);
+            if (currentMode == MODE_SENSORS) {
+                Log.d("EXPAND_SENSOR", "collapsing previous sensor at " + previousExpanded);
+                sensorAdapter.setExpanded(previousExpanded, false);
+            } else if (currentMode == MODE_SETPOINTS) {
+                Log.d("EXPAND_SETPOINT", "collapsing previous setpoint at " + previousExpanded);
+                setpointAdapter.setExpanded(previousExpanded, false);
+            } else {
+                Log.d("EXPAND_VALVE", "collapsing previous valve at " + previousExpanded);
+                adapter.setExpanded(previousExpanded, false);
+            }
         }
 
         expandedPositions.add(position);
-        adapter.setExpanded(position, true);
+        Log.d("EXPAND", "added position " + position + " to expandedPositions");
+
+        if (currentMode == MODE_SENSORS) {
+            Log.d("EXPAND_SENSOR", "expanding sensor at position " + position);
+            sensorAdapter.setExpanded(position, true);
+        } else if (currentMode == MODE_SETPOINTS) {
+            Log.d("EXPAND_SETPOINT", "expanding setpoint at position " + position);
+            setpointAdapter.setExpanded(position, true);
+        } else {
+            Log.d("EXPAND_VALVE", "expanding valve at position " + position);
+            adapter.setExpanded(position, true);
+        }
+        Log.d("EXPAND", "=== toggleExpanded END ===");
     }
 
     // ==========================================
@@ -458,7 +560,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void deactivateSearchState() {
-        if (!isSearchActive) return;
+        // Убираем проверку if (!isSearchActive) return;
+        // Чтобы метод всегда выполнялся
         isSearchActive = false;
 
         TransitionManager.beginDelayedTransition(rootLayout);
@@ -487,29 +590,32 @@ public class MainActivity extends AppCompatActivity {
     public void onBackPressed() {
         if (overlayDetail.getVisibility() == View.VISIBLE) {
             hideOverlay();
+        } else if (currentMode != MODE_MAIN) {
+            showMainMode();
+            // Принудительно обновляем layout
+            rootLayout.requestLayout();
         } else if (isSearchActive) {
             deactivateSearchState();
+            rootLayout.requestLayout();
         } else {
             super.onBackPressed();
         }
     }
-
-    // ==========================================
     // 🔍 ПОИСК И СЛУШАТЕЛИ ВВОДА
-    // ==========================================
+// ==========================================
 
     private void setupSearch() {
         rvGateValves.setVisibility(View.GONE);
         tvEmptySearch.setVisibility(View.GONE);
 
         etSearch.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus && !isSearchActive) {
+            if (hasFocus && !isSearchActive && currentMode == MODE_MAIN) {
                 activateSearchState();
             }
         });
 
         etSearch.setOnClickListener(v -> {
-            if (!isSearchActive) {
+            if (!isSearchActive && currentMode == MODE_MAIN) {
                 activateSearchState();
             }
         });
@@ -521,13 +627,37 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 String query = s.toString().trim();
-                if (query.length() >= 2) {
-                    viewModel.search(query);
-                } else {
-                    rvGateValves.setVisibility(View.GONE);
-                    tvEmptySearch.setVisibility(View.GONE);
-                    if (query.isEmpty()) {
-                        viewModel.search("");
+
+                if (currentMode == MODE_MAIN) {
+                    // Главный режим - поиск задвижек
+                    if (query.length() >= 2 || query.equalsIgnoreCase("#все")) {
+                        viewModel.search(query);
+                    } else {
+                        rvGateValves.setVisibility(View.GONE);
+                        tvEmptySearch.setVisibility(View.GONE);
+                        if (query.isEmpty()) {
+                            viewModel.search("");
+                        }
+                    }
+                } else if (currentMode == MODE_SENSORS) {
+                    // Режим датчиков
+                    if (query.length() >= 2 || query.equalsIgnoreCase("#все")) {
+                        searchSensors(query);
+                    } else {
+                        // 🔥 ПРИ ПУСТОМ ЗАПРОСЕ - ОЧИЩАЕМ СПИСОК
+                        sensorAdapter.updateData(new ArrayList<>());
+                        rvGateValves.setVisibility(View.VISIBLE);
+                        tvEmptySearch.setVisibility(View.GONE);
+                    }
+                } else if (currentMode == MODE_SETPOINTS) {
+                    // Режим уставок
+                    if (query.length() >= 2 || query.equalsIgnoreCase("#все")) {
+                        searchSetpoints(query);
+                    } else {
+                        // 🔥 ПРИ ПУСТОМ ЗАПРОСЕ - ОЧИЩАЕМ СПИСОК
+                        setpointAdapter.updateData(new ArrayList<>());
+                        rvGateValves.setVisibility(View.VISIBLE);
+                        tvEmptySearch.setVisibility(View.GONE);
                     }
                 }
             }
@@ -590,14 +720,14 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnSetpoints.setOnClickListener(v -> {
-            Toast.makeText(this, "Открыть журнал уставок", Toast.LENGTH_SHORT).show();
+            // Переключаемся в режим уставок
+            showSetpointsMode();
         });
 
         btnSensors.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, SavedMeasurementsActivity.class);
-            startActivity(intent);
+            // Переключаемся в режим датчиков
+            showSensorsMode();
         });
-
         // ✅ ЗАМЕР ТЕМПЕРАТУРЫ → ДИАЛОГ ВЫБОРА
         btnConverter.setOnClickListener(v -> {
             showMeasurementTypeDialog();
@@ -810,7 +940,226 @@ public class MainActivity extends AppCompatActivity {
             detailResultLauncher.launch(intent);
         });
     }
+    // ==========================================
+// 🔥 ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ
+// ==========================================
 
+    private void showMainMode() {
+        currentMode = MODE_MAIN;
+        Log.d(TAG, "=== showMainMode ===");
+
+        // Показываем все кнопки
+        updateTopButtonsVisibility(true);
+
+        bottomButtons.setVisibility(View.VISIBLE);
+        rvGateValves.setAdapter(adapter);
+        rvGateValves.setVisibility(View.GONE);
+
+        etSearch.setText("");
+        etSearch.clearFocus();
+        isSearchActive = false;
+
+        deactivateSearchState();
+
+        btnNewValve.setText(R.string.new_valve);
+        btnNewValve.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, DetailActivity.class);
+            intent.putExtra(DetailActivity.EXTRA_IS_NEW, true);
+            detailResultLauncher.launch(intent);
+        });
+
+        updateSearchHint();
+        refreshData();
+        updateButtonState();
+    }
+    private void showSensorsMode() {
+        currentMode = MODE_SENSORS;
+        Log.d(TAG, "=== showSensorsMode ===");
+
+        // Скрываем Списки и Настройки
+        updateTopButtonsVisibility(false);
+
+        bottomButtons.setVisibility(View.GONE);
+        rvGateValves.setAdapter(sensorAdapter);
+        rvGateValves.setVisibility(View.VISIBLE);
+
+        isSearchActive = true;
+        activateSearchState();
+
+        btnNewValve.setText("НОВАЯ ПОЗИЦИЯ");
+        btnNewValve.setOnClickListener(v -> {
+            Toast.makeText(this, "Создание новой позиции датчика", Toast.LENGTH_SHORT).show();
+        });
+
+        sensorAdapter.updateData(new ArrayList<>());
+        tvEmptySearch.setVisibility(View.GONE);
+
+        etSearch.setText("");
+        etSearch.requestFocus();
+        showKeyboard();
+        updateSearchHint();
+    }
+
+    private void showSetpointsMode() {
+        currentMode = MODE_SETPOINTS;
+        Log.d(TAG, "=== showSetpointsMode ===");
+
+        // Скрываем Списки и Настройки
+        updateTopButtonsVisibility(false);
+
+        bottomButtons.setVisibility(View.GONE);
+        rvGateValves.setAdapter(setpointAdapter);
+        rvGateValves.setVisibility(View.VISIBLE);
+
+        isSearchActive = true;
+        activateSearchState();
+
+        btnNewValve.setText("НОВАЯ УСТАВКА");
+        btnNewValve.setOnClickListener(v -> {
+            Toast.makeText(this, "Создание новой уставки", Toast.LENGTH_SHORT).show();
+        });
+
+        setpointAdapter.updateData(new ArrayList<>());
+        tvEmptySearch.setVisibility(View.GONE);
+
+        etSearch.setText("");
+        etSearch.requestFocus();
+        showKeyboard();
+        updateSearchHint();
+    }
+    private void updateTopButtonsVisibility(boolean showExtraButtons) {
+        if (showExtraButtons) {
+            // Режим 1 - показываем все кнопки
+            btnHelp.setVisibility(View.VISIBLE);
+            btnLists.setVisibility(View.VISIBLE);
+            btnSettings.setVisibility(View.VISIBLE);
+        } else {
+            // Режимы 2 и 3 - скрываем Списки и Настройки, оставляем только Справку
+            btnHelp.setVisibility(View.VISIBLE);
+            btnLists.setVisibility(View.GONE);
+            btnSettings.setVisibility(View.GONE);
+        }
+    }
+    // ==========================================
+// 🔧 ЗАГРУЗКА ДАННЫХ
+// ==========================================
+
+    private void loadAllSensors() {
+        new Thread(() -> {
+            try {
+                IRepository repository = ((MyApp) getApplication()).getRepository();
+                List<Sensor> sensors = repository.getAllSensors();
+                runOnUiThread(() -> {
+                    sensorAdapter.updateData(sensors);
+                    tvEmptySearch.setVisibility(sensors.isEmpty() ? View.VISIBLE : View.GONE);
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    private void loadAllSetpoints() {
+        Log.d("POINT", "=== loadAllSetpoints START ===");
+        new Thread(() -> {
+            try {
+                IRepository repository = ((MyApp) getApplication()).getRepository();
+                List<Setpoint> setpoints = repository.getAllSetpoints();
+                Log.d("POINT", "all setpoints size = " + setpoints.size());
+
+                for (int i = 0; i < setpoints.size(); i++) {
+                    Setpoint sp = setpoints.get(i);
+                    Log.d("POINT", "  ALL [" + i + "] position=" + sp.getPositionName() +
+                            ", name=" + sp.getName());
+                }
+
+                runOnUiThread(() -> {
+                    setpointAdapter.updateData(setpoints);
+                    tvEmptySearch.setVisibility(setpoints.isEmpty() ? View.VISIBLE : View.GONE);
+                });
+                Log.d("POINT", "=== loadAllSetpoints END ===");
+            } catch (Exception e) {
+                Log.e("POINT", "Error loading setpoints", e);
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    private void searchSensors(String query) {
+        Log.d(TAG, "searchSensors: query = " + query);
+        new Thread(() -> {
+            try {
+                IRepository repository = ((MyApp) getApplication()).getRepository();
+
+                // Проверяем команду #ВСЕ
+                if (query.trim().equalsIgnoreCase("#все")) {
+                    List<Sensor> all = repository.getAllSensors();
+                    runOnUiThread(() -> {
+                        sensorAdapter.updateData(all);
+                        tvEmptySearch.setVisibility(all.isEmpty() ? View.VISIBLE : View.GONE);
+                    });
+                    return;
+                }
+
+                List<Sensor> results = repository.searchSensors(query);
+                Log.d(TAG, "searchSensors: results size = " + results.size());
+                runOnUiThread(() -> {
+                    sensorAdapter.updateData(results);
+                    tvEmptySearch.setVisibility(results.isEmpty() ? View.VISIBLE : View.GONE);
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "searchSensors error", e);
+                e.printStackTrace();
+            }
+        }).start();
+    }
+    private void searchSetpoints(String query) {
+        Log.d("POINT", "=== searchSetpoints START ===");
+        Log.d("POINT", "query = " + query);
+
+        new Thread(() -> {
+            try {
+                IRepository repository = ((MyApp) getApplication()).getRepository();
+
+                // Проверяем команду #ВСЕ
+                if (query.trim().equalsIgnoreCase("#все")) {
+                    Log.d("POINT", "command #все detected, loading all setpoints");
+                    List<Setpoint> all = repository.getAllSetpoints();
+                    Log.d("POINT", "all setpoints size = " + all.size());
+                    runOnUiThread(() -> {
+                        setpointAdapter.updateData(all);
+                        tvEmptySearch.setVisibility(all.isEmpty() ? View.VISIBLE : View.GONE);
+                    });
+                    return;
+                }
+
+                // 🔥 Проверяем, начинается ли запрос с #
+                if (query.trim().startsWith("#")) {
+                    String groupQuery = query.trim().substring(1).replaceAll("\\s+", "");
+                    Log.d("POINT", "search by equipment_group: " + groupQuery);
+                    List<Setpoint> results = repository.searchSetpointsByGroup(groupQuery);
+                    runOnUiThread(() -> {
+                        setpointAdapter.updateData(results);
+                        tvEmptySearch.setVisibility(results.isEmpty() ? View.VISIBLE : View.GONE);
+                    });
+                    return;
+                }
+
+                // Обычный поиск
+                List<Setpoint> results = repository.searchSetpoints(query);
+                Log.d("POINT", "search results size = " + results.size());
+
+                runOnUiThread(() -> {
+                    setpointAdapter.updateData(results);
+                    tvEmptySearch.setVisibility(results.isEmpty() ? View.VISIBLE : View.GONE);
+                });
+                Log.d("POINT", "=== searchSetpoints END ===");
+            } catch (Exception e) {
+                Log.e("POINT", "Search error", e);
+                e.printStackTrace();
+            }
+        }).start();
+    }
     private void createNewSession() {
         Toast.makeText(this, "createNewSession START", Toast.LENGTH_SHORT).show();
 
@@ -946,7 +1295,34 @@ public class MainActivity extends AppCompatActivity {
 
         listDetailResultLauncher.launch(intent);
     }
-
+    private void showKeyboard() {
+        if (etSearch != null) {
+            etSearch.requestFocus();
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.showSoftInput(etSearch, InputMethodManager.SHOW_IMPLICIT);
+            }
+        }
+    }
+    private void updateSearchHint() {
+        TextInputLayout searchLayout = findViewById(R.id.searchLayout);
+        if (searchLayout != null) {
+            switch (currentMode) {
+                case MODE_MAIN:
+                    searchLayout.setHint(R.string.search_hint);
+                    break;
+                case MODE_SENSORS:
+                    searchLayout.setHint(R.string.search_hint_sensors);
+                    break;
+                case MODE_SETPOINTS:
+                    searchLayout.setHint(R.string.search_hint_setpoints);
+                    break;
+                default:
+                    searchLayout.setHint(R.string.search_hint);
+                    break;
+            }
+        }
+    }
     @Override
     protected void onResume() {
         super.onResume();

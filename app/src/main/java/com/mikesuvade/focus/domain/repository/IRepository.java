@@ -17,7 +17,6 @@ public interface IRepository {
     long insertGateValve(GateValve valve);
     int updateGateValve(GateValve valve);
     int deleteGateValve(int id);
-
     // ==================== SENSORS ====================
     List<Sensor> getAllSensors();
     Sensor getSensorByKks(String kks);
@@ -30,6 +29,7 @@ public interface IRepository {
     List<Setpoint> getAllSetpoints();
     Setpoint getSetpointById(int id);
     List<Setpoint> searchSetpoints(String query);
+    List<Setpoint> searchSetpointsByGroup(String group);
     long insertSetpoint(Setpoint setpoint);
     int updateSetpoint(Setpoint setpoint);
     int deleteSetpoint(int id);

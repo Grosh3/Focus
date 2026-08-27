@@ -30,46 +30,37 @@ public final class DatabaseContract {
         public static final String COLUMN_DESCRIPTION_BLOCKING_PERIFER = "description_blocking_perifer";
         public static final String COLUMN_LOCATION_DESCRIPTION = "location_description";
         public static final String COLUMN_IS_EDITED = "is_edited";
-
-        // ==========================================
-        // 🔧 ТОЛЬКО ОДНА КОЛОНКА!
-        // ==========================================
         public static final String COLUMN_EDITED_AT = "edited_at";
     }
-    // ==================== GATE VALVES USER ====================
-
 
     // ==================== SENSOR SCHEDULE ====================
     public static class SensorScheduleEntry implements BaseColumns {
         public static final String TABLE_NAME = "sensor_schedule";
-        public static final String COLUMN_KEYNUM = "KEYNUM";
-        public static final String COLUMN_FA = "FA";
-        public static final String COLUMN_KKS = "KKS";
-        public static final String COLUMN_ST_MARKIR = "ст_маркир";
-        public static final String COLUMN_FULL_NAME = "полное_название";
-        public static final String COLUMN_NAME = "NAME";
-        public static final String COLUMN_MEDIA = "MEDIA";
-        public static final String COLUMN_UNITS = "UNITS";
-        public static final String COLUMN_NOMINAL = "NOMINAL";
-        public static final String COLUMN_VOL_MIN = "VOL_MIN";
-        public static final String COLUMN_VOL_MAX = "VOL_MAX";
-        public static final String COLUMN_SPEED = "SPEED";
-        public static final String COLUMN_FAULT_PAR = "FAULT_PAR";
-        public static final String COLUMN_INSTEAD_F = "INSTEAD_F";
-        public static final String COLUMN_FILTER = "FILTER";
-        public static final String COLUMN_MODEL_SENSOR = "модель_датч";
-        public static final String COLUMN_MOD_SENSOR = "мод_датчика";
-        public static final String COLUMN_ADDITIONAL_INFO = "доп_сведения";
+        public static final String COLUMN_KEYNUM = "keynum";
+        public static final String COLUMN_FA = "fa";
+        public static final String COLUMN_KKS = "kks";
+        public static final String COLUMN_ST_MARKIR = "st_marking";      // ст.маркир
+        public static final String COLUMN_FULL_NAME = "full_name";       // полное название
+        public static final String COLUMN_NAME = "name";
+        public static final String COLUMN_MEDIA = "media";
+        public static final String COLUMN_UNITS = "units";
+        public static final String COLUMN_NOMINAL = "nominal";
+        public static final String COLUMN_VOL_MIN = "vol_min";
+        public static final String COLUMN_VOL_MAX = "vol_max";
+        public static final String COLUMN_SPEED = "speed";
+        public static final String COLUMN_FAULT_PAR = "fault_param";
+        public static final String COLUMN_INSTEAD_F = "instead_f";
+        public static final String COLUMN_FILTER = "filter";
+        public static final String COLUMN_MODEL_SENSOR = "sensor_model";  // модель датчика
+        public static final String COLUMN_MOD_SENSOR = "sensor_mod";      // мод датчика
+        public static final String COLUMN_ADDITIONAL_INFO = "additional_info"; // доп сведения
         public static final String COLUMN_MIN = "min";
         public static final String COLUMN_MAX = "max";
-        public static final String COLUMN_MEASURE_UNIT = "ед_изм";
-        public static final String COLUMN_LOCATION = "место_установки";
-        public static final String COLUMN_CVA = "CVA";
-        public static final String COLUMN_DAMPING_TIME = "вр_демпф";
+        public static final String COLUMN_MEASURE_UNIT = "unit_measure";  // ед.изм
+        public static final String COLUMN_LOCATION = "installation_location"; // место установки
+        public static final String COLUMN_CVA = "cva";
+        public static final String COLUMN_DAMPING_TIME = "damping_time";  // вр.демпф
     }
-
-    // ==================== SENSOR SCHEDULE USER ====================
-
 
     // ==================== SETPOINT SCHEDULE ====================
     public static class SetpointScheduleEntry implements BaseColumns {
@@ -84,10 +75,7 @@ public final class DatabaseContract {
         public static final String COLUMN_EQUIPMENT_GROUP = "equipment_group";
     }
 
-    // ==================== SETPOINT SCHEDULE USER ====================
-
-
-    // ==================== CONVERTER TABLES (термометры/термопары) ====================
+    // ==================== CONVERTER TABLES ====================
     public static class Gr21Entry implements BaseColumns {
         public static final String TABLE_NAME = "gr21";
         public static final String COLUMN_SIGNAL_VALUE = "signal_value";
@@ -130,11 +118,9 @@ public final class DatabaseContract {
         public static final String COLUMN_SESSION_ID = "session_id";
         public static final String COLUMN_SAVE_DATE = "save_date";
         public static final String COLUMN_EQUIPMENT_DESCRIPTION = "equipment_description";
-
     }
 
     // ==================== VALVE ITEMS ====================
-
     public static class ValveItemsEntry implements BaseColumns {
         public static final String TABLE_NAME = "valve_items";
         public static final String COLUMN_ITEM_ID = "item_id";
@@ -162,4 +148,5 @@ public final class DatabaseContract {
         public static final String COLUMN_COLD_JUNCTION_MV = "cold_junction_mv";
         public static final String COLUMN_LINE_RESISTANCE = "line_resistance";
     }
+    
 }

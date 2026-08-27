@@ -1,5 +1,6 @@
 package com.mikesuvade.focus.ui.main;
 
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -91,13 +92,20 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
     }
 
     public void setExpanded(int position, boolean expanded) {
+        Log.d("EXPAND", "SetpointAdapter.setExpanded: position=" + position + ", expanded=" + expanded);
+        Log.d("EXPAND", "expandedPositions before: " + expandedPositions);
+
         if (expanded) {
             if (!expandedPositions.contains(position)) {
                 expandedPositions.add(position);
+                Log.d("EXPAND", "added position " + position + " to expandedPositions");
             }
         } else {
             expandedPositions.remove(Integer.valueOf(position));
+            Log.d("EXPAND", "removed position " + position + " from expandedPositions");
         }
+
+        Log.d("EXPAND", "expandedPositions after: " + expandedPositions);
         notifyItemChanged(position);
     }
 

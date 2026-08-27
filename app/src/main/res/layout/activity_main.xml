@@ -95,7 +95,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:hint="@string/search_hint"
+            android:hint="Поиск"
             app:boxCornerRadiusBottomEnd="16dp"
             app:boxCornerRadiusBottomStart="16dp"
             app:boxCornerRadiusTopEnd="16dp"
@@ -229,7 +229,7 @@
             app:layout_constraintTop_toTopOf="@id/btnOverlayBack"
             app:layout_constraintBottom_toBottomOf="@id/btnOverlayBack" />
 
-        <!-- Изображение схемы (Упирается снизу строго в карточку описания) -->
+        <!-- Изображение схемы -->
         <ImageView
             android:id="@+id/ivOverlayImage"
             android:layout_width="0dp"
@@ -247,7 +247,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
-        <!-- Прогресс-бар (центрирован по картинке) -->
+        <!-- Прогресс-бар -->
         <ProgressBar
             android:id="@+id/progressOverlay"
             android:layout_width="48dp"
@@ -259,7 +259,7 @@
             app:layout_constraintStart_toStartOf="@id/ivOverlayImage"
             app:layout_constraintTop_toTopOf="@id/ivOverlayImage" />
 
-        <!-- Карточка с описанием (Фундамент низа) -->
+        <!-- Карточка с описанием -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardOverlayDescription"
             android:layout_width="0dp"
@@ -284,7 +284,5 @@
         </com.google.android.material.card.MaterialCardView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>
