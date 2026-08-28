@@ -28,11 +28,17 @@ public class Sensor {
     private String dampingTime;
 
     // Для пользовательских таблиц
-    private String originalKks;
-    private String editedAt;
+    private String originalKks;   // KKS из справочника
+    private int isDeleted;        // 0 - активна, 1 - удалена
+    private int isEdited;         // 0 - не редактировалось, 1 - редактировалось
+    private String editedAt;      // Дата редактирования
+    private String createdAt;     // Дата создания копии
     private boolean isCustom;
 
-    // Геттеры и сеттеры (все поля)
+    // ==========================================
+    // ГЕТТЕРЫ И СЕТТЕРЫ
+    // ==========================================
+
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -108,17 +114,47 @@ public class Sensor {
     public String getDampingTime() { return dampingTime; }
     public void setDampingTime(String dampingTime) { this.dampingTime = dampingTime; }
 
+    // ==========================================
+    // ПОЛЬЗОВАТЕЛЬСКИЕ ПОЛЯ - ГЕТТЕРЫ И СЕТТЕРЫ
+    // ==========================================
+
     public String getOriginalKks() { return originalKks; }
     public void setOriginalKks(String originalKks) { this.originalKks = originalKks; }
+
+    public int getIsDeleted() { return isDeleted; }
+    public void setIsDeleted(int isDeleted) { this.isDeleted = isDeleted; }
+
+    public int getIsEdited() { return isEdited; }
+    public void setIsEdited(int isEdited) { this.isEdited = isEdited; }
 
     public String getEditedAt() { return editedAt; }
     public void setEditedAt(String editedAt) { this.editedAt = editedAt; }
 
+    public String getCreatedAt() { return createdAt; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
     public boolean isCustom() { return isCustom; }
     public void setCustom(boolean custom) { isCustom = custom; }
 
+    // ==========================================
+    // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+    // ==========================================
+
     @Override
     public String toString() {
-        return name + " (" + kks + ")";
+        return (name != null ? name : "Без названия") + " (" + (kks != null ? kks : "нет KKS") + ")";
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Sensor that = (Sensor) obj;
+        return kks != null && kks.equals(that.kks);
+    }
+
+    @Override
+    public int hashCode() {
+        return kks != null ? kks.hashCode() : 0;
     }
 }

@@ -1,5 +1,6 @@
 package com.mikesuvade.focus.ui.saved;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,7 +28,9 @@ public class SavedListAdapter extends RecyclerView.Adapter<SavedListAdapter.View
     }
 
     public void setSessions(List<ValveWorkSession> sessions) {
+        Log.d("SESSY", "SavedListAdapter.setSessions: " + (sessions != null ? sessions.size() : 0));
         this.sessions = sessions != null ? sessions : new ArrayList<>();
+        Log.d("SESSY", "SavedListAdapter: calling notifyDataSetChanged()");
         notifyDataSetChanged();
     }
 

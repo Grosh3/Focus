@@ -7,12 +7,13 @@ import androidx.lifecycle.ViewModel;
 import com.mikesuvade.focus.domain.models.Measurement;
 import com.mikesuvade.focus.domain.repository.IRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class SavedMeasurementsViewModel extends ViewModel {
 
     private final IRepository repository;
-    private final MutableLiveData<List<Measurement>> measurements = new MutableLiveData<>();
+    private final MutableLiveData<List<Measurement>> measurements = new MutableLiveData<>(new ArrayList<>());
 
     public SavedMeasurementsViewModel(IRepository repository) {
         this.repository = repository;
@@ -25,19 +26,9 @@ public class SavedMeasurementsViewModel extends ViewModel {
     public void loadMeasurements() {
         new Thread(() -> {
             try {
-                List<Measurement> result = repository.getAllMeasurements();
+                // 🔥 ИСПРАВЛЕНО: используем ПОЛЬЗОВАТЕЛЬСКУЮ БД
+                List<Measurement> result = repository.getAllUserMeasurements();
                 measurements.postValue(result);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }).start();
-    }
-
-    public void deleteMeasurement(int id) {
-        new Thread(() -> {
-            try {
-                repository.deleteMeasurement(id);
-                loadMeasurements();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -47,7 +38,20 @@ public class SavedMeasurementsViewModel extends ViewModel {
     public void renameMeasurement(int id, String newDescription) {
         new Thread(() -> {
             try {
-                repository.updateMeasurementDescription(id, newDescription);
+                // 🔥 ИСПРАВЛЕНО: используем ПОЛЬЗОВАТЕЛЬСКУЮ БД
+                repository.updateUserMeasurementDescription(id, newDescription);
+                loadMeasurements();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    public void deleteMeasurement(int id) {
+        new Thread(() -> {
+            try {
+                // 🔥 ИСПРАВЛЕНО: используем ПОЛЬЗОВАТЕЛЬСКУЮ БД
+                repository.deleteUserMeasurement(id);
                 loadMeasurements();
             } catch (Exception e) {
                 e.printStackTrace();

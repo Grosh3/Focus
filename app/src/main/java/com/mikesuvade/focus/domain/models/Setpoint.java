@@ -12,11 +12,17 @@ public class Setpoint {
     private String equipmentGroup;
 
     // Для пользовательских таблиц
-    private int originalId;
-    private String editedAt;
+    private int originalId;       // ID из справочника
+    private int isDeleted;        // 0 - активна, 1 - удалена
+    private int isEdited;         // 0 - не редактировалось, 1 - редактировалось
+    private String editedAt;      // Дата редактирования
+    private String createdAt;     // Дата создания копии
     private boolean isCustom;
 
-    // Геттеры и сеттеры
+    // ==========================================
+    // ГЕТТЕРЫ И СЕТТЕРЫ
+    // ==========================================
+
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -44,17 +50,48 @@ public class Setpoint {
     public String getEquipmentGroup() { return equipmentGroup; }
     public void setEquipmentGroup(String equipmentGroup) { this.equipmentGroup = equipmentGroup; }
 
+    // ==========================================
+    // ПОЛЬЗОВАТЕЛЬСКИЕ ПОЛЯ - ГЕТТЕРЫ И СЕТТЕРЫ
+    // ==========================================
+
     public int getOriginalId() { return originalId; }
     public void setOriginalId(int originalId) { this.originalId = originalId; }
+
+    public int getIsDeleted() { return isDeleted; }
+    public void setIsDeleted(int isDeleted) { this.isDeleted = isDeleted; }
+
+    public int getIsEdited() { return isEdited; }
+    public void setIsEdited(int isEdited) { this.isEdited = isEdited; }
 
     public String getEditedAt() { return editedAt; }
     public void setEditedAt(String editedAt) { this.editedAt = editedAt; }
 
+    public String getCreatedAt() { return createdAt; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
     public boolean isCustom() { return isCustom; }
     public void setCustom(boolean custom) { isCustom = custom; }
 
+    // ==========================================
+    // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+    // ==========================================
+
     @Override
     public String toString() {
-        return name + " (" + positionName + ")";
+        return (positionName != null ? positionName : "Без позиции") +
+                " - " + (name != null ? name : "Без названия");
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Setpoint that = (Setpoint) obj;
+        return id == that.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return id;
     }
 }

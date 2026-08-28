@@ -58,6 +58,10 @@
             android:windowSoftInputMode="adjustResize"
             android:screenOrientation="portrait"
             android:parentActivityName=".ui.main.MainActivity" />
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:parentActivityName=".ui.main.MainActivity"
+            android:label="Настройки" />
 
     </application>
 

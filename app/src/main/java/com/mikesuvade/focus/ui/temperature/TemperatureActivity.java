@@ -150,7 +150,6 @@ public class TemperatureActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         rvResults.setLayoutManager(new LinearLayoutManager(this));
 
-        // ✅ СКРЫВАЕМ КЛАВИАТУРУ ПРИ СКРОЛЛЕ
         rvResults.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
@@ -164,6 +163,7 @@ public class TemperatureActivity extends AppCompatActivity {
         adapter.setOnSaveClickListener(this::showSaveDialog);
         rvResults.setAdapter(adapter);
     }
+
     private void setupListeners() {
         etValue.addTextChangedListener(new TextWatcher() {
             @Override
@@ -324,19 +324,17 @@ public class TemperatureActivity extends AppCompatActivity {
         Measurement measurement = new Measurement();
         measurement.setSensorType(result.getSensorName());
         measurement.setInputValue(result.getUserValue());
-        measurement.setValue(result.getUserValue());  // для совместимости
+        measurement.setValue(result.getUserValue());
         measurement.setUnit(result.getUnit());
 
         double roundedTemperature = Math.round(result.getTemperature() * 100.0) / 100.0;
         measurement.setTemperature(roundedTemperature);
         measurement.setDescription(description);
 
-        // ✅ ДЛЯ ТЕРМОПАР
         if ("мВ".equals(result.getUnit())) {
             measurement.setColdJunctionMv(result.getColdJunctionMv());
             measurement.setLineResistance(0);
         } else {
-            // ✅ ДЛЯ ТЕРМОСОПРОТИВЛЕНИЙ
             double lineResistance = result.getUserValue() - result.getCorrectedValue();
             measurement.setColdJunctionMv(0);
             measurement.setLineResistance(lineResistance > 0 ? lineResistance : 0);
@@ -348,9 +346,10 @@ public class TemperatureActivity extends AppCompatActivity {
         measurement.setMeasurementDate(currentDate);
         measurement.setCreatedAt(currentDateTime);
 
+        // 🔥 СОХРАНЯЕМ В ПОЛЬЗОВАТЕЛЬСКУЮ БД
         new Thread(() -> {
             try {
-                long id = ((MyApp) getApplication()).getRepository().insertMeasurement(measurement);
+                long id = ((MyApp) getApplication()).getRepository().insertUserMeasurement(measurement);
                 runOnUiThread(() -> {
                     if (id > 0) {
                         Toast.makeText(this, "Замер сохранён!", Toast.LENGTH_SHORT).show();

@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.domain.models.GateValve;
 import com.mikesuvade.focus.domain.models.ValveItem;
 import com.mikesuvade.focus.domain.models.ValveWorkSession;
@@ -27,7 +28,7 @@ public class MainViewModel extends ViewModel {
     private List<GateValve> allGateValves = new ArrayList<>();
 
     // ==========================================
-    // 🔥 currentList теперь через LiveData
+    // 🔥 currentList через LiveData
     // ==========================================
     private final MutableLiveData<List<GateValve>> currentListLive = new MutableLiveData<>(new ArrayList<>());
 
@@ -60,9 +61,6 @@ public class MainViewModel extends ViewModel {
         return currentListSize;
     }
 
-    // ==========================================
-    // 🔥 НОВЫЙ ГЕТТЕР ДЛЯ LiveData
-    // ==========================================
     public LiveData<List<GateValve>> getCurrentListLive() {
         return currentListLive;
     }
@@ -73,8 +71,9 @@ public class MainViewModel extends ViewModel {
     }
 
     public void updateCurrentListSize(int size) {
-        currentListSize.setValue(size);
         Log.d("CURRENT_LIST", "updateCurrentListSize: size = " + size);
+        // 🔥 ИСПРАВЛЕНО: используем postValue вместо setValue
+        currentListSize.postValue(size);
     }
 
     // ==========================================
@@ -87,7 +86,6 @@ public class MainViewModel extends ViewModel {
                 allGateValves = repository.getAllGateValves();
                 Log.d("MAIN_DEBUG", "allGateValves size = " + allGateValves.size());
 
-                // 🔥 ВЫВОДИМ ВСЕ ЗАДВИЖКИ
                 for (int i = 0; i < allGateValves.size(); i++) {
                     GateValve valve = allGateValves.get(i);
                     Log.d("MAIN_DEBUG", "  ALL [" + i + "] id=" + valve.getId() +
@@ -135,7 +133,6 @@ public class MainViewModel extends ViewModel {
                 List<GateValve> results = repository.searchGateValves(trimmedQuery);
                 Log.d("MAIN_DEBUG", "search results size = " + results.size());
 
-                // 🔥 ВЫВОДИМ РЕЗУЛЬТАТЫ ПОИСКА
                 for (int i = 0; i < results.size(); i++) {
                     GateValve valve = results.get(i);
                     Log.d("MAIN_DEBUG", "  RESULT [" + i + "] id=" + valve.getId() +
@@ -150,6 +147,7 @@ public class MainViewModel extends ViewModel {
             }
         }).start();
     }
+
     // ==========================================
     // 📋 РАБОТА СО СПИСКОМ (через LiveData)
     // ==========================================
@@ -227,7 +225,7 @@ public class MainViewModel extends ViewModel {
     private void updateNextListNumber() {
         new Thread(() -> {
             try {
-                int count = repository.getAllWorkSessions().size();
+                int count = repository.getAllUserWorkSessions().size();  // 🔥 ИЗМЕНЕНО
                 nextListNumber = count + 1;
                 listName.postValue("НОВЫЙ " + nextListNumber);
             } catch (Exception e) {
@@ -264,22 +262,35 @@ public class MainViewModel extends ViewModel {
         }).start();
     }
 
+    // ==========================================
+    // 💾 СОХРАНЕНИЕ В ПОЛЬЗОВАТЕЛЬСКУЮ БД
+    // ==========================================
+
     public void saveSessionToDb(ValveWorkSession session) {
         new Thread(() -> {
             try {
-                List<ValveWorkSession> existing = repository.getAllWorkSessions();
-                boolean exists = false;
-                for (ValveWorkSession s : existing) {
-                    if (s.getSessionId().equals(session.getSessionId())) {
-                        exists = true;
-                        break;
-                    }
-                }
-
-                if (exists) {
-                    repository.updateWorkSession(session);
+                // 🔥 ИСПОЛЬЗУЕМ ПОЛЬЗОВАТЕЛЬСКУЮ БД
+                ValveWorkSession existing = repository.getUserWorkSessionById(session.getSessionId());
+                if (existing != null) {
+                    repository.updateUserWorkSession(session);
                 } else {
-                    repository.insertWorkSession(session);
+                    repository.insertUserWorkSession(session);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    public void saveUserSessionToDb(ValveWorkSession session) {
+        new Thread(() -> {
+            try {
+                // 🔥 ИСПОЛЬЗУЕМ ПОЛЬЗОВАТЕЛЬСКУЮ БД
+                ValveWorkSession existing = repository.getUserWorkSessionById(session.getSessionId());
+                if (existing != null) {
+                    repository.updateUserWorkSession(session);
+                } else {
+                    repository.insertUserWorkSession(session);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -288,18 +299,20 @@ public class MainViewModel extends ViewModel {
     }
 
     public void addToActiveSession(GateValve valve) {
-        Log.d("ADD_TO_SESSION", "=== addToActiveSession ВЫЗВАН ===");
+        Log.d("SESSY", "=== addToActiveSession ВЫЗВАН ===");
+        Log.d("SESSY", "valve.id = " + valve.getId());
+        Log.d("SESSY", "valve.name = " + valve.getName());
+
         String sessionId = AppState.getInstance().getLastOpenedSessionId();
-        if (sessionId == null || sessionId.isEmpty()) return;
+        Log.d("SESSY", "sessionId = " + sessionId);
+
+        if (sessionId == null || sessionId.isEmpty()) {
+            Log.d("SESSY", "ERROR: sessionId is NULL or EMPTY!");
+            return;
+        }
 
         new Thread(() -> {
             try {
-                Log.d("ADD_TO_SESSION", "=== Добавление задвижки в список ===");
-                Log.d("ADD_TO_SESSION", "valve.getId() = " + valve.getId());
-                Log.d("ADD_TO_SESSION", "valve.getName() = " + valve.getName());
-                Log.d("ADD_TO_SESSION", "valve.getIsy() = " + valve.getIsy());
-                Log.d("ADD_TO_SESSION", "sessionId = " + sessionId);
-
                 ValveItem item = new ValveItem();
                 item.setParentSessionId(sessionId);
                 item.setGateValveId(valve.getId());
@@ -310,17 +323,16 @@ public class MainViewModel extends ViewModel {
                 item.setCheckedAt(null);
                 item.setOperationTimestamp(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
 
-                long result = repository.insertValveItem(item);
-                Log.d("ADD_TO_SESSION", "insertValveItem result = " + result);
-                Log.d("ADD_TO_SESSION", "item.getGateValveId() = " + item.getGateValveId());
+                Log.d("SESSY", "Inserting user session item...");
+                long result = repository.insertUserSessionItem(item);
+                Log.d("SESSY", "insertUserSessionItem result = " + result);
 
-                int newSize = repository.getValveItemsBySession(sessionId).size();
+                int newSize = repository.getUserSessionItemsBySession(sessionId).size();
                 updateCurrentListSize(newSize);
-
-                Log.d("ADD_TO_SESSION", "=== Добавление завершено, размер списка = " + newSize);
+                Log.d("SESSY", "Session items count = " + newSize);
 
             } catch (Exception e) {
-                Log.e("ADD_TO_SESSION", "Ошибка при добавлении", e);
+                Log.e("SESSY", "Ошибка при добавлении", e);
             }
         }).start();
     }

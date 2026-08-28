@@ -3,6 +3,7 @@ package com.mikesuvade.focus.ui.saved;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -71,12 +72,12 @@ public class SavedListsActivity extends AppCompatActivity {
 
                 Intent intent = new Intent(SavedListsActivity.this, ListDetailActivity.class);
                 intent.putExtra("session_id", session.getSessionId());
+                intent.putExtra("use_user_db", true);  // 🔥 ДОБАВЛЕНО
                 startActivity(intent);
             }
 
             @Override
             public void onItemLongClick(ValveWorkSession session) {
-                // ✅ ВЫЗЫВАЕМ ДИАЛОГ С ВЫБОРОМ
                 showItemOptionsDialog(session);
             }
         });
@@ -84,21 +85,23 @@ public class SavedListsActivity extends AppCompatActivity {
     }
 
     private void setupObservers() {
+        Log.d("SESSY", "=== SavedListsActivity.setupObservers START ===");
         viewModel.getSessions().observe(this, sessions -> {
+            Log.d("SESSY", "SavedListsActivity: sessions observer triggered");
+            Log.d("SESSY", "sessions size = " + (sessions != null ? sessions.size() : 0));
             if (sessions != null && !sessions.isEmpty()) {
                 adapter.setSessions(sessions);
                 rvSavedLists.setVisibility(View.VISIBLE);
                 tvEmpty.setVisibility(View.GONE);
+                Log.d("SESSY", "Showing " + sessions.size() + " sessions");
             } else {
                 rvSavedLists.setVisibility(View.GONE);
                 tvEmpty.setVisibility(View.VISIBLE);
+                Log.d("SESSY", "No sessions to show");
             }
         });
+        Log.d("SESSY", "=== SavedListsActivity.setupObservers END ===");
     }
-
-    // ==========================================
-    // ✅ ДИАЛОГ С ВЫБОРОМ: ПЕРЕИМЕНОВАТЬ / УДАЛИТЬ
-    // ==========================================
 
     private void showItemOptionsDialog(ValveWorkSession session) {
         String[] options = {"Переименовать", "Удалить"};

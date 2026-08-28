@@ -37,6 +37,18 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
+        <!-- 🔥 ДОБАВИТЬ ЭТОТ БЛОК -->
+        <TextView
+            android:id="@+id/tvListNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Список №1"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvListTitle"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

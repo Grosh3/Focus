@@ -14,6 +14,11 @@ public class Measurement {
     private double lineResistance;      // для термосопротивлений (Ом)
 
     // ==========================================
+    // ПОЛЬЗОВАТЕЛЬСКИЕ ПОЛЯ
+    // ==========================================
+    private int isSynced;               // 0 - не синхронизировано, 1 - синхронизировано
+
+    // ==========================================
     // ГЕТТЕРЫ И СЕТТЕРЫ
     // ==========================================
 
@@ -49,4 +54,39 @@ public class Measurement {
 
     public double getLineResistance() { return lineResistance; }
     public void setLineResistance(double lineResistance) { this.lineResistance = lineResistance; }
+
+    // ==========================================
+    // ПОЛЬЗОВАТЕЛЬСКИЕ ПОЛЯ - ГЕТТЕРЫ И СЕТТЕРЫ
+    // ==========================================
+
+    public int getIsSynced() { return isSynced; }
+    public void setIsSynced(int isSynced) { this.isSynced = isSynced; }
+
+    // ==========================================
+    // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+    // ==========================================
+
+    @Override
+    public String toString() {
+        return "Measurement{" +
+                "id=" + id +
+                ", date='" + measurementDate + '\'' +
+                ", value=" + value +
+                ", unit='" + unit + '\'' +
+                ", temperature=" + temperature +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Measurement that = (Measurement) obj;
+        return id == that.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return id;
+    }
 }

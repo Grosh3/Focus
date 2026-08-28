@@ -36,7 +36,6 @@ public class ListDetailActivity extends AppCompatActivity {
     private ValveItemAdapter rightAdapter;
 
     private TextView tvListTitle;
-    private TextView tvCount;
     private TextView tvListNumber;
 
     private boolean isExistingSession = false;
@@ -48,7 +47,9 @@ public class ListDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list_detail);
 
-        // Инициализация ViewModel
+        Log.d("SESSY", "=== ListDetailActivity.onCreate START ===");
+
+        // ИНИЦИАЛИЗАЦИЯ ViewModel
         viewModel = new ViewModelProvider(
                 this,
                 new ViewModelProvider.Factory() {
@@ -62,44 +63,43 @@ public class ListDetailActivity extends AppCompatActivity {
                     }
                 }
         ).get(ListDetailViewModel.class);
+        Log.d("SESSY", "viewModel created");
 
         initViews();
-        setupRecyclerViews();
-        setupObservers();
+        Log.d("SESSY", "initViews completed");
 
-        // Проверяем Intent
+        setupRecyclerViews();
+        Log.d("SESSY", "setupRecyclerViews completed");
+
+        setupObservers();
+        Log.d("SESSY", "setupObservers completed");
+
+        // ПОЛУЧАЕМ ДАННЫЕ ИЗ INTENT
         currentSessionId = getIntent().getStringExtra("session_id");
         boolean isNewSession = getIntent().getBooleanExtra("is_new_session", false);
+        boolean useUserDb = getIntent().getBooleanExtra("use_user_db", true);
 
-        Log.d("MYTITLE", "=== onCreate ListDetailActivity ===");
-        Log.d("MYTITLE", "currentSessionId: " + currentSessionId);
-        Log.d("MYTITLE", "isNewSession: " + isNewSession);
+        Log.d("SESSY", "currentSessionId: " + currentSessionId);
+        Log.d("SESSY", "isNewSession: " + isNewSession);
+        Log.d("SESSY", "useUserDb: " + useUserDb);
 
-        if (currentSessionId != null && !currentSessionId.isEmpty()) {
-            // ✅ ЗАГРУЗКА СОХРАНЁННОЙ СЕССИИ
-            isExistingSession = true;
-            viewModel.loadSession(currentSessionId);
-            showListNumber();
+        viewModel.setUseUserDb(useUserDb);
 
-        } else if (isNewSession) {
-            // ✅ СОЗДАНИЕ НОВОЙ ПУСТОЙ СЕССИИ
+        // ЗАГРУЗКА ДАННЫХ
+        if (isNewSession) {
             isExistingSession = false;
-            viewModel.createEmptySession();
-            showListNumber();
-
-        } else {
-            // ✅ СОЗДАНИЕ НОВОГО СПИСКА ИЗ MAINACTIVITY
-            isExistingSession = false;
+            Log.d("SESSY", "isExistingSession = FALSE (new session)");
 
             ArrayList<Integer> ids = getIntent().getIntegerArrayListExtra("valve_ids");
             ArrayList<String> names = getIntent().getStringArrayListExtra("valve_names");
             ArrayList<String> isys = getIntent().getStringArrayListExtra("valve_isys");
 
-            Log.d("MYTITLE", "=== New list from MainActivity ===");
-            Log.d("MYTITLE", "ids size: " + (ids != null ? ids.size() : 0));
-            Log.d("MYTITLE", "names size: " + (names != null ? names.size() : 0));
+            Log.d("SESSY", "ids = " + (ids != null ? ids.size() : "NULL"));
+            Log.d("SESSY", "names = " + (names != null ? names.size() : "NULL"));
+            Log.d("SESSY", "isys = " + (isys != null ? isys.size() : "NULL"));
 
             if (names != null && !names.isEmpty()) {
+                Log.d("SESSY", "Loading " + names.size() + " valves from MainActivity");
                 List<GateValve> valves = new ArrayList<>();
                 for (int i = 0; i < names.size(); i++) {
                     GateValve valve = new GateValve();
@@ -109,188 +109,213 @@ public class ListDetailActivity extends AppCompatActivity {
                     valve.setName(names.get(i) != null ? names.get(i) : "");
                     valve.setIsy(i < isys.size() && isys.get(i) != null ? isys.get(i) : "");
                     valves.add(valve);
-                    Log.d("MYTITLE", "  valve[" + i + "] id=" + valve.getId() + ", name=" + valve.getName());
+                    Log.d("SESSY", "  valve[" + i + "] id=" + valve.getId() + ", name=" + valve.getName());
                 }
-
-                // ✅ ВОТ ЭТИ СТРОКИ НУЖНО РАСКОММЕНТИРОВАТЬ!
                 viewModel.setListName("Новый список");
                 viewModel.loadFromGateValves(valves);
-
-                showListNumber();
             } else {
-                Toast.makeText(this, R.string.list_empty, Toast.LENGTH_SHORT).show();
-                finish();
+                Log.d("SESSY", "names is NULL or EMPTY - creating empty session");
+                viewModel.createEmptySession();
             }
+            showListNumber();
+
+        } else if (currentSessionId != null && !currentSessionId.isEmpty()) {
+            isExistingSession = true;
+            Log.d("SESSY", "isExistingSession = TRUE (loading existing session)");
+            viewModel.loadSession(currentSessionId);
+            showListNumber();
+
+        } else {
+            Log.e("SESSY", "ERROR: no session_id and no isNewSession");
+            Toast.makeText(this, "Ошибка загрузки списка", Toast.LENGTH_SHORT).show();
+            finish();
         }
+
+        Log.d("SESSY", "=== ListDetailActivity.onCreate END ===");
     }
+
     private void initViews() {
+        Log.d("SESSY", "=== initViews START ===");
+
         tvListTitle = findViewById(R.id.tvListTitle);
-        Log.d("MYTITLE", "tvListTitle found: " + (tvListTitle != null));
-      //  tvCount = findViewById(R.id.tvCount);
-       // tvListNumber = findViewById(R.id.tvListNumber);
+        Log.d("SESSY", "tvListTitle = " + (tvListTitle != null ? "found" : "NULL"));
 
-        findViewById(R.id.btnAssemble).setOnClickListener(v -> {
-            hasChanges = true;
-            viewModel.assembleAll();
-        });
+        tvListNumber = findViewById(R.id.tvListNumber);
+        Log.d("SESSY", "tvListNumber = " + (tvListNumber != null ? "found" : "NULL"));
 
-        findViewById(R.id.btnDisassemble).setOnClickListener(v -> {
-            hasChanges = true;
-            viewModel.disassembleAll();
-        });
+        View btnAssemble = findViewById(R.id.btnAssemble);
+        if (btnAssemble != null) {
+            btnAssemble.setOnClickListener(v -> {
+                hasChanges = true;
+                viewModel.assembleAll();
+            });
+            Log.d("SESSY", "btnAssemble configured");
+        } else {
+            Log.e("SESSY", "btnAssemble not found!");
+        }
+
+        View btnDisassemble = findViewById(R.id.btnDisassemble);
+        if (btnDisassemble != null) {
+            btnDisassemble.setOnClickListener(v -> {
+                hasChanges = true;
+                viewModel.disassembleAll();
+            });
+            Log.d("SESSY", "btnDisassemble configured");
+        } else {
+            Log.e("SESSY", "btnDisassemble not found!");
+        }
+
+        Log.d("SESSY", "=== initViews END ===");
     }
 
-    private void showListNumber() {
-        viewModel.getListCount(listCount -> {
-            if (listCount > 0) {
-                tvListNumber.setVisibility(View.VISIBLE);
-                tvListNumber.setText("Список №" + (listCount + 1));
-            }
-        });
-    }
     private void setupRecyclerViews() {
+        Log.d("SESSY", "=== setupRecyclerViews START ===");
+
         RecyclerView rvLeft = findViewById(R.id.rvLeft);
-        rvLeft.setLayoutManager(new LinearLayoutManager(this));
-        leftAdapter = new ValveItemAdapter(this);
-        leftAdapter.setListener(new ValveItemAdapter.OnItemClickListener() {
-            @Override
-            public void onMoveClick(ValveItem item) {
-                Log.d("LIST_DEBUG", "onMoveClick LEFT: item.gateValveId=" + item.getGateValveId());
-                hasChanges = true;
-                viewModel.moveItem(item, true);
-            }
+        if (rvLeft != null) {
+            rvLeft.setLayoutManager(new LinearLayoutManager(this));
+            leftAdapter = new ValveItemAdapter(this);
+            leftAdapter.setListener(new ValveItemAdapter.OnItemClickListener() {
+                @Override
+                public void onMoveClick(ValveItem item) {
+                    Log.d("LIST_DEBUG", "onMoveClick LEFT: item.gateValveId=" + item.getGateValveId());
+                    hasChanges = true;
+                    // 🔥 ИСПРАВЛЕНО: из левого → в правый (toLeft = false)
+                    viewModel.moveItem(item, false);
+                }
 
-            @Override
-            public void onMotorClick(ValveItem item) {
-                Log.d("LIST_DEBUG", "onMotorClick LEFT: item.gateValveId=" + item.getGateValveId());
-                hasChanges = true;
-                viewModel.toggleMotor(item);
-            }
+                @Override
+                public void onMotorClick(ValveItem item) {
+                    Log.d("LIST_DEBUG", "onMotorClick LEFT: item.gateValveId=" + item.getGateValveId());
+                    hasChanges = true;
+                    viewModel.toggleMotor(item);
+                }
 
-            @Override
-            public void onBoxClick(ValveItem item) {
-                Log.d("LIST_DEBUG", "onBoxClick LEFT: item.gateValveId=" + item.getGateValveId());
-                hasChanges = true;
-                viewModel.toggleBox(item);
-            }
+                @Override
+                public void onBoxClick(ValveItem item) {
+                    Log.d("LIST_DEBUG", "onBoxClick LEFT: item.gateValveId=" + item.getGateValveId());
+                    hasChanges = true;
+                    viewModel.toggleBox(item);
+                }
 
-            @Override
-            public void onCheckedClick(ValveItem item, boolean isChecked) {
-                Log.d("LIST_DEBUG", "=== onCheckedClick LEFT ===");
-                Log.d("LIST_DEBUG", "item.gateValveId = " + item.getGateValveId());
-                Log.d("LIST_DEBUG", "isChecked = " + isChecked);
+                @Override
+                public void onCheckedClick(ValveItem item, boolean isChecked) {
+                    Log.d("LIST_DEBUG", "=== onCheckedClick LEFT ===");
+                    Log.d("LIST_DEBUG", "item.gateValveId = " + item.getGateValveId());
+                    Log.d("LIST_DEBUG", "isChecked = " + isChecked);
+                    hasChanges = true;
+                    viewModel.toggleChecked(item);
+                    Log.d("LIST_DEBUG", "=== onCheckedClick LEFT END ===");
+                }
 
-                hasChanges = true;
-                viewModel.toggleChecked(item);
+                @Override
+                public void onItemLongClick(ValveItem item) {
+                    hasChanges = true;
+                    showDeleteDialog(item);
+                }
 
-                Log.d("LIST_DEBUG", "=== onCheckedClick LEFT END ===");
-            }
-
-            @Override
-            public void onItemLongClick(ValveItem item) {
-                hasChanges = true;
-                showDeleteDialog(item);
-            }
-
-            // ✅ ДОБАВЛЕНО: КОРОТКИЙ ТАП ПО КАРТОЧКЕ
-            @Override
-            public void onItemClick(ValveItem item) {
-                showValveInfoDialog(item);
-            }
-        });
-        rvLeft.setAdapter(leftAdapter);
+                @Override
+                public void onItemClick(ValveItem item) {
+                    showValveInfoDialog(item);
+                }
+            });
+            rvLeft.setAdapter(leftAdapter);
+            Log.d("SESSY", "rvLeft configured");
+        } else {
+            Log.e("SESSY", "rvLeft not found!");
+        }
 
         RecyclerView rvRight = findViewById(R.id.rvRight);
-        rvRight.setLayoutManager(new LinearLayoutManager(this));
-        rightAdapter = new ValveItemAdapter(this);
-        rightAdapter.setListener(new ValveItemAdapter.OnItemClickListener() {
-            @Override
-            public void onMoveClick(ValveItem item) {
-                Log.d("LIST_DEBUG", "onMoveClick RIGHT: item.gateValveId=" + item.getGateValveId());
-                hasChanges = true;
-                viewModel.moveItem(item, false);
-            }
-
-            @Override
-            public void onMotorClick(ValveItem item) {
-                Log.d("LIST_DEBUG", "onMotorClick RIGHT: item.gateValveId=" + item.getGateValveId());
-                hasChanges = true;
-                viewModel.toggleMotor(item);
-            }
-
-            @Override
-            public void onBoxClick(ValveItem item) {
-                Log.d("LIST_DEBUG", "onBoxClick RIGHT: item.gateValveId=" + item.getGateValveId());
-                hasChanges = true;
-                viewModel.toggleBox(item);
-            }
-
-            @Override
-            public void onCheckedClick(ValveItem item, boolean isChecked) {
-                Log.d("LIST_DEBUG", "=== onCheckedClick RIGHT ===");
-                Log.d("LIST_DEBUG", "item.gateValveId = " + item.getGateValveId());
-                Log.d("LIST_DEBUG", "isChecked = " + isChecked);
-
-                hasChanges = true;
-                viewModel.toggleChecked(item);
-
-                Log.d("LIST_DEBUG", "=== onCheckedClick RIGHT END ===");
-            }
-
-            @Override
-            public void onItemLongClick(ValveItem item) {
-                hasChanges = true;
-                showDeleteDialog(item);
-            }
-
-            // ✅ ДОБАВЛЕНО: КОРОТКИЙ ТАП ПО КАРТОЧКЕ
-            @Override
-            public void onItemClick(ValveItem item) {
-                showValveInfoDialog(item);
-            }
-        });
-        rvRight.setAdapter(rightAdapter);
-    }
-    private void setupObservers() {
-        viewModel.getLeftList().observe(this, items -> {
-            Log.d("LIST_DEBUG", "=== OBSERVER: leftList changed ===");
-            Log.d("LIST_DEBUG", "Left items size: " + (items != null ? items.size() : 0));
-            if (items != null) {
-                for (int i = 0; i < items.size(); i++) {
-                    ValveItem item = items.get(i);
-                    Log.d("LIST_DEBUG", "  LEFT [" + i + "] gateValveId=" + item.getGateValveId() +
-                            ", assembled=" + item.getIsAssembled() +
-                            ", checked=" + item.getIsChecked());
+        if (rvRight != null) {
+            rvRight.setLayoutManager(new LinearLayoutManager(this));
+            rightAdapter = new ValveItemAdapter(this);
+            rightAdapter.setListener(new ValveItemAdapter.OnItemClickListener() {
+                @Override
+                public void onMoveClick(ValveItem item) {
+                    Log.d("LIST_DEBUG", "onMoveClick RIGHT: item.gateValveId=" + item.getGateValveId());
+                    hasChanges = true;
+                    // 🔥 ИСПРАВЛЕНО: из правого → в левый (toLeft = true)
+                    viewModel.moveItem(item, true);
                 }
+
+                @Override
+                public void onMotorClick(ValveItem item) {
+                    Log.d("LIST_DEBUG", "onMotorClick RIGHT: item.gateValveId=" + item.getGateValveId());
+                    hasChanges = true;
+                    viewModel.toggleMotor(item);
+                }
+
+                @Override
+                public void onBoxClick(ValveItem item) {
+                    Log.d("LIST_DEBUG", "onBoxClick RIGHT: item.gateValveId=" + item.getGateValveId());
+                    hasChanges = true;
+                    viewModel.toggleBox(item);
+                }
+
+                @Override
+                public void onCheckedClick(ValveItem item, boolean isChecked) {
+                    Log.d("LIST_DEBUG", "=== onCheckedClick RIGHT ===");
+                    Log.d("LIST_DEBUG", "item.gateValveId = " + item.getGateValveId());
+                    Log.d("LIST_DEBUG", "isChecked = " + isChecked);
+                    hasChanges = true;
+                    viewModel.toggleChecked(item);
+                    Log.d("LIST_DEBUG", "=== onCheckedClick RIGHT END ===");
+                }
+
+                @Override
+                public void onItemLongClick(ValveItem item) {
+                    hasChanges = true;
+                    showDeleteDialog(item);
+                }
+
+                @Override
+                public void onItemClick(ValveItem item) {
+                    showValveInfoDialog(item);
+                }
+            });
+            rvRight.setAdapter(rightAdapter);
+            Log.d("SESSY", "rvRight configured");
+        } else {
+            Log.e("SESSY", "rvRight not found!");
+        }
+
+        Log.d("SESSY", "=== setupRecyclerViews END ===");
+    }
+
+    private void setupObservers() {
+        Log.d("SESSY", "=== setupObservers START ===");
+
+        viewModel.getLeftList().observe(this, items -> {
+            Log.d("SESSY", "=== OBSERVER: leftList changed ===");
+            Log.d("SESSY", "Left items size: " + (items != null ? items.size() : 0));
+            if (items != null && leftAdapter != null) {
+                leftAdapter.setItems(items);
             }
-            leftAdapter.setItems(items);  // ← ЭТО ДОЛЖНО СРАБОТАТЬ
         });
 
         viewModel.getRightList().observe(this, items -> {
-            Log.d("LIST_DEBUG", "=== OBSERVER: rightList changed ===");
-            Log.d("LIST_DEBUG", "Right items size: " + (items != null ? items.size() : 0));
-            if (items != null) {
-                for (int i = 0; i < items.size(); i++) {
-                    ValveItem item = items.get(i);
-                    Log.d("LIST_DEBUG", "  RIGHT [" + i + "] gateValveId=" + item.getGateValveId() +
-                            ", assembled=" + item.getIsAssembled() +
-                            ", checked=" + item.getIsChecked());
+            Log.d("SESSY", "=== OBSERVER: rightList changed ===");
+            Log.d("SESSY", "Right items size: " + (items != null ? items.size() : 0));
+            if (items != null && rightAdapter != null) {
+                rightAdapter.setItems(items);
+            }
+        });
+
+        Log.d("SESSY", "=== setupObservers END ===");
+    }
+
+    private void showListNumber() {
+        Log.d("SESSY", "=== showListNumber START ===");
+        viewModel.getListCount(listCount -> {
+            runOnUiThread(() -> {
+                if (tvListNumber != null && listCount > 0) {
+                    tvListNumber.setVisibility(View.VISIBLE);
+                    tvListNumber.setText("Список №" + (listCount + 1));
+                    Log.d("SESSY", "List number set to: " + (listCount + 1));
                 }
-            }
-            rightAdapter.setItems(items);
+            });
         });
-
-     //   viewModel.getTotalCount().observe(this, count -> {
-    //        tvCount.setText(String.valueOf(count));
-     //   });
-
-        viewModel.getListName().observe(this, name -> {
-            Log.d("MYTITLE", "вызывается");
-            if (name != null && !name.isEmpty()) {
-                Log.d("MYTITLE", "устанавливается");
-                tvListTitle.setText(name);
-            }
-        });
+        Log.d("SESSY", "=== showListNumber END ===");
     }
 
     private void showDeleteDialog(ValveItem item) {
@@ -314,26 +339,37 @@ public class ListDetailActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
+        Log.d("DATEFRESH", "=== onBackPressed START ===");
+        Log.d("DATEFRESH", "isExistingSession = " + isExistingSession);
+        Log.d("DATEFRESH", "hasChanges = " + hasChanges);
+
         if (isExistingSession) {
+            Log.d("DATEFRESH", "Existing session branch");
             if (hasChanges) {
-                // ✅ ТОЛЬКО ОБНОВЛЯЕМ ЭЛЕМЕНТЫ И ДАТУ
+                Log.d("DATEFRESH", "Has changes - updating session");
                 viewModel.updateSession(currentSessionId);
                 AppState.getInstance().setHasUnsavedChanges(true);
 
-                // ✅ НЕ СОЗДАЁМ НОВУЮ СЕССИЮ, НЕ ПЕРЕЗАПИСЫВАЕМ ИМЯ
                 Intent data = new Intent();
                 data.putExtra("data_changed", true);
                 setResult(RESULT_OK, data);
+                Log.d("DATEFRESH", "Session update triggered");
             } else {
+                Log.d("DATEFRESH", "No changes - cancel");
                 setResult(RESULT_CANCELED);
             }
             super.onBackPressed();
         } else {
+            Log.d("DATEFRESH", "New session - showing save dialog");
             showSaveDialog();
         }
+        Log.d("DATEFRESH", "=== onBackPressed END ===");
     }
 
     private void showSaveDialog() {
+        Log.d("SESSY", "=== showSaveDialog START ===");
+        Log.d("SESSY", "isFinishing = " + isFinishing());
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(R.string.dialog_save_title);
 
@@ -348,6 +384,8 @@ public class ListDetailActivity extends AppCompatActivity {
                 name = getString(R.string.default_list_name) + " " +
                         new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(new Date());
             }
+            Log.d("SESSY", "Save dialog: name = " + name);
+
             viewModel.setListName(name);
             viewModel.saveSession(name);
 
@@ -364,9 +402,8 @@ public class ListDetailActivity extends AppCompatActivity {
         });
 
         builder.setNegativeButton(R.string.dialog_save_negative, (dialogInterface, whichButton) -> {
+            Log.d("SESSY", "Save dialog: CANCEL");
             dialogInterface.cancel();
-
-            // ✅ ПРИ ОТМЕНЕ — ОЧИЩАЕМ СЕССИЮ И ВОЗВРАЩАЕМСЯ
             AppState.getInstance().clearSession();
             setResult(RESULT_CANCELED);
             finish();
@@ -375,14 +412,17 @@ public class ListDetailActivity extends AppCompatActivity {
         AlertDialog alertDialog = builder.create();
         alertDialog.setOnDismissListener(dismissListener -> {
             if (!isFinishing()) {
-                // ✅ ПРИ ЗАКРЫТИИ ДИАЛОГА (НАЖАТИЕ ВНЕ) — ОЧИЩАЕМ СЕССИЮ
+                Log.d("SESSY", "Save dialog: DISMISSED");
                 AppState.getInstance().clearSession();
                 setResult(RESULT_CANCELED);
                 finish();
             }
         });
+
         alertDialog.show();
+        Log.d("SESSY", "=== showSaveDialog END ===");
     }
+
     private void showValveInfoDialog(ValveItem item) {
         GateValve valve = ((MyApp) getApplication()).getRepository().getGateValveById(item.getGateValveId());
         if (valve == null) {
@@ -395,7 +435,6 @@ public class ListDetailActivity extends AppCompatActivity {
         String isy = valve.getIsy();
         String name = valve.getName();
 
-        // Сборка с дефисом
         String powerCabinet = valve.getPowerCabinet();
         String locationDescription = valve.getLocationDescription();
         if (powerCabinet != null && !powerCabinet.isEmpty()) {
@@ -408,18 +447,15 @@ public class ListDetailActivity extends AppCompatActivity {
             info.append("- ").append(locationDescription).append("\n");
         }
 
-        // Месторасположение с дефисом
         String onPlace = valve.getOnPlace();
         if (onPlace != null && !onPlace.isEmpty()) {
             info.append("- ").append(onPlace).append("\n");
         }
 
-        // Если нет данных
         if (info.length() == 0) {
             info.append("Нет данных о задвижке");
         }
 
-        // Заголовок: ИСУ + Название (жирным)
         String title = "";
         if (isy != null && !isy.isEmpty()) {
             title += isy + "    ";

@@ -36,7 +36,7 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
         void onBoxClick(ValveItem item);
         void onCheckedClick(ValveItem item, boolean isChecked);
         void onItemLongClick(ValveItem item);
-        void onItemClick(ValveItem item);  // ← ДОБАВЛЕНО
+        void onItemClick(ValveItem item);
     }
 
     public ValveItemAdapter(Context context) {
@@ -60,6 +60,7 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
 
     public void setListener(OnItemClickListener listener) {
         this.listener = listener;
+        Log.d("LIST_DEBUG", "setListener: listener = " + (listener != null ? "not null" : "NULL"));
     }
 
     @NonNull
@@ -112,8 +113,7 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
 
         void bind(ValveItem item, GateValve valve, OnItemClickListener listener, Context context, int position) {
             Log.d("LIST_DEBUG", "=== bind ===");
-            Log.d("LIST_DEBUG", "position=" + position + ", gateValveId=" + item.getGateValveId() +
-                    ", isChecked=" + item.getIsChecked());
+            Log.d("LIST_DEBUG", "position=" + position + ", gateValveId=" + item.getGateValveId());
 
             // ==========================================
             // ISY и NAME из GateValve
@@ -138,10 +138,9 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
             }
 
             // ==========================================
-            // СТАТУСЫ (из ValveItem)
+            // СТАТУСЫ
             // ==========================================
 
-            // 1. Статус собрано/разобрано
             tvAssembleStatus.setVisibility(View.VISIBLE);
             if (item.getIsChecked() == 0) {
                 if (item.getIsAssembled() == 1) {
@@ -216,7 +215,7 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 tvAssembleStatus.setAlpha(1.0f);
             }
 
-            // Дата выполнения - только время (ЧЧ:ММ)
+            // Дата выполнения
             if (item.getCheckedAt() != null && !item.getCheckedAt().isEmpty()) {
                 try {
                     SimpleDateFormat fullFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
@@ -236,16 +235,26 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
             }
 
             // ==========================================
-            // КНОПКИ
+            // 🔥 КНОПКИ С ЛОГАМИ
             // ==========================================
 
-            btnMove.setOnClickListener(null);
+            // Кнопка перемещения
             btnMove.setOnClickListener(v -> {
+                Log.d("LIST_DEBUG", "=== btnMove CLICKED ===");
+                Log.d("LIST_DEBUG", "position=" + position);
+                Log.d("LIST_DEBUG", "gateValveId=" + item.getGateValveId());
+                Log.d("LIST_DEBUG", "isAssembled=" + item.getIsAssembled());
+                Log.d("LIST_DEBUG", "listener=" + (listener != null ? "not null" : "NULL"));
+
                 if (listener != null) {
+                    Log.d("LIST_DEBUG", "Calling listener.onMoveClick()");
                     listener.onMoveClick(item);
+                } else {
+                    Log.e("LIST_DEBUG", "❌ listener is NULL!");
                 }
             });
 
+            // Кнопка двигателя
             if (item.getMotorDisabled() == 1) {
                 btnMotor.setColorFilter(0xFFFF0000);
                 btnMotor.setContentDescription(context.getString(R.string.content_description_motor_off));
@@ -253,13 +262,14 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 btnMotor.setColorFilter(0xFF888888);
                 btnMotor.setContentDescription(context.getString(R.string.content_description_motor_on));
             }
-            btnMotor.setOnClickListener(null);
             btnMotor.setOnClickListener(v -> {
+                Log.d("LIST_DEBUG", "btnMotor CLICKED: gateValveId=" + item.getGateValveId());
                 if (listener != null) {
                     listener.onMotorClick(item);
                 }
             });
 
+            // Кнопка коробки
             if (item.getBoxRemoved() == 1) {
                 btnBox.setColorFilter(0xFFFF8800);
                 btnBox.setContentDescription(context.getString(R.string.content_description_box_off));
@@ -267,43 +277,36 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 btnBox.setColorFilter(0xFF888888);
                 btnBox.setContentDescription(context.getString(R.string.content_description_box_on));
             }
-            btnBox.setOnClickListener(null);
             btnBox.setOnClickListener(v -> {
+                Log.d("LIST_DEBUG", "btnBox CLICKED: gateValveId=" + item.getGateValveId());
                 if (listener != null) {
                     listener.onBoxClick(item);
                 }
             });
 
             // ==========================================
-            // ✅ CHECKBOX
+            // CHECKBOX
             // ==========================================
             cbChecked.setOnCheckedChangeListener(null);
             cbChecked.setChecked(item.getIsChecked() == 1);
-            Log.d("LIST_DEBUG", "CheckBox setChecked = " + (item.getIsChecked() == 1));
-
             cbChecked.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                Log.d("LIST_DEBUG", "=== CheckBox clicked ===");
-                Log.d("LIST_DEBUG", "position=" + position + ", gateValveId=" + item.getGateValveId());
-                Log.d("LIST_DEBUG", "isChecked=" + isChecked);
-
+                Log.d("LIST_DEBUG", "CheckBox clicked: gateValveId=" + item.getGateValveId() + ", isChecked=" + isChecked);
                 if (listener != null) {
                     listener.onCheckedClick(item, isChecked);
                 }
             });
 
-            // ==========================================
-            // ✅ КОРОТКИЙ ТАП ПО КАРТОЧКЕ (НОВОЕ!)
-            // ==========================================
+            // Короткий тап
             itemView.setOnClickListener(v -> {
+                Log.d("LIST_DEBUG", "itemView clicked: gateValveId=" + item.getGateValveId());
                 if (listener != null) {
                     listener.onItemClick(item);
                 }
             });
 
-            // ==========================================
-            // ДЛИННЫЙ ТАП
-            // ==========================================
+            // Длинный тап
             itemView.setOnLongClickListener(v -> {
+                Log.d("LIST_DEBUG", "itemView long clicked: gateValveId=" + item.getGateValveId());
                 if (listener != null) {
                     listener.onItemLongClick(item);
                 }

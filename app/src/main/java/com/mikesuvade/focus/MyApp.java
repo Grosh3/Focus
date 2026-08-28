@@ -4,6 +4,7 @@ import android.app.Application;
 import android.util.Log;
 
 import com.mikesuvade.focus.data.database.DatabaseHelper;
+import com.mikesuvade.focus.data.database.UserDatabaseHelper;
 import com.mikesuvade.focus.data.repository.RepositoryImpl;
 import com.mikesuvade.focus.domain.repository.IRepository;
 
@@ -12,18 +13,17 @@ public class MyApp extends Application {
     private static final String TAG = "MyApp";
     private static MyApp instance;
     private IRepository repository;
+    private UserDatabaseHelper userDatabaseHelper;
 
     @Override
     public void onCreate() {
         super.onCreate();
         instance = this;
 
-        // Инициализируем DatabaseHelper и копируем БД из assets
         DatabaseHelper dbHelper = DatabaseHelper.getInstance(this);
-       // dbHelper.ensureDatabaseReady();
+        userDatabaseHelper = UserDatabaseHelper.getInstance(this);
 
-        // Создаём Repository (внедряем зависимости)
-        repository = new RepositoryImpl(dbHelper);
+        repository = new RepositoryImpl(dbHelper, userDatabaseHelper);
 
         Log.d(TAG, "Application initialized successfully");
     }
@@ -34,5 +34,9 @@ public class MyApp extends Application {
 
     public IRepository getRepository() {
         return repository;
+    }
+
+    public UserDatabaseHelper getUserDatabaseHelper() {
+        return userDatabaseHelper;
     }
 }

@@ -23,7 +23,7 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
     private SavedMeasurementsViewModel viewModel;
     private SavedMeasurementsAdapter adapter;
     private TextView tvEmpty;
-    private RecyclerView rvSavedMeasurements;
+    private RecyclerView rvMeasurements;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,20 +52,22 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        rvSavedMeasurements = findViewById(R.id.rvSavedMeasurements);
+        rvMeasurements = findViewById(R.id.rvSavedMeasurements);
         tvEmpty = findViewById(R.id.tvEmpty);
-        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+
+        View btnBack = findViewById(R.id.btnBack);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> finish());
+        }
     }
 
     private void setupRecyclerView() {
-        rvSavedMeasurements.setLayoutManager(new LinearLayoutManager(this));
+        rvMeasurements.setLayoutManager(new LinearLayoutManager(this));
         adapter = new SavedMeasurementsAdapter();
         adapter.setListener(new SavedMeasurementsAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(Measurement measurement) {
-                // Можно открыть детальный просмотр или ничего не делать
-                Toast.makeText(SavedMeasurementsActivity.this,
-                        measurement.getDescription(), Toast.LENGTH_SHORT).show();
+                showMeasurementInfoDialog(measurement);
             }
 
             @Override
@@ -73,34 +75,52 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
                 showItemOptionsDialog(measurement);
             }
         });
-        rvSavedMeasurements.setAdapter(adapter);
+        rvMeasurements.setAdapter(adapter);
     }
 
     private void setupObservers() {
         viewModel.getMeasurements().observe(this, measurements -> {
             if (measurements != null && !measurements.isEmpty()) {
                 adapter.setItems(measurements);
-                rvSavedMeasurements.setVisibility(View.VISIBLE);
+                rvMeasurements.setVisibility(View.VISIBLE);
                 tvEmpty.setVisibility(View.GONE);
             } else {
-                rvSavedMeasurements.setVisibility(View.GONE);
+                rvMeasurements.setVisibility(View.GONE);
                 tvEmpty.setVisibility(View.VISIBLE);
             }
         });
     }
 
-    // ==========================================
-    // ДИАЛОГИ
-    // ==========================================
+    private void showMeasurementInfoDialog(Measurement measurement) {
+        StringBuilder info = new StringBuilder();
+        info.append("Дата: ").append(measurement.getMeasurementDate()).append("\n");
+        info.append("Температура: ").append(measurement.getTemperature()).append(" °C\n");
+        info.append("Тип датчика: ").append(measurement.getSensorType()).append("\n");
 
-    private void showItemOptionsDialog(Measurement measurement) {
-        String[] options = {
-                getString(R.string.saved_measurements_options_rename),
-                getString(R.string.saved_measurements_options_delete)
-        };
+        if (measurement.getSensorType() != null && measurement.getSensorType().equals("MV")) {
+            info.append("Значение: ").append(measurement.getInputValue()).append(" мВ\n");
+            info.append("Холодный спай: ").append(measurement.getColdJunctionMv()).append(" мВ\n");
+        } else {
+            info.append("Значение: ").append(measurement.getInputValue()).append(" Ом\n");
+            info.append("Сопротивление линии: ").append(measurement.getLineResistance()).append(" Ом\n");
+        }
+
+        if (measurement.getDescription() != null && !measurement.getDescription().isEmpty()) {
+            info.append("Описание: ").append(measurement.getDescription());
+        }
 
         new AlertDialog.Builder(this)
-                .setTitle(measurement.getDescription())
+                .setTitle("Информация о замере")
+                .setMessage(info.toString().trim())
+                .setPositiveButton("Закрыть", (dialog, which) -> dialog.dismiss())
+                .show();
+    }
+
+    private void showItemOptionsDialog(Measurement measurement) {
+        String[] options = {"Переименовать", "Удалить"};
+
+        new AlertDialog.Builder(this)
+                .setTitle(measurement.getDescription() != null ? measurement.getDescription() : "Замер")
                 .setItems(options, (dialog, which) -> {
                     if (which == 0) {
                         showRenameDialog(measurement);
@@ -117,17 +137,14 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
 
         final EditText input = new EditText(this);
         input.setInputType(InputType.TYPE_CLASS_TEXT);
-        String currentDesc = measurement.getDescription();
-        input.setText(currentDesc != null ? currentDesc : "");
+        input.setText(measurement.getDescription() != null ? measurement.getDescription() : "");
         input.setSelection(input.getText().length());
         builder.setView(input);
 
         builder.setPositiveButton(R.string.saved_measurements_rename_positive, (dialog, which) -> {
-            String newName = input.getText().toString().trim();
-            if (!newName.isEmpty()) {
-                viewModel.renameMeasurement(measurement.getId(), newName);
-                Toast.makeText(this, R.string.saved_measurements_renamed, Toast.LENGTH_SHORT).show();
-            }
+            String newDescription = input.getText().toString().trim();
+            viewModel.renameMeasurement(measurement.getId(), newDescription);
+            Toast.makeText(this, R.string.saved_measurements_renamed, Toast.LENGTH_SHORT).show();
         });
 
         builder.setNegativeButton(R.string.saved_measurements_rename_negative, (dialog, which) -> dialog.dismiss());
@@ -135,14 +152,10 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
     }
 
     private void showDeleteDialog(Measurement measurement) {
-        String desc = measurement.getDescription();
-        if (desc == null || desc.isEmpty()) {
-            desc = measurement.getSensorType() + " " + measurement.getValue() + measurement.getUnit();
-        }
-
         new AlertDialog.Builder(this)
                 .setTitle(R.string.saved_measurements_delete_title)
-                .setMessage(getString(R.string.saved_measurements_delete_message, desc))
+                .setMessage(getString(R.string.saved_measurements_delete_message,
+                        measurement.getDescription() != null ? measurement.getDescription() : "Замер"))
                 .setPositiveButton("Да", (dialog, which) -> {
                     viewModel.deleteMeasurement(measurement.getId());
                     Toast.makeText(this, R.string.saved_measurements_deleted, Toast.LENGTH_SHORT).show();
@@ -154,6 +167,10 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        viewModel.loadMeasurements();
+        new android.os.Handler().postDelayed(() -> {
+            if (!isFinishing() && !isDestroyed()) {
+                viewModel.loadMeasurements();
+            }
+        }, 300);
     }
 }

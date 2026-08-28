@@ -47,6 +47,7 @@ import com.mikesuvade.focus.ui.detail.DetailActivity;
 import com.mikesuvade.focus.ui.list.ListDetailActivity;
 import com.mikesuvade.focus.ui.saved.SavedListsActivity;
 import com.mikesuvade.focus.ui.saved.SavedMeasurementsActivity;
+import com.mikesuvade.focus.ui.settings.SettingsActivity;
 import com.mikesuvade.focus.ui.temperature.TemperatureActivity;
 import com.mikesuvade.focus.utils.AppState;
 
@@ -157,6 +158,16 @@ public class MainActivity extends AppCompatActivity {
         setupObservers();
         setupEmptySearchKeyboardPadding();
         updateSearchHint();
+
+        Log.d("USERDB", "=== onCreate START ===");
+        Log.d("USERDB", "Current mode = " + currentMode);
+        Log.d("USERDB", "NOT loading data on startup");
+        // loadAllGateValvesWithUser();  // ← НЕ ЗАГРУЖАЕМ ПРИ СТАРТЕ
+
+        // 🔥 ДОБАВЛЯЕМ ВОССТАНОВЛЕНИЕ СЕССИИ ПРИ СТАРТЕ
+        restoreLastSession();
+
+        Log.d("SESSY", "=== onCreate END ===");
     }
 
     private void initViews() {
@@ -187,6 +198,9 @@ public class MainActivity extends AppCompatActivity {
         // 🔥 ИНИЦИАЛИЗАЦИЯ АДАПТЕРОВ
         sensorAdapter = new SensorAdapter();
         setpointAdapter = new SetpointAdapter();
+
+        // 🔥 СКРЫВАЕМ КНОПКУ ПРИ СТАРТЕ
+        btnNewValve.setVisibility(View.GONE);
 
         // ✅ ДОЛГИЙ ТАП ПО КНОПКЕ
         btnNewValve.setOnLongClickListener(v -> {
@@ -609,14 +623,26 @@ public class MainActivity extends AppCompatActivity {
         tvEmptySearch.setVisibility(View.GONE);
 
         etSearch.setOnFocusChangeListener((v, hasFocus) -> {
+            Log.d("USERDB", "onFocusChange: hasFocus=" + hasFocus + ", isSearchActive=" + isSearchActive + ", currentMode=" + currentMode);
             if (hasFocus && !isSearchActive && currentMode == MODE_MAIN) {
+                Log.d("USERDB", "ACTIVATING SEARCH STATE");
                 activateSearchState();
+                Log.d("USERDB", "CLEARING ADAPTER");
+                adapter.updateData(new ArrayList<>(), new ArrayList<>());
+                rvGateValves.setVisibility(View.VISIBLE);
+                tvEmptySearch.setVisibility(View.GONE);
             }
         });
 
         etSearch.setOnClickListener(v -> {
+            Log.d("USERDB", "onClick: isSearchActive=" + isSearchActive + ", currentMode=" + currentMode);
             if (!isSearchActive && currentMode == MODE_MAIN) {
+                Log.d("USERDB", "ACTIVATING SEARCH STATE VIA CLICK");
                 activateSearchState();
+                Log.d("USERDB", "CLEARING ADAPTER");
+                adapter.updateData(new ArrayList<>(), new ArrayList<>());
+                rvGateValves.setVisibility(View.VISIBLE);
+                tvEmptySearch.setVisibility(View.GONE);
             }
         });
 
@@ -627,34 +653,40 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 String query = s.toString().trim();
+                Log.d("USERDB", "onTextChanged: query='" + query + "', length=" + query.length() + ", currentMode=" + currentMode);
 
                 if (currentMode == MODE_MAIN) {
-                    // Главный режим - поиск задвижек
-                    if (query.length() >= 2 || query.equalsIgnoreCase("#все")) {
-                        viewModel.search(query);
-                    } else {
-                        rvGateValves.setVisibility(View.GONE);
+                    if (query.isEmpty()) {
+                        Log.d("USERDB", "EMPTY QUERY - CLEARING LIST");
+                        adapter.updateData(new ArrayList<>(), new ArrayList<>());
+                        rvGateValves.setVisibility(View.VISIBLE);
                         tvEmptySearch.setVisibility(View.GONE);
-                        if (query.isEmpty()) {
-                            viewModel.search("");
-                        }
+                    } else if (query.length() >= 2) {
+                        Log.d("USERDB", "SEARCH WITH USERDB: query=" + query);
+                        searchGateValvesWithUser(query);
+                    } else if (query.equalsIgnoreCase("#все")) {
+                        Log.d("USERDB", "LOAD ALL WITH USERDB");
+                        loadAllGateValvesWithUser();
+                    } else {
+                        Log.d("USERDB", "SHORT QUERY - CLEARING LIST");
+                        adapter.updateData(new ArrayList<>(), new ArrayList<>());
+                        rvGateValves.setVisibility(View.VISIBLE);
+                        tvEmptySearch.setVisibility(View.GONE);
                     }
                 } else if (currentMode == MODE_SENSORS) {
-                    // Режим датчиков
+                    Log.d("USERDB", "SENSORS MODE: query=" + query);
                     if (query.length() >= 2 || query.equalsIgnoreCase("#все")) {
                         searchSensors(query);
                     } else {
-                        // 🔥 ПРИ ПУСТОМ ЗАПРОСЕ - ОЧИЩАЕМ СПИСОК
                         sensorAdapter.updateData(new ArrayList<>());
                         rvGateValves.setVisibility(View.VISIBLE);
                         tvEmptySearch.setVisibility(View.GONE);
                     }
                 } else if (currentMode == MODE_SETPOINTS) {
-                    // Режим уставок
+                    Log.d("USERDB", "SETPOINTS MODE: query=" + query);
                     if (query.length() >= 2 || query.equalsIgnoreCase("#все")) {
                         searchSetpoints(query);
                     } else {
-                        // 🔥 ПРИ ПУСТОМ ЗАПРОСЕ - ОЧИЩАЕМ СПИСОК
                         setpointAdapter.updateData(new ArrayList<>());
                         rvGateValves.setVisibility(View.VISIBLE);
                         tvEmptySearch.setVisibility(View.GONE);
@@ -706,6 +738,10 @@ public class MainActivity extends AppCompatActivity {
     private void setupListeners() {
         btnOverlayBack.setOnClickListener(v -> hideOverlay());
 
+        // Кнопки переключения режимов
+        btnSensors.setOnClickListener(v -> showSensorsMode());
+        btnSetpoints.setOnClickListener(v -> showSetpointsMode());
+
         btnLists.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, SavedListsActivity.class);
             startActivity(intent);
@@ -715,25 +751,16 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Открыть справку", Toast.LENGTH_SHORT).show();
         });
 
+        // 🔥 НАСТРОЙКИ → ОТКРЫВАЕМ SettingsActivity
         btnSettings.setOnClickListener(v -> {
-            Toast.makeText(this, "Открыть настройки", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            startActivity(intent);
         });
 
-        btnSetpoints.setOnClickListener(v -> {
-            // Переключаемся в режим уставок
-            showSetpointsMode();
-        });
-
-        btnSensors.setOnClickListener(v -> {
-            // Переключаемся в режим датчиков
-            showSensorsMode();
-        });
-        // ✅ ЗАМЕР ТЕМПЕРАТУРЫ → ДИАЛОГ ВЫБОРА
         btnConverter.setOnClickListener(v -> {
             showMeasurementTypeDialog();
         });
     }
-
     // ==========================================
     // 📋 ДИАЛОГ ВЫБОРА РЕЖИМА ЗАМЕРА
     // ==========================================
@@ -757,39 +784,10 @@ public class MainActivity extends AppCompatActivity {
     // ==========================================
 
     private void setupObservers() {
-        viewModel.getGateValves().observe(this, valves -> {
-            Log.d("MAIN_DEBUG", "=== getGateValves observer ===");
-            Log.d("MAIN_DEBUG", "valves size = " + (valves != null ? valves.size() : 0));
-
-            if (valves != null && !valves.isEmpty()) {
-                List<Integer> selectedPositions = new ArrayList<>();
-                List<GateValve> currentList = viewModel.getCurrentListLive().getValue();
-                if (currentList == null) currentList = new ArrayList<>();
-
-                for (int i = 0; i < valves.size(); i++) {
-                    GateValve valve = valves.get(i);
-                    for (GateValve v : currentList) {
-                        if (v.getId() == valve.getId()) {
-                            selectedPositions.add(i);
-                            break;
-                        }
-                    }
-                }
-
-                adapter.updateData(valves, selectedPositions);
-                rvGateValves.setVisibility(View.VISIBLE);
-                tvEmptySearch.setVisibility(View.GONE);
-                expandedPositions.clear();
-            } else {
-                adapter.updateData(new ArrayList<>(), new ArrayList<>());
-                rvGateValves.setVisibility(View.GONE);
-                String query = etSearch.getText().toString().trim();
-                tvEmptySearch.setVisibility(query.length() >= 2 ? View.VISIBLE : View.GONE);
-            }
-            Log.d("MAIN_DEBUG", "=== getGateValves observer END ===");
-        });
+        // ⚠️ Теперь данные загружаются через loadAllGateValvesWithUser()
+        // Можно оставить пустым или закомментировать старый observer
+        // viewModel.getGateValves().observe(...) - больше не используем
     }
-
     // ==========================================
     // ✅ СИНХРОНИЗАЦИЯ ВЫДЕЛЕНИЯ
     // ==========================================
@@ -904,41 +902,59 @@ public class MainActivity extends AppCompatActivity {
 
     private void refreshData() {
         String query = etSearch.getText().toString().trim();
-        if (query.length() >= 2) {
-            viewModel.search(query);
-        } else {
-            viewModel.search("");
+        if (currentMode == MODE_MAIN) {
+            if (query.length() >= 2) {
+                // 🔥 Ищем с учетом пользовательских данных
+                searchGateValvesWithUser(query);
+            } else {
+                // 🔥 Загружаем все с учетом пользовательских данных
+               // loadAllGateValvesWithUser();
+            }
         }
     }
 
     private void updateButtonState() {
-        AppState appState = AppState.getInstance();
+        Log.d("SESSY", "=== updateButtonState START ===");
+        Log.d("SESSY", "currentMode = " + currentMode);
 
+        AppState appState = AppState.getInstance();
+        Log.d("SESSY", "hasActiveSession = " + appState.hasActiveSession());
+        Log.d("SESSY", "lastOpenedSessionId = " + appState.getLastOpenedSessionId());
+        Log.d("SESSY", "lastOpenedSessionName = " + appState.getLastOpenedSessionName());
+
+        if (currentMode != MODE_MAIN) {
+            Log.d("SESSY", "Not in MAIN mode, hiding btnNewValve");
+            btnNewValve.setVisibility(View.GONE);
+            return;
+        }
+
+        // Режим 1 (Арматура)
         if (appState.hasActiveSession()) {
+            Log.d("SESSY", "Active session found!");
+            btnNewValve.setVisibility(View.VISIBLE);
             String name = appState.getLastOpenedSessionName();
             int size = viewModel.getCurrentListSize();
-            if (name != null && !name.isEmpty()) {
-                btnNewValve.setText(name + " (" + size + ")");
-            } else {
-                btnNewValve.setText("Список (" + size + ")");
-            }
+            Log.d("SESSY", "Session name = " + name + ", size = " + size);
+            btnNewValve.setText(name + " (" + size + ")");
             btnNewValve.setOnClickListener(v -> openSession());
             return;
         }
 
         if (viewModel.getIsRecording().getValue() != null && viewModel.getIsRecording().getValue()) {
             int size = viewModel.getCurrentListSize();
-            btnNewValve.setText(getString(R.string.to_list, size));
-            btnNewValve.setOnClickListener(v -> openNewList());
+            Log.d("SESSY", "Recording mode, size = " + size);
+            if (size > 0) {
+                btnNewValve.setVisibility(View.VISIBLE);
+                btnNewValve.setText(getString(R.string.to_list, size));
+                btnNewValve.setOnClickListener(v -> openNewList());
+            } else {
+                btnNewValve.setVisibility(View.GONE);
+            }
             return;
         }
 
-        btnNewValve.setText(R.string.new_valve);
-        btnNewValve.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, DetailActivity.class);
-            intent.putExtra(DetailActivity.EXTRA_IS_NEW, true);
-            detailResultLauncher.launch(intent);
-        });
+        Log.d("SESSY", "No session and no recording, hiding btnNewValve");
+        btnNewValve.setVisibility(View.GONE);
     }
     // ==========================================
 // 🔥 ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ
@@ -961,16 +977,11 @@ public class MainActivity extends AppCompatActivity {
 
         deactivateSearchState();
 
-        btnNewValve.setText(R.string.new_valve);
-        btnNewValve.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, DetailActivity.class);
-            intent.putExtra(DetailActivity.EXTRA_IS_NEW, true);
-            detailResultLauncher.launch(intent);
-        });
+        // 🔥 КНОПКА УПРАВЛЯЕТСЯ ЧЕРЕЗ updateButtonState()
+        updateButtonState();
 
         updateSearchHint();
-        refreshData();
-        updateButtonState();
+       // refreshData();
     }
     private void showSensorsMode() {
         currentMode = MODE_SENSORS;
@@ -986,10 +997,8 @@ public class MainActivity extends AppCompatActivity {
         isSearchActive = true;
         activateSearchState();
 
-        btnNewValve.setText("НОВАЯ ПОЗИЦИЯ");
-        btnNewValve.setOnClickListener(v -> {
-            Toast.makeText(this, "Создание новой позиции датчика", Toast.LENGTH_SHORT).show();
-        });
+        // 🔥 КНОПКА СКРЫТА В РЕЖИМЕ ДАТЧИКОВ
+        btnNewValve.setVisibility(View.GONE);
 
         sensorAdapter.updateData(new ArrayList<>());
         tvEmptySearch.setVisibility(View.GONE);
@@ -1014,10 +1023,8 @@ public class MainActivity extends AppCompatActivity {
         isSearchActive = true;
         activateSearchState();
 
-        btnNewValve.setText("НОВАЯ УСТАВКА");
-        btnNewValve.setOnClickListener(v -> {
-            Toast.makeText(this, "Создание новой уставки", Toast.LENGTH_SHORT).show();
-        });
+        // 🔥 КНОПКА СКРЫТА В РЕЖИМЕ УСТАВОК
+        btnNewValve.setVisibility(View.GONE);
 
         setpointAdapter.updateData(new ArrayList<>());
         tvEmptySearch.setVisibility(View.GONE);
@@ -1180,16 +1187,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void openSession() {
+        Log.d("SESSY", "=== openSession START ===");
         String sessionId = AppState.getInstance().getLastOpenedSessionId();
+        Log.d("SESSY", "sessionId = " + sessionId);
+
         if (sessionId != null && !sessionId.isEmpty()) {
             Intent intent = new Intent(MainActivity.this, ListDetailActivity.class);
             intent.putExtra("session_id", sessionId);
+            intent.putExtra("use_user_db", true);
             listDetailResultLauncher.launch(intent);
+            Log.d("SESSY", "Launching ListDetailActivity with session: " + sessionId);
         } else {
+            Log.d("SESSY", "Session not found!");
             Toast.makeText(this, "Сессия не найдена", Toast.LENGTH_SHORT).show();
         }
+        Log.d("SESSY", "=== openSession END ===");
     }
-
     private void showSaveChangesDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("Сохранить изменения?")
@@ -1207,7 +1220,8 @@ public class MainActivity extends AppCompatActivity {
     private void saveCurrentSession() {
         ValveWorkSession session = AppState.getInstance().getActiveSession();
         if (session != null) {
-            viewModel.saveSessionToDb(session);
+            // 🔥 ВЫЗЫВАЕМ saveUserSessionToDb
+            viewModel.saveUserSessionToDb(session);
             AppState.getInstance().setHasUnsavedChanges(false);
             Toast.makeText(this, "Список сохранён", Toast.LENGTH_SHORT).show();
         }
@@ -1228,52 +1242,72 @@ public class MainActivity extends AppCompatActivity {
         Log.d("DUPLICATE", "hasActiveSession = " + appState.hasActiveSession());
 
         if (appState.hasActiveSession()) {
-            Log.d("DUPLICATE", "sessionId = " + appState.getLastOpenedSessionId());
+            String sessionId = appState.getLastOpenedSessionId();
+            Log.d("DUPLICATE", "sessionId = " + sessionId);
+
             new Thread(() -> {
                 try {
-                    List<ValveItem> items = ((MyApp) getApplication())
-                            .getRepository()
-                            .getValveItemsBySession(appState.getLastOpenedSessionId());
-
+                    IRepository repository = ((MyApp) getApplication()).getRepository();
+                    // 🔥 ИСПРАВЛЕНО: getUserSessionItemsBySession
+                    List<ValveItem> items = repository.getUserSessionItemsBySession(sessionId);
                     Log.d("DUPLICATE", "items size = " + items.size());
+
+                    List<GateValve> loadedValves = new ArrayList<>();
+                    for (ValveItem item : items) {
+                        Log.d("RESTORE", "item: gateValveId=" + item.getGateValveId());
+                        GateValve valve = repository.getGateValveById(item.getGateValveId());
+
+                        if (valve != null) {
+                            valve.setId(item.getGateValveId());
+                            loadedValves.add(valve);
+                            Log.d("RESTORE", "valve found: " + valve.getName());
+                        } else {
+                            Log.d("RESTORE", "valve found: null");
+                        }
+                    }
 
                     runOnUiThread(() -> {
                         viewModel.clearCurrentList();
-                        for (ValveItem item : items) {
-                            Log.d("RESTORE", "item: gateValveId=" + item.getGateValveId());
-
-                            GateValve valve = ((MyApp) getApplication())
-                                    .getRepository()
-                                    .getGateValveById(item.getGateValveId());
-
-                            Log.d("RESTORE", "valve found: " + (valve != null ? valve.getName() : "null"));
-
-                            if (valve != null) {
-                                valve.setId(item.getGateValveId());
-                                viewModel.addToCurrentList(valve);
-                            }
+                        for (GateValve valve : loadedValves) {
+                            viewModel.addToCurrentList(valve);
                         }
                         viewModel.updateCurrentListSize(items.size());
+
+                        syncAdapterSelection();
                         updateButtonState();
+
                         Log.d("DUPLICATE", "currentList size after restore = " + viewModel.getCurrentListSize());
                     });
                 } catch (Exception e) {
+                    Log.e("DUPLICATE", "Ошибка восстановления сессии", e);
                     e.printStackTrace();
                 }
             }).start();
         } else {
             Log.d("DUPLICATE", "Нет активной сессии");
+            syncAdapterSelection();
+            updateButtonState();
         }
         Log.d("DUPLICATE", "=== restoreLastSession END ===");
     }
 
     private void openNewList() {
+        Log.d("SESSY1", "=== openNewList START ===");
+
         List<GateValve> currentList = viewModel.getCurrentListLive().getValue();
+        if (currentList == null) {
+            Log.d("SESSY1", "currentList is NULL");
+        } else {
+            Log.d("SESSY1", "currentList size = " + currentList.size());
+        }
+
         if (currentList == null || currentList.isEmpty()) {
+            Log.d("SESSY1", "List is empty, showing toast");
             Toast.makeText(this, R.string.list_empty, Toast.LENGTH_SHORT).show();
             return;
         }
 
+        // 🔥 СОЗДАЕМ СПИСКИ ДЛЯ ПЕРЕДАЧИ
         ArrayList<Integer> ids = new ArrayList<>();
         ArrayList<String> names = new ArrayList<>();
         ArrayList<String> isys = new ArrayList<>();
@@ -1284,16 +1318,35 @@ public class MainActivity extends AppCompatActivity {
             isys.add(valve.getIsy() != null ? valve.getIsy() : "");
         }
 
+        Log.d("SESSY1", "ids size = " + ids.size());
+        Log.d("SESSY1", "names size = " + names.size());
+        Log.d("SESSY1", "isys size = " + isys.size());
+
+        // 🔥 НЕ СОХРАНЯЕМ СЕССИЮ ЗДЕСЬ!
+        // Создаем только временную сессию в памяти
+        String sessionId = "SESSION_" + System.currentTimeMillis();
+
+        ValveWorkSession session = new ValveWorkSession();
+        session.setSessionId(sessionId);
+        session.setEquipmentDescription("Новый список");
+        session.setSaveDate(getCurrentDateTime());
+        session.setCreatedAt(getCurrentDateTime());
+        session.setIsSynced(0);
+
+        AppState.getInstance().setActiveSession(session);
+        AppState.getInstance().setHasUnsavedChanges(true);
+        Log.d("SESSY1", "Session set in AppState (not saved to DB yet)");
+
         Intent intent = new Intent(MainActivity.this, ListDetailActivity.class);
+        intent.putExtra("is_new_session", true);
+        intent.putExtra("session_id", sessionId);
+        intent.putExtra("use_user_db", true);
         intent.putIntegerArrayListExtra("valve_ids", ids);
         intent.putStringArrayListExtra("valve_names", names);
         intent.putStringArrayListExtra("valve_isys", isys);
 
-        Log.d("MYTITLE", "=== openNewList ===");
-        Log.d("MYTITLE", "ids size: " + ids.size());
-        Log.d("MYTITLE", "names size: " + names.size());
-
         listDetailResultLauncher.launch(intent);
+        Log.d("SESSY1", "=== openNewList END ===");
     }
     private void showKeyboard() {
         if (etSearch != null) {
@@ -1323,20 +1376,118 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+    private void updateNewValveButtonVisibility(boolean show) {
+        if (show) {
+            btnNewValve.setVisibility(View.VISIBLE);
+            // Возвращаем связь с btnHelp
+            ConstraintSet set = new ConstraintSet();
+            set.clone(rootLayout);
+            set.connect(btnHelp.getId(), ConstraintSet.START, btnNewValve.getId(), ConstraintSet.END, 0);
+            set.applyTo(rootLayout);
+        } else {
+            btnNewValve.setVisibility(View.GONE);
+            // Привязываем btnHelp к левому краю
+            ConstraintSet set = new ConstraintSet();
+            set.clone(rootLayout);
+            set.connect(btnHelp.getId(), ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, 0);
+            set.applyTo(rootLayout);
+        }
+    }
+    // ==========================================
+// 🔧 ЗАГРУЗКА ДАННЫХ С УЧЕТОМ ПОЛЬЗОВАТЕЛЬСКОЙ БД
+// ==========================================
+
+    private void loadAllGateValvesWithUser() {
+        Log.d("USERDB", "=== loadAllGateValvesWithUser START ===");
+        new Thread(() -> {
+            try {
+                IRepository repository = ((MyApp) getApplication()).getRepository();
+                Log.d("USERDB", "Calling repository.getAllGateValvesWithUser()");
+                List<GateValve> valves = repository.getAllGateValvesWithUser();
+                Log.d("USERDB", "loadAllGateValvesWithUser: size = " + valves.size());
+                runOnUiThread(() -> {
+                    Log.d("USERDB", "Updating adapter with " + valves.size() + " valves");
+                    List<Integer> selectedPositions = new ArrayList<>();
+                    List<GateValve> currentList = viewModel.getCurrentListLive().getValue();
+                    if (currentList == null) currentList = new ArrayList<>();
+
+                    for (int i = 0; i < valves.size(); i++) {
+                        GateValve valve = valves.get(i);
+                        for (GateValve v : currentList) {
+                            if (v.getId() == valve.getId() ||
+                                    (v.getOriginalId() > 0 && v.getOriginalId() == valve.getOriginalId())) {
+                                selectedPositions.add(i);
+                                break;
+                            }
+                        }
+                    }
+
+                    adapter.updateData(valves, selectedPositions);
+                    rvGateValves.setVisibility(valves.isEmpty() ? View.GONE : View.VISIBLE);
+                    tvEmptySearch.setVisibility(valves.isEmpty() ? View.VISIBLE : View.GONE);
+                    expandedPositions.clear();
+                    Log.d("USERDB", "=== loadAllGateValvesWithUser END ===");
+                });
+            } catch (Exception e) {
+                Log.e("USERDB", "Error loading valves with user", e);
+            }
+        }).start();
+    }
+    private void searchGateValvesWithUser(String query) {
+        Log.d("USERDB", "=== searchGateValvesWithUser START ===");
+        Log.d("USERDB", "query = " + query);
+        new Thread(() -> {
+            try {
+                IRepository repository = ((MyApp) getApplication()).getRepository();
+                Log.d("USERDB", "Calling repository.searchGateValvesWithUser()");
+                List<GateValve> results = repository.searchGateValvesWithUser(query);
+                Log.d("USERDB", "searchGateValvesWithUser: results size = " + results.size());
+                runOnUiThread(() -> {
+                    Log.d("USERDB", "Updating adapter with " + results.size() + " results");
+                    List<Integer> selectedPositions = new ArrayList<>();
+                    List<GateValve> currentList = viewModel.getCurrentListLive().getValue();
+                    if (currentList == null) currentList = new ArrayList<>();
+
+                    for (int i = 0; i < results.size(); i++) {
+                        GateValve valve = results.get(i);
+                        for (GateValve v : currentList) {
+                            if (v.getId() == valve.getId() ||
+                                    (v.getOriginalId() > 0 && v.getOriginalId() == valve.getOriginalId())) {
+                                selectedPositions.add(i);
+                                break;
+                            }
+                        }
+                    }
+
+                    adapter.updateData(results, selectedPositions);
+                    rvGateValves.setVisibility(results.isEmpty() ? View.GONE : View.VISIBLE);
+                    tvEmptySearch.setVisibility(results.isEmpty() ? View.VISIBLE : View.GONE);
+                    expandedPositions.clear();
+                    Log.d("USERDB", "=== searchGateValvesWithUser END ===");
+                });
+            } catch (Exception e) {
+                Log.e("USERDB", "Error searching valves with user", e);
+            }
+        }).start();
+    }
     @Override
     protected void onResume() {
         super.onResume();
         Log.d("MAIN_DEBUG", "=== onResume START ===");
 
-        if (!AppState.getInstance().hasActiveSession()) {
-            viewModel.clearCurrentList();
-            Log.d("MAIN_DEBUG", "No active session, cleared current list");
-        } else {
-            restoreLastSession();
-        }
+        if (currentMode == MODE_MAIN) {
+            if (!AppState.getInstance().hasActiveSession()) {
+                viewModel.clearCurrentList();
+                Log.d("MAIN_DEBUG", "No active session, cleared current list");
+            } else {
+                restoreLastSession();
+            }
 
-        viewModel.refreshData();
-        updateButtonState();
+            // 🔥 Обновляем данные с учетом пользовательской БД
+           // loadAllGateValvesWithUser();
+            updateButtonState();
+        }
         Log.d("MAIN_DEBUG", "=== onResume END ===");
     }
+
 }

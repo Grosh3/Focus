@@ -10,6 +10,9 @@
     <!-- ========================================== -->
     <!-- 1️⃣ Верхняя панель (ConstraintLayout) -->
     <!-- ========================================== -->
+    <!-- ========================================== -->
+    <!-- 1️⃣ Верхняя панель (ConstraintLayout) -->
+    <!-- ========================================== -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/topPanel"
         android:layout_width="match_parent"
@@ -22,7 +25,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- 1️⃣ НОВАЯ ЗАДВИЖКА (растягивается) -->
+        <!-- 1️⃣ ИНДИКАТОР СЕССИИ / СПИСКА -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnNewValve"
             style="@style/Widget.Material3.Button.OutlinedButton"
@@ -32,6 +35,7 @@
             android:text="@string/new_valve"
             android:maxLines="1"
             android:ellipsize="end"
+            android:visibility="invisible"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/btnHelp"
             app:layout_constraintTop_toTopOf="parent"
@@ -44,7 +48,6 @@
             android:layout_width="48dp"
             android:layout_height="wrap_content"
             android:text="❓"
-            app:layout_constraintStart_toEndOf="@id/btnNewValve"
             app:layout_constraintEnd_toStartOf="@id/btnLists"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
@@ -56,12 +59,11 @@
             android:layout_width="48dp"
             android:layout_height="wrap_content"
             android:text="🗂️"
-            app:layout_constraintStart_toEndOf="@id/btnHelp"
             app:layout_constraintEnd_toStartOf="@id/btnSettings"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
 
-        <!-- 4️⃣ НАСТРОЙКИ (прижата к правому краю) -->
+        <!-- 4️⃣ НАСТРОЙКИ -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSettings"
             style="@style/Widget.Material3.Button.TextButton"

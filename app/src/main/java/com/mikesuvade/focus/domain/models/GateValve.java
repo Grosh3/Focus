@@ -1,8 +1,9 @@
 package com.mikesuvade.focus.domain.models;
 
-import java.io.Serializable;  // ← ДОБАВЛЯЕМ ИМПОРТ
+import java.io.Serializable;
+import java.util.Arrays;
 
-public class GateValve implements Serializable {  // ← ДОБАВЛЯЕМ implements Serializable
+public class GateValve implements Serializable {
 
     private int id;
     private String nameEng;
@@ -27,10 +28,12 @@ public class GateValve implements Serializable {  // ← ДОБАВЛЯЕМ impl
 
     // Для пользовательских таблиц
     private int originalId;
+    private int isDeleted;       // 0 - активна, 1 - удалена
     private String editedAt;
     private boolean isCustom;
     private int isEdited;
     private String editedAtValve;
+    private String createdAt;    // Дата создания копии
 
     // Конструкторы
     public GateValve() {}
@@ -40,7 +43,10 @@ public class GateValve implements Serializable {  // ← ДОБАВЛЯЕМ impl
         this.kks = kks;
     }
 
-    // Все геттеры и сеттеры (без изменений)
+    // ==========================================
+    // ГЕТТЕРЫ И СЕТТЕРЫ
+    // ==========================================
+
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
@@ -98,16 +104,18 @@ public class GateValve implements Serializable {  // ← ДОБАВЛЯЕМ impl
     public String getDescriptionBlockingPerifer() { return descriptionBlockingPerifer; }
     public void setDescriptionBlockingPerifer(String descriptionBlockingPerifer) { this.descriptionBlockingPerifer = descriptionBlockingPerifer; }
 
-    public String getLocationDescription() {
-        return locationDescription;
-    }
+    public String getLocationDescription() { return locationDescription; }
+    public void setLocationDescription(String locationDescription) { this.locationDescription = locationDescription; }
 
-    public void setLocationDescription(String locationDescription) {
-        this.locationDescription = locationDescription;
-    }
+    // ==========================================
+    // ПОЛЬЗОВАТЕЛЬСКИЕ ПОЛЯ
+    // ==========================================
 
     public int getOriginalId() { return originalId; }
     public void setOriginalId(int originalId) { this.originalId = originalId; }
+
+    public int getIsDeleted() { return isDeleted; }
+    public void setIsDeleted(int isDeleted) { this.isDeleted = isDeleted; }
 
     public String getEditedAt() { return editedAt; }
     public void setEditedAt(String editedAt) { this.editedAt = editedAt; }
@@ -121,8 +129,28 @@ public class GateValve implements Serializable {  // ← ДОБАВЛЯЕМ impl
     public String getEditedAtValve() { return editedAtValve; }
     public void setEditedAtValve(String editedAtValve) { this.editedAtValve = editedAtValve; }
 
+    public String getCreatedAt() { return createdAt; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
+    // ==========================================
+    // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+    // ==========================================
+
     @Override
     public String toString() {
-        return name + " (" + kks + ")";
+        return (name != null ? name : "Без названия") + " (" + (kks != null ? kks : "нет KKS") + ")";
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        GateValve that = (GateValve) obj;
+        return id == that.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return id;
     }
 }

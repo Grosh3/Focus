@@ -12,7 +12,15 @@ public class ValveItem {
     private String checkedAt;
     private String operationTimestamp;
 
-    // Геттеры и сеттеры
+    // ==========================================
+    // ПОЛЬЗОВАТЕЛЬСКИЕ ПОЛЯ
+    // ==========================================
+    private int id;           // ID в пользовательской БД
+
+    // ==========================================
+    // ГЕТТЕРЫ И СЕТТЕРЫ
+    // ==========================================
+
     public int getItemId() { return itemId; }
     public void setItemId(int itemId) { this.itemId = itemId; }
 
@@ -39,5 +47,37 @@ public class ValveItem {
 
     public String getOperationTimestamp() { return operationTimestamp; }
     public void setOperationTimestamp(String operationTimestamp) { this.operationTimestamp = operationTimestamp; }
-    
+
+    // ==========================================
+    // ПОЛЬЗОВАТЕЛЬСКИЕ ПОЛЯ - ГЕТТЕРЫ И СЕТТЕРЫ
+    // ==========================================
+
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+
+    // ==========================================
+    // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+    // ==========================================
+
+    @Override
+    public String toString() {
+        return "ValveItem{" +
+                "itemId=" + itemId +
+                ", gateValveId=" + gateValveId +
+                ", parentSessionId='" + parentSessionId + '\'' +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        ValveItem that = (ValveItem) obj;
+        return itemId == that.itemId;
+    }
+
+    @Override
+    public int hashCode() {
+        return itemId;
+    }
 }
