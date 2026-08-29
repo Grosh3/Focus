@@ -1,16 +1,24 @@
 package com.mikesuvade.focus;
 
 import android.app.Application;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
+
+import androidx.appcompat.app.AppCompatDelegate;
 
 import com.mikesuvade.focus.data.database.DatabaseHelper;
 import com.mikesuvade.focus.data.database.UserDatabaseHelper;
 import com.mikesuvade.focus.data.repository.RepositoryImpl;
 import com.mikesuvade.focus.domain.repository.IRepository;
+import com.mikesuvade.focus.ui.settings.SettingsActivity;
 
 public class MyApp extends Application {
 
     private static final String TAG = "MyApp";
+    private static final String PREFS_NAME = "theme_prefs";
+    private static final String KEY_THEME = "current_theme";
+
     private static MyApp instance;
     private IRepository repository;
     private UserDatabaseHelper userDatabaseHelper;
@@ -20,12 +28,37 @@ public class MyApp extends Application {
         super.onCreate();
         instance = this;
 
+        // 🔥 ПРИМЕНЯЕМ СОХРАНЁННУЮ ТЕМУ ПРИ СТАРТЕ
+        applySavedTheme();
+
         DatabaseHelper dbHelper = DatabaseHelper.getInstance(this);
         userDatabaseHelper = UserDatabaseHelper.getInstance(this);
 
         repository = new RepositoryImpl(dbHelper, userDatabaseHelper);
 
         Log.d(TAG, "Application initialized successfully");
+    }
+
+    // 🔥 НОВЫЙ МЕТОД — применяет сохранённую тему
+    private void applySavedTheme() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        int savedTheme = prefs.getInt(KEY_THEME, SettingsActivity.THEME_SYSTEM);
+
+        int mode;
+        switch (savedTheme) {
+            case SettingsActivity.THEME_LIGHT:
+                mode = AppCompatDelegate.MODE_NIGHT_NO;
+                break;
+            case SettingsActivity.THEME_DARK:
+                mode = AppCompatDelegate.MODE_NIGHT_YES;
+                break;
+            default:
+                mode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+                break;
+        }
+
+        AppCompatDelegate.setDefaultNightMode(mode);
+        Log.d(TAG, "Applied theme: " + savedTheme + " (mode=" + mode + ")");
     }
 
     public static MyApp getInstance() {

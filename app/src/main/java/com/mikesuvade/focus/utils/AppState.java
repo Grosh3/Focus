@@ -1,5 +1,7 @@
 package com.mikesuvade.focus.utils;
 
+import android.util.Log;
+
 import com.mikesuvade.focus.domain.models.ValveWorkSession;
 
 public class AppState {
@@ -24,10 +26,18 @@ public class AppState {
     }
 
     public void setActiveSession(ValveWorkSession session) {
+        Log.d("APPSTATE", "=== setActiveSession ===");
+        Log.d("APPSTATE", "session = " + (session != null ? "not null" : "NULL"));
+        if (session != null) {
+            Log.d("APPSTATE", "session.sessionId = " + session.getSessionId());
+            Log.d("APPSTATE", "session.name = " + session.getEquipmentDescription());
+        }
         this.activeSession = session;
         if (session != null) {
             this.lastOpenedSessionName = session.getEquipmentDescription();
             this.lastOpenedSessionId = session.getSessionId();
+            Log.d("APPSTATE", "lastOpenedSessionId = " + lastOpenedSessionId);
+            Log.d("APPSTATE", "lastOpenedSessionName = " + lastOpenedSessionName);
         }
     }
 

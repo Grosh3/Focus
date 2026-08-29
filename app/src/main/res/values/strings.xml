@@ -124,5 +124,9 @@
     <string name="saved_measurements_rename_negative">Отмена</string>
     <string name="saved_measurements_options_rename">Переименовать</string>
     <string name="saved_measurements_options_delete">Удалить</string>
+    <!-- Диалог выбора типа замера -->
+    <string name="dialog_measurement_title">Выберите тип замера</string>
+    <string name="measurement_mv">мВ</string>
+    <string name="measurement_ohm">Ом</string>
 
 </resources>

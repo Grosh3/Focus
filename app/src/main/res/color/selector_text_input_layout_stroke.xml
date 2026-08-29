@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Активное состояние (фокус) — цвет primary -->
+    <item android:color="?attr/colorPrimary" android:state_focused="true" />
+    <!-- Активное состояние (нажатие) — цвет primary -->
+    <item android:color="?attr/colorPrimary" android:state_pressed="true" />
+    <!-- Обычное состояние — серый -->
+    <item android:color="?android:attr/textColorSecondary" />
+</selector>

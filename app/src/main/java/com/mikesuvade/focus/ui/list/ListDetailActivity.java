@@ -386,15 +386,34 @@ public class ListDetailActivity extends AppCompatActivity {
             }
             Log.d("SESSY", "Save dialog: name = " + name);
 
+            // 🔥 ПОЛУЧАЕМ sessionId
+            String sessionId = viewModel.getSessionId();
+            Log.d("SESSY", "sessionId from ViewModel = " + sessionId);
+
+            if (sessionId == null || sessionId.isEmpty()) {
+                sessionId = "SESSION_" + System.currentTimeMillis();
+                viewModel.setSessionId(sessionId);
+                Log.d("SESSY", "Generated new sessionId: " + sessionId);
+            }
+
             viewModel.setListName(name);
             viewModel.saveSession(name);
 
+            // 🔥 СОЗДАЁМ СЕССИЮ ДЛЯ AppState
             ValveWorkSession session = new ValveWorkSession();
-            session.setSessionId(viewModel.getSessionId());
+            session.setSessionId(sessionId);
             session.setEquipmentDescription(name);
             session.setSaveDate(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
+
+            // 🔥 ЭТИ ЛОГИ ДОЛЖНЫ ПОЯВИТЬСЯ
+            Log.d("APPSTATE", "=== SETTING APPSTATE SESSION ===");
+            Log.d("APPSTATE", "sessionId = " + sessionId);
+            Log.d("APPSTATE", "name = " + name);
+
             AppState.getInstance().setActiveSession(session);
             AppState.getInstance().setHasUnsavedChanges(false);
+
+            Log.d("APPSTATE", "AppState set successfully");
 
             Toast.makeText(this, R.string.toast_saved, Toast.LENGTH_SHORT).show();
             setResult(RESULT_OK);
@@ -409,7 +428,9 @@ public class ListDetailActivity extends AppCompatActivity {
             finish();
         });
 
+        // 🔥 СОЗДАЁМ AlertDialog
         AlertDialog alertDialog = builder.create();
+
         alertDialog.setOnDismissListener(dismissListener -> {
             if (!isFinishing()) {
                 Log.d("SESSY", "Save dialog: DISMISSED");
@@ -422,7 +443,6 @@ public class ListDetailActivity extends AppCompatActivity {
         alertDialog.show();
         Log.d("SESSY", "=== showSaveDialog END ===");
     }
-
     private void showValveInfoDialog(ValveItem item) {
         GateValve valve = ((MyApp) getApplication()).getRepository().getGateValveById(item.getGateValveId());
         if (valve == null) {

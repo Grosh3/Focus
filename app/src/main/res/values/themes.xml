@@ -22,4 +22,13 @@
         <!-- Navigation Bar -->
         <item name="android:navigationBarColor">@color/surface</item>
     </style>
+
+    <style name="RoundedOutlinedBox" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxStrokeColor">@color/selector_text_input_layout_stroke</item>
+        <item name="hintTextColor">?android:attr/textColorSecondary</item>
+    </style>
 </resources>

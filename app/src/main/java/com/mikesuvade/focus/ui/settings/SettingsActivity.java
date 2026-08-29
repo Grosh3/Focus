@@ -6,6 +6,8 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.RadioGroup;
 import android.widget.Toast;
@@ -14,6 +16,9 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
@@ -47,7 +52,6 @@ public class SettingsActivity extends AppCompatActivity {
             this::performImport
     );
 
-    // 🔥 Результат создания/редактирования
     private final ActivityResultLauncher<Intent> createResultLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
@@ -62,10 +66,9 @@ public class SettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
 
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("Настройки");
-        }
+        // 🔥 ФИКС СТАТУС-БАРА
+        fixTopPanelPadding();
+        setStatusBarAndNavigationIconsDark(true);
 
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
@@ -73,6 +76,43 @@ public class SettingsActivity extends AppCompatActivity {
         initAdminSection();
         initBackupSection();
     }
+
+    // ========================================== //
+    // 🔧 ФИКС СТАТУС-БАРА
+    // ========================================== //
+
+    private void fixTopPanelPadding() {
+        View topPanel = findViewById(R.id.topPanel);
+        if (topPanel == null) return;
+
+        ViewCompat.setOnApplyWindowInsetsListener(topPanel, (view, windowInsets) -> {
+            int statusBarHeight = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+
+            view.setPadding(
+                    view.getPaddingLeft(),
+                    statusBarHeight + view.getPaddingTop(),
+                    view.getPaddingRight(),
+                    view.getPaddingBottom()
+            );
+
+            ViewCompat.setOnApplyWindowInsetsListener(view, null);
+            return windowInsets;
+        });
+    }
+
+    private void setStatusBarAndNavigationIconsDark(boolean dark) {
+        Window window = getWindow();
+        if (window != null) {
+            WindowInsetsControllerCompat controller =
+                    new WindowInsetsControllerCompat(window, window.getDecorView());
+            controller.setAppearanceLightStatusBars(dark);
+            controller.setAppearanceLightNavigationBars(dark);
+        }
+    }
+
+    // ========================================== //
+    // 📋 ИНИЦИАЛИЗАЦИЯ
+    // ========================================== //
 
     private void initThemeSection() {
         RadioGroup rgTheme = findViewById(R.id.rgTheme);
@@ -104,7 +144,6 @@ public class SettingsActivity extends AppCompatActivity {
         Button btnCreateSensor = findViewById(R.id.btnAdminCreateSensor);
         Button btnCreateSetpoint = findViewById(R.id.btnAdminCreateSetpoint);
 
-        // 🔥 СОЗДАНИЕ НОВОЙ ЗАДВИЖКИ
         btnCreateValve.setOnClickListener(v -> {
             Intent intent = new Intent(this, DetailActivity.class);
             intent.putExtra(DetailActivity.EXTRA_TYPE, DetailActivity.TYPE_VALVE);
@@ -112,7 +151,6 @@ public class SettingsActivity extends AppCompatActivity {
             createResultLauncher.launch(intent);
         });
 
-        // 🔥 СОЗДАНИЕ НОВОГО ДАТЧИКА
         btnCreateSensor.setOnClickListener(v -> {
             Intent intent = new Intent(this, DetailActivity.class);
             intent.putExtra(DetailActivity.EXTRA_TYPE, DetailActivity.TYPE_SENSOR);
@@ -120,7 +158,6 @@ public class SettingsActivity extends AppCompatActivity {
             createResultLauncher.launch(intent);
         });
 
-        // 🔥 СОЗДАНИЕ НОВОЙ УСТАВКИ
         btnCreateSetpoint.setOnClickListener(v -> {
             Intent intent = new Intent(this, DetailActivity.class);
             intent.putExtra(DetailActivity.EXTRA_TYPE, DetailActivity.TYPE_SETPOINT);
@@ -143,12 +180,15 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
+    // ========================================== //
+    // 📤 ЭКСПОРТ / ИМПОРТ
+    // ========================================== //
+
     private void performExport(Uri targetUri) {
         if (targetUri == null) return;
 
         new Thread(() -> {
             try {
-                // 🔥 ЭКСПОРТИРУЕМ ТОЛЬКО ПОЛЬЗОВАТЕЛЬСКУЮ БД (focus_user.db)
                 File currentDb = getDatabasePath("focus_user.db");
 
                 if (!currentDb.exists()) {
@@ -188,7 +228,6 @@ public class SettingsActivity extends AppCompatActivity {
     private void executeDbReplacement(Uri sourceUri) {
         new Thread(() -> {
             try {
-                // 🔥 ИМПОРТИРУЕМ В ПОЛЬЗОВАТЕЛЬСКУЮ БД (focus_user.db)
                 File targetDb = getDatabasePath("focus_user.db");
                 targetDb.getParentFile().mkdirs();
 
@@ -212,6 +251,7 @@ public class SettingsActivity extends AppCompatActivity {
             }
         }).start();
     }
+
     @Override
     public boolean onSupportNavigateUp() {
         onBackPressed();

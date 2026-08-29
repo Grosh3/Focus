@@ -9,6 +9,7 @@ import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -18,6 +19,9 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -26,6 +30,7 @@ import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.Measurement;
 import com.mikesuvade.focus.domain.models.TemperatureResult;
+import com.mikesuvade.focus.domain.repository.IRepository;
 import com.mikesuvade.focus.ui.saved.SavedMeasurementsActivity;
 
 import java.text.SimpleDateFormat;
@@ -52,32 +57,71 @@ public class TemperatureActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_temperature);
 
-        mode = getIntent().getStringExtra("MODE");
-        if (mode == null) {
-            mode = "OHM";
-        }
+        try {
+            setContentView(R.layout.activity_temperature);
+            fixTopPanelPadding();
+            // 🔥 УСТАНАВЛИВАЕМ ЦВЕТ СТАТУС-БАРА (как в MainActivity)
+            setStatusBarIconsDark(true);
+            setStatusBarAndNavigationIconsDark(true);
+            mode = getIntent().getStringExtra("MODE");
+            if (mode == null) {
+                mode = "OHM";
+            }
 
-        viewModel = new ViewModelProvider(
-                this,
-                new ViewModelProvider.Factory() {
-                    @NonNull
-                    @Override
-                    @SuppressWarnings("unchecked")
-                    public <T extends androidx.lifecycle.ViewModel> T create(@NonNull Class<T> modelClass) {
-                        return (T) new TemperatureViewModel(
-                                ((MyApp) getApplication()).getRepository()
-                        );
-                    }
+            // 🔥 ЛОГ ДЛЯ ПРОВЕРКИ
+            Log.d("TEMP_DEBUG", "1. setContentView done, mode=" + mode);
+
+            TextView tvTitle = findViewById(R.id.tvTitle);
+            Log.d("TEMP_DEBUG", "2. tvTitle found: " + (tvTitle != null));
+
+            if (tvTitle != null) {
+                if ("MV".equals(mode)) {
+                    tvTitle.setText("Термопары");
+                } else {
+                    tvTitle.setText("Термометры");
                 }
-        ).get(TemperatureViewModel.class);
+            }
+            Log.d("TEMP_DEBUG", "3. Title set");
 
-        initViews();
-        setupRecyclerView();
-        setupListeners();
-        setupObservers();
-        setupHideKeyboardOnTouch();
+            IRepository repository = ((MyApp) getApplication()).getRepository();
+            Log.d("TEMP_DEBUG", "4. Repository obtained");
+
+            viewModel = new ViewModelProvider(
+                    this,
+                    new ViewModelProvider.Factory() {
+                        @NonNull
+                        @Override
+                        @SuppressWarnings("unchecked")
+                        public <T extends androidx.lifecycle.ViewModel> T create(@NonNull Class<T> modelClass) {
+                            return (T) new TemperatureViewModel(repository);
+                        }
+                    }
+            ).get(TemperatureViewModel.class);
+            Log.d("TEMP_DEBUG", "5. ViewModel created");
+
+            initViews();
+            Log.d("TEMP_DEBUG", "6. initViews done");
+
+            setupRecyclerView();
+            Log.d("TEMP_DEBUG", "7. setupRecyclerView done");
+
+            setupListeners();
+            Log.d("TEMP_DEBUG", "8. setupListeners done");
+
+            setupObservers();
+            Log.d("TEMP_DEBUG", "9. setupObservers done");
+
+            setupHideKeyboardOnTouch();
+            Log.d("TEMP_DEBUG", "10. setupHideKeyboardOnTouch done");
+
+            Log.d("TEMP_DEBUG", "✅ onCreate COMPLETED SUCCESSFULLY");
+
+        } catch (Exception e) {
+            Log.e("TEMP_DEBUG", "❌ ERROR in onCreate", e);
+            Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
     }
 
     private void initViews() {
@@ -95,27 +139,29 @@ public class TemperatureActivity extends AppCompatActivity {
 
         if ("MV".equals(mode)) {
             tvUnit.setText("мВ");
-            etValue.setHint("Введите значение в мВ");
+         //   etValue.setHint("Введите значение");
             cbLineResistance.setVisibility(View.GONE);
             etLineResistance.setVisibility(View.GONE);
+
+            // 🔥 ПОКАЗЫВАЕМ ХОЛОДНЫЙ СПАЙ
             tilColdJunction.setVisibility(View.VISIBLE);
             tvColdJunctionUnit.setVisibility(View.VISIBLE);
-            etColdJunction.setHint("Т холодного спая");
+          //  etColdJunction.setHint("t холодного спая");
             etColdJunction.setText("");
         } else {
             tvUnit.setText("Ом");
-            etValue.setHint("Введите значение в Ом");
+          //  etValue.setHint("Введите значение");
             cbLineResistance.setVisibility(View.VISIBLE);
             etLineResistance.setVisibility(View.VISIBLE);
+
+            // 🔥 СКРЫВАЕМ ХОЛОДНЫЙ СПАЙ
             tilColdJunction.setVisibility(View.GONE);
             tvColdJunctionUnit.setVisibility(View.GONE);
             cbLineResistance.setChecked(true);
             etLineResistance.setEnabled(true);
             etLineResistance.setText("");
-            etLineResistance.setHint("Напр. 0.15");
+          //  etLineResistance.setHint("Напр. 0.15");
         }
-
-        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
 
         findViewById(R.id.btnHelp).setOnClickListener(v -> {
             Toast.makeText(this, "Справка по замерам температуры", Toast.LENGTH_SHORT).show();
@@ -126,7 +172,6 @@ public class TemperatureActivity extends AppCompatActivity {
             startActivity(intent);
         });
     }
-
     private void setupHideKeyboardOnTouch() {
         if (rootLayout != null) {
             rootLayout.setOnTouchListener((v, event) -> {
@@ -366,4 +411,43 @@ public class TemperatureActivity extends AppCompatActivity {
         }).start();
     }
 
+    private void fixTopPanelPadding() {
+        View topPanel = findViewById(R.id.topPanel);
+        if (topPanel == null) return;
+
+        ViewCompat.setOnApplyWindowInsetsListener(topPanel, (view, windowInsets) -> {
+            int statusBarHeight = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+
+            view.setPadding(
+                    view.getPaddingLeft(),
+                    statusBarHeight + view.getPaddingTop(),
+                    view.getPaddingRight(),
+                    view.getPaddingBottom()
+            );
+
+            ViewCompat.setOnApplyWindowInsetsListener(view, null);
+            return windowInsets;
+        });
+    }
+    private void setStatusBarIconsDark(boolean dark) {
+        Window window = getWindow();
+        if (window != null) {
+            WindowInsetsControllerCompat controller =
+                    new WindowInsetsControllerCompat(window, window.getDecorView());
+            controller.setAppearanceLightStatusBars(dark);
+        }
+    }
+    private void setStatusBarAndNavigationIconsDark(boolean dark) {
+        Window window = getWindow();
+        if (window != null) {
+            WindowInsetsControllerCompat controller =
+                    new WindowInsetsControllerCompat(window, window.getDecorView());
+
+            // Статус-бар
+            controller.setAppearanceLightStatusBars(dark);
+
+            // Навигационные кнопки (системные)
+            controller.setAppearanceLightNavigationBars(dark);
+        }
+    }
 }
