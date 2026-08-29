@@ -47,6 +47,16 @@ public class SettingsActivity extends AppCompatActivity {
             this::performImport
     );
 
+    // 🔥 Результат создания/редактирования
+    private final ActivityResultLauncher<Intent> createResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    Toast.makeText(this, "✅ Запись создана", Toast.LENGTH_SHORT).show();
+                }
+            }
+    );
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -94,20 +104,28 @@ public class SettingsActivity extends AppCompatActivity {
         Button btnCreateSensor = findViewById(R.id.btnAdminCreateSensor);
         Button btnCreateSetpoint = findViewById(R.id.btnAdminCreateSetpoint);
 
+        // 🔥 СОЗДАНИЕ НОВОЙ ЗАДВИЖКИ
         btnCreateValve.setOnClickListener(v -> {
             Intent intent = new Intent(this, DetailActivity.class);
+            intent.putExtra(DetailActivity.EXTRA_TYPE, DetailActivity.TYPE_VALVE);
             intent.putExtra(DetailActivity.EXTRA_IS_NEW, true);
-            startActivity(intent);
+            createResultLauncher.launch(intent);
         });
 
+        // 🔥 СОЗДАНИЕ НОВОГО ДАТЧИКА
         btnCreateSensor.setOnClickListener(v -> {
-            Toast.makeText(this, "Форма создания датчика", Toast.LENGTH_SHORT).show();
-            // TODO: открыть активити для создания датчика
+            Intent intent = new Intent(this, DetailActivity.class);
+            intent.putExtra(DetailActivity.EXTRA_TYPE, DetailActivity.TYPE_SENSOR);
+            intent.putExtra(DetailActivity.EXTRA_IS_NEW, true);
+            createResultLauncher.launch(intent);
         });
 
+        // 🔥 СОЗДАНИЕ НОВОЙ УСТАВКИ
         btnCreateSetpoint.setOnClickListener(v -> {
-            Toast.makeText(this, "Форма создания уставки", Toast.LENGTH_SHORT).show();
-            // TODO: открыть активити для создания уставки
+            Intent intent = new Intent(this, DetailActivity.class);
+            intent.putExtra(DetailActivity.EXTRA_TYPE, DetailActivity.TYPE_SETPOINT);
+            intent.putExtra(DetailActivity.EXTRA_IS_NEW, true);
+            createResultLauncher.launch(intent);
         });
     }
 
@@ -130,10 +148,11 @@ public class SettingsActivity extends AppCompatActivity {
 
         new Thread(() -> {
             try {
-                File currentDb = getDatabasePath("focus_data.db");
+                // 🔥 ЭКСПОРТИРУЕМ ТОЛЬКО ПОЛЬЗОВАТЕЛЬСКУЮ БД (focus_user.db)
+                File currentDb = getDatabasePath("focus_user.db");
 
                 if (!currentDb.exists()) {
-                    runOnUiThread(() -> Toast.makeText(this, "База данных не найдена", Toast.LENGTH_SHORT).show());
+                    runOnUiThread(() -> Toast.makeText(this, "Пользовательская БД не найдена", Toast.LENGTH_SHORT).show());
                     return;
                 }
 
@@ -147,10 +166,10 @@ public class SettingsActivity extends AppCompatActivity {
                     }
                 }
 
-                runOnUiThread(() -> Toast.makeText(this, "Экспорт успешно завершен!", Toast.LENGTH_LONG).show());
+                runOnUiThread(() -> Toast.makeText(this, "✅ Экспорт успешно завершен!", Toast.LENGTH_LONG).show());
             } catch (Exception e) {
                 Log.e(TAG, "Ошибка экспорта БД", e);
-                runOnUiThread(() -> Toast.makeText(this, "Ошибка экспорта", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> Toast.makeText(this, "❌ Ошибка экспорта", Toast.LENGTH_SHORT).show());
             }
         }).start();
     }
@@ -160,7 +179,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("Внимание")
-                .setMessage("Импорт резервной копии полностью заменит текущие данные приложения. Продолжить?")
+                .setMessage("Импорт резервной копии полностью заменит текущие пользовательские данные. Продолжить?")
                 .setPositiveButton("Импортировать", (dialog, which) -> executeDbReplacement(sourceUri))
                 .setNegativeButton("Отмена", null)
                 .show();
@@ -169,7 +188,8 @@ public class SettingsActivity extends AppCompatActivity {
     private void executeDbReplacement(Uri sourceUri) {
         new Thread(() -> {
             try {
-                File targetDb = getDatabasePath("focus_data.db");
+                // 🔥 ИМПОРТИРУЕМ В ПОЛЬЗОВАТЕЛЬСКУЮ БД (focus_user.db)
+                File targetDb = getDatabasePath("focus_user.db");
                 targetDb.getParentFile().mkdirs();
 
                 try (InputStream in = getContentResolver().openInputStream(sourceUri);
@@ -183,16 +203,15 @@ public class SettingsActivity extends AppCompatActivity {
                 }
 
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "База данных успешно восстановлена! Перезапустите приложение.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "✅ База данных успешно восстановлена! Перезапустите приложение.", Toast.LENGTH_LONG).show();
                     finishAffinity();
                 });
             } catch (Exception e) {
                 Log.e(TAG, "Ошибка импорта БД", e);
-                runOnUiThread(() -> Toast.makeText(this, "Ошибка при накатывании бэкапа", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> Toast.makeText(this, "❌ Ошибка при накатывании бэкапа", Toast.LENGTH_SHORT).show());
             }
         }).start();
     }
-
     @Override
     public boolean onSupportNavigateUp() {
         onBackPressed();

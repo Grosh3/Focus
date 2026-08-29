@@ -301,6 +301,7 @@ public class MainActivity extends AppCompatActivity {
             toggleExpanded(position);
         });
 
+        // 🔥 ОБНОВЛЁННЫЙ LongClickListener для задвижек
         adapter.setOnItemLongClickListener(valve -> {
             String displayName = valve.getIsy();
             if (displayName == null || displayName.isEmpty()) {
@@ -314,8 +315,10 @@ public class MainActivity extends AppCompatActivity {
                     .setTitle("Редактировать задвижку?")
                     .setMessage("Вы хотите отредактировать \"" + displayName + "\"?")
                     .setPositiveButton("Редактировать", (dialog, which) -> {
+                        // 🔥 ИСПОЛЬЗУЕМ УНИВЕРСАЛЬНУЮ DetailActivity
                         Intent intent = new Intent(MainActivity.this, DetailActivity.class);
-                        intent.putExtra("valve_id", valve.getId());
+                        intent.putExtra(DetailActivity.EXTRA_TYPE, DetailActivity.TYPE_VALVE);
+                        intent.putExtra(DetailActivity.EXTRA_ID, valve.getId());
                         detailResultLauncher.launch(intent);
                     })
                     .setNegativeButton("Отмена", (dialog, which) -> {
@@ -375,47 +378,51 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // ==========================================
-        // 2️⃣ АДАПТЕР ДАТЧИКОВ (НОВЫЙ)
+        // 2️⃣ АДАПТЕР ДАТЧИКОВ
         // ==========================================
         sensorAdapter.setOnItemClickListener((sensor, position) -> {
             Log.d("EXPAND_SENSOR", "onItemClick: position=" + position + ", name=" + sensor.getFullName());
             toggleExpanded(position);
         });
 
+        // 🔥 ОБНОВЛЁННЫЙ LongClickListener для датчиков
         sensorAdapter.setOnItemLongClickListener((sensor, position) -> {
-            new AlertDialog.Builder(this)
+            new AlertDialog.Builder(MainActivity.this)
                     .setTitle("Редактировать датчик?")
                     .setMessage("Вы хотите отредактировать \"" + sensor.getStMarkir() + "\"?")
                     .setPositiveButton("Редактировать", (dialog, which) -> {
-                        Toast.makeText(this, "Редактирование датчика", Toast.LENGTH_SHORT).show();
+                        // 🔥 ИСПОЛЬЗУЕМ УНИВЕРСАЛЬНУЮ DetailActivity
+                        Intent intent = new Intent(MainActivity.this, DetailActivity.class);
+                        intent.putExtra(DetailActivity.EXTRA_TYPE, DetailActivity.TYPE_SENSOR);
+                        intent.putExtra(DetailActivity.EXTRA_KKS, sensor.getKks());
+                        detailResultLauncher.launch(intent);
                     })
-                    .setNegativeButton("Удалить", (dialog, which) -> {
-                        Toast.makeText(this, "Удаление датчика", Toast.LENGTH_SHORT).show();
-                    })
-                    .setNeutralButton("Отмена", null)
+                    .setNegativeButton("Отмена", null)
                     .show();
             return true;
         });
 
         // ==========================================
-        // 3️⃣ АДАПТЕР УСТАВОК (НОВЫЙ)
+        // 3️⃣ АДАПТЕР УСТАВОК
         // ==========================================
         setpointAdapter.setOnItemClickListener((setpoint, position) -> {
             Log.d("EXPAND_SETPOINT", "onItemClick: position=" + position + ", name=" + setpoint.getName());
             toggleExpanded(position);
         });
 
+        // 🔥 ОБНОВЛЁННЫЙ LongClickListener для уставок
         setpointAdapter.setOnItemLongClickListener((setpoint, position) -> {
-            new AlertDialog.Builder(this)
+            new AlertDialog.Builder(MainActivity.this)
                     .setTitle("Редактировать уставку?")
                     .setMessage("Вы хотите отредактировать \"" + setpoint.getPositionName() + "\"?")
                     .setPositiveButton("Редактировать", (dialog, which) -> {
-                        Toast.makeText(this, "Редактирование уставки", Toast.LENGTH_SHORT).show();
+                        // 🔥 ИСПОЛЬЗУЕМ УНИВЕРСАЛЬНУЮ DetailActivity
+                        Intent intent = new Intent(MainActivity.this, DetailActivity.class);
+                        intent.putExtra(DetailActivity.EXTRA_TYPE, DetailActivity.TYPE_SETPOINT);
+                        intent.putExtra(DetailActivity.EXTRA_ID, setpoint.getId());
+                        detailResultLauncher.launch(intent);
                     })
-                    .setNegativeButton("Удалить", (dialog, which) -> {
-                        Toast.makeText(this, "Удаление уставки", Toast.LENGTH_SHORT).show();
-                    })
-                    .setNeutralButton("Отмена", null)
+                    .setNegativeButton("Отмена", null)
                     .show();
             return true;
         });
@@ -423,7 +430,6 @@ public class MainActivity extends AppCompatActivity {
         // По умолчанию устанавливаем адаптер задвижек
         rvGateValves.setAdapter(adapter);
     }
-
     private void toggleExpanded(int position) {
         Log.d("EXPAND_1", "=== toggleExpanded START ===");
         Log.d("EXPAND", "position = " + position);
@@ -1093,14 +1099,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void searchSensors(String query) {
-        Log.d(TAG, "searchSensors: query = " + query);
+        Log.d("MAIN_SEARCH", "=== searchSensors START ===");
+        Log.d("MAIN_SEARCH", "query = " + query);
+        Log.d("MAIN_SEARCH", "currentMode = " + currentMode);
+
         new Thread(() -> {
             try {
                 IRepository repository = ((MyApp) getApplication()).getRepository();
+                Log.d("MAIN_SEARCH", "repository = " + (repository != null ? "not null" : "NULL"));
 
                 // Проверяем команду #ВСЕ
                 if (query.trim().equalsIgnoreCase("#все")) {
-                    List<Sensor> all = repository.getAllSensors();
+                    Log.d("MAIN_SEARCH", "command #все detected");
+                    List<Sensor> all = repository.getAllSensorsWithUser();
+                    Log.d("MAIN_SEARCH", "all sensors size = " + all.size());
                     runOnUiThread(() -> {
                         sensorAdapter.updateData(all);
                         tvEmptySearch.setVisibility(all.isEmpty() ? View.VISIBLE : View.GONE);
@@ -1108,31 +1120,45 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                List<Sensor> results = repository.searchSensors(query);
-                Log.d(TAG, "searchSensors: results size = " + results.size());
+                // 🔥 ИСПОЛЬЗУЕМ searchSensorsWithUser
+                Log.d("MAIN_SEARCH", "calling repository.searchSensorsWithUser()");
+                List<Sensor> results = repository.searchSensorsWithUser(query);
+                Log.d("MAIN_SEARCH", "results size = " + results.size());
+
+                // Логируем результаты
+                for (int i = 0; i < results.size(); i++) {
+                    Sensor s = results.get(i);
+                    Log.d("MAIN_SEARCH", "  RESULT[" + i + "] stMarking=" + s.getStMarkir() +
+                            ", kks=" + s.getKks() +
+                            ", isCustom=" + s.isCustom() +
+                            ", originalKks=" + s.getOriginalKks());
+                }
+
                 runOnUiThread(() -> {
                     sensorAdapter.updateData(results);
                     tvEmptySearch.setVisibility(results.isEmpty() ? View.VISIBLE : View.GONE);
                 });
             } catch (Exception e) {
-                Log.e(TAG, "searchSensors error", e);
+                Log.e("MAIN_SEARCH", "searchSensors error", e);
                 e.printStackTrace();
             }
         }).start();
     }
     private void searchSetpoints(String query) {
-        Log.d("POINT", "=== searchSetpoints START ===");
-        Log.d("POINT", "query = " + query);
+        Log.d("MAIN_SEARCH_SETPOINT", "=== searchSetpoints START ===");
+        Log.d("MAIN_SEARCH_SETPOINT", "query = " + query);
+        Log.d("MAIN_SEARCH_SETPOINT", "currentMode = " + currentMode);
 
         new Thread(() -> {
             try {
                 IRepository repository = ((MyApp) getApplication()).getRepository();
+                Log.d("MAIN_SEARCH_SETPOINT", "repository = " + (repository != null ? "not null" : "NULL"));
 
                 // Проверяем команду #ВСЕ
                 if (query.trim().equalsIgnoreCase("#все")) {
-                    Log.d("POINT", "command #все detected, loading all setpoints");
-                    List<Setpoint> all = repository.getAllSetpoints();
-                    Log.d("POINT", "all setpoints size = " + all.size());
+                    Log.d("MAIN_SEARCH_SETPOINT", "command #все detected");
+                    List<Setpoint> all = repository.getAllSetpointsWithUser();
+                    Log.d("MAIN_SEARCH_SETPOINT", "all setpoints size = " + all.size());
                     runOnUiThread(() -> {
                         setpointAdapter.updateData(all);
                         tvEmptySearch.setVisibility(all.isEmpty() ? View.VISIBLE : View.GONE);
@@ -1140,29 +1166,24 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                // 🔥 Проверяем, начинается ли запрос с #
-                if (query.trim().startsWith("#")) {
-                    String groupQuery = query.trim().substring(1).replaceAll("\\s+", "");
-                    Log.d("POINT", "search by equipment_group: " + groupQuery);
-                    List<Setpoint> results = repository.searchSetpointsByGroup(groupQuery);
-                    runOnUiThread(() -> {
-                        setpointAdapter.updateData(results);
-                        tvEmptySearch.setVisibility(results.isEmpty() ? View.VISIBLE : View.GONE);
-                    });
-                    return;
-                }
+                // 🔥 ВЫЗЫВАЕМ searchSetpointsWithUser
+                Log.d("MAIN_SEARCH_SETPOINT", "calling repository.searchSetpointsWithUser()");
+                List<Setpoint> results = repository.searchSetpointsWithUser(query);
+                Log.d("MAIN_SEARCH_SETPOINT", "results size = " + results.size());
 
-                // Обычный поиск
-                List<Setpoint> results = repository.searchSetpoints(query);
-                Log.d("POINT", "search results size = " + results.size());
+                // Логируем результаты
+                for (int i = 0; i < results.size(); i++) {
+                    Setpoint s = results.get(i);
+                    Log.d("MAIN_SEARCH_SETPOINT", "  RESULT[" + i + "] position=" + s.getPositionName() +
+                            ", name=" + s.getName());
+                }
 
                 runOnUiThread(() -> {
                     setpointAdapter.updateData(results);
                     tvEmptySearch.setVisibility(results.isEmpty() ? View.VISIBLE : View.GONE);
                 });
-                Log.d("POINT", "=== searchSetpoints END ===");
             } catch (Exception e) {
-                Log.e("POINT", "Search error", e);
+                Log.e("MAIN_SEARCH_SETPOINT", "searchSetpoints error", e);
                 e.printStackTrace();
             }
         }).start();

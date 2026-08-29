@@ -1,165 +1,152 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/editScrollView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:clipToPadding="false"
     android:background="?android:attr/windowBackground">
 
-    <!-- ========================================== -->
-    <!-- 🛠️ TOOLBAR -->
-    <!-- ========================================== -->
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
-        android:layout_width="0dp"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="?attr/actionBarSize"
-        android:background="?android:attr/windowBackground"
-        android:theme="@style/ThemeOverlay.Material3.ActionBar"
-        app:titleTextColor="?android:attr/textColorPrimary"
-        app:title="@string/detail_title"
-        app:navigationIcon="?attr/homeAsUpIndicator"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:paddingBottom="32dp">
 
-    <!-- ========================================== -->
-    <!-- 📄 ОСНОВНОЙ КОНТЕНТ -->
-    <!-- ========================================== -->
-    <ScrollView
-        android:id="@+id/editScrollView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:fillViewport="true"
-        android:clipToPadding="false"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar">
-
-        <LinearLayout
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:paddingBottom="32dp">
+            android:minHeight="?attr/actionBarSize"
+            android:background="?android:attr/windowBackground"
+            android:theme="@style/ThemeOverlay.Material3.ActionBar"
+            app:titleTextColor="?android:attr/textColorPrimary"
+            app:navigationIcon="?attr/homeAsUpIndicator" />
 
-            <!-- ========================================== -->
-            <!-- 1️⃣ ИСУ -->
-            <!-- ========================================== -->
+        <!-- ========================================== -->
+        <!-- 📌 ОБЩИЕ ПОЛЯ (есть у всех) -->
+        <!-- ========================================== -->
+
+        <!-- KKS (есть у всех) -->
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="KKS *"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etKks"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Название (у задвижки и уставки) -->
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Наименование"
+            android:layout_marginBottom="8dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Расположение (у датчика и уставки) -->
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Расположение"
+            android:layout_marginBottom="8dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- ========================================== -->
+        <!-- 🚪 ПОЛЯ ЗАДВИЖКИ -->
+        <!-- ========================================== -->
+        <LinearLayout
+            android:id="@+id/valveFields"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/isy"
+                android:hint="ИСУ"
                 android:layout_marginBottom="8dp">
-
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etIsy"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textMultiLine"
-                    android:maxLines="1"
-                    android:scrollHorizontally="false" />
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- ========================================== -->
-            <!-- 2️⃣ Название (name) -->
-            <!-- ========================================== -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/name"
+                android:hint="Сборка"
                 android:layout_marginBottom="8dp">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etName"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textMultiLine"
-                    android:maxLines="2"
-                    android:scrollHorizontally="false" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- ========================================== -->
-            <!-- 3️⃣ Сборка (power_cabinet) -->
-            <!-- ========================================== -->
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/power_cabinet"
-                android:layout_marginBottom="8dp">
-
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPowerCabinet"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textMultiLine"
-                    android:maxLines="2"
-                    android:scrollHorizontally="false" />
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- ========================================== -->
-            <!-- 4️⃣ Расположение сборки (location_description) -->
-            <!-- ========================================== -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/location_description"
+                android:hint="Расположение сборки"
                 android:layout_marginBottom="8dp">
-
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etLocationDescription"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textMultiLine"
-                    android:maxLines="3"
-                    android:scrollHorizontally="false" />
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- ========================================== -->
-            <!-- 5️⃣ Расположение по месту (on_place) -->
-            <!-- ========================================== -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/on_place"
+                android:hint="Расположение по месту"
                 android:layout_marginBottom="8dp">
-
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etOnPlace"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textMultiLine"
-                    android:maxLines="3"
-                    android:scrollHorizontally="false" />
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- ========================================== -->
-            <!-- 6️⃣ Описание (full_name_of_the_position) -->
-            <!-- ========================================== -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/full_name"
+                android:hint="Описание"
                 android:layout_marginBottom="8dp">
-
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etFullName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textMultiLine"
-                    android:maxLines="7"
-                    android:scrollHorizontally="false" />
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- ========================================== -->
-            <!-- 📋 ДОПОЛНИТЕЛЬНЫЕ ПОЛЯ (сворачиваемые) -->
-            <!-- ========================================== -->
+            <!-- Кнопка показать дополнительные поля -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnToggleExtra"
                 android:layout_width="wrap_content"
@@ -169,6 +156,7 @@
                 android:text="@string/toggle_extra_fields"
                 style="@style/Widget.Material3.Button.TextButton" />
 
+            <!-- Дополнительные поля -->
             <LinearLayout
                 android:id="@+id/extraFieldsContainer"
                 android:layout_width="match_parent"
@@ -176,138 +164,352 @@
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <!-- 7️⃣ KKS -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/kks"
+                    android:hint="name_eng"
                     android:layout_marginBottom="8dp">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etKks"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="textMultiLine"
-                        android:maxLines="2"
-                        android:scrollHorizontally="false" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <!-- 8️⃣ name_eng -->
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="@string/name_eng"
-                    android:layout_marginBottom="8dp">
-
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etNameEng"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="textMultiLine"
-                        android:maxLines="2"
-                        android:scrollHorizontally="false" />
+                        android:inputType="text" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- 9️⃣ ap_50 -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/ap50"
+                    android:hint="ap_50"
                     android:layout_marginBottom="8dp">
-
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etAp50"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="textMultiLine"
-                        android:maxLines="1"
-                        android:scrollHorizontally="false" />
+                        android:inputType="text" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- 🔟 mark -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/mark"
+                    android:hint="mark"
                     android:layout_marginBottom="8dp">
-
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etMark"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="textMultiLine"
-                        android:maxLines="1"
-                        android:scrollHorizontally="false" />
+                        android:inputType="text" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- 1️⃣1️⃣ cda_cabinet -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/cda_cabinet"
+                    android:hint="cda_cabinet"
                     android:layout_marginBottom="8dp">
-
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etCdaCabinet"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="textMultiLine"
-                        android:maxLines="2"
-                        android:scrollHorizontally="false" />
+                        android:inputType="text" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- 1️⃣2️⃣ cda_cabinet_position -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/cda_cabinet_position"
+                    android:hint="cda_cabinet_position"
                     android:layout_marginBottom="8dp">
-
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etCdaCabinetPosition"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="textMultiLine"
-                        android:maxLines="2"
-                        android:scrollHorizontally="false" />
+                        android:inputType="text" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- 1️⃣3️⃣ slot -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/slot"
+                    android:hint="slot"
                     android:layout_marginBottom="8dp">
-
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etSlot"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="textMultiLine"
-                        android:maxLines="1"
-                        android:scrollHorizontally="false" />
+                        android:inputType="text" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ========================================== -->
+        <!-- 📊 ПОЛЯ ДАТЧИКА -->
+        <!-- ========================================== -->
+        <LinearLayout
+            android:id="@+id/sensorFields"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="ст.маркир *"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etStMarking"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Полное название"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etFullNameSensor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Место установки"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etLocationSensor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Модель датчика"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etModelSensor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Мод датчика"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etModSensor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Доп. сведения"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etAdditionalInfo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Мин"
+                    android:layout_marginEnd="4dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etMin"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Макс"
+                    android:layout_marginStart="4dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etMax"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <!-- Сообщение о статусе -->
-            <TextView
-                android:id="@+id/tvStatus"
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text=""
-                android:textSize="14sp"
-                android:textAlignment="center"
-                android:layout_marginTop="8dp"
-                android:visibility="gone" />
+                android:hint="Ед.изм"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etUnitMeasure"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="CVA"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etCva"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Время демпфирования"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etDampingTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
 
         </LinearLayout>
-    </ScrollView>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- ========================================== -->
+        <!-- 📋 ПОЛЯ УСТАВКИ -->
+        <!-- ========================================== -->
+        <LinearLayout
+            android:id="@+id/setpointFields"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Позиция *"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPositionName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Уставка"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSetpointValue"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Выдержка"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etDelayTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Операция"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etOperation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Notes"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etNotes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Группа оборудования"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etEquipmentGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Расположение"
+                android:layout_marginBottom="8dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etLocationSetpoint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

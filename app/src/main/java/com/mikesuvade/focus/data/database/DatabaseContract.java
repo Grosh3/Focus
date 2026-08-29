@@ -50,7 +50,7 @@ public final class DatabaseContract {
         public static final String COLUMN_SPEED = "speed";
         public static final String COLUMN_FAULT_PAR = "fault_param";
         public static final String COLUMN_INSTEAD_F = "instead_f";
-        public static final String COLUMN_FILTER = "filter";
+        public static final String COLUMN_FILTER = "filter_value";
         public static final String COLUMN_MODEL_SENSOR = "sensor_model";  // модель датчика
         public static final String COLUMN_MOD_SENSOR = "sensor_mod";      // мод датчика
         public static final String COLUMN_ADDITIONAL_INFO = "additional_info"; // доп сведения

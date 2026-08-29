@@ -3,6 +3,7 @@ package com.mikesuvade.focus.ui.detail;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -24,6 +25,8 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.GateValve;
+import com.mikesuvade.focus.domain.models.Sensor;
+import com.mikesuvade.focus.domain.models.Setpoint;
 import com.mikesuvade.focus.domain.repository.IRepository;
 
 import java.text.SimpleDateFormat;
@@ -32,21 +35,52 @@ import java.util.Locale;
 
 public class DetailActivity extends AppCompatActivity {
 
-    public static final String EXTRA_VALVE_ID = "valve_id";
+    // ==========================================
+    // 🏷️ КОНСТАНТЫ
+    // ==========================================
+
+    public static final String EXTRA_TYPE = "entity_type";
+    public static final String EXTRA_ID = "entity_id";
+    public static final String EXTRA_KKS = "entity_kks";
     public static final String EXTRA_IS_NEW = "is_new";
 
+    public static final int TYPE_VALVE = 1;
+    public static final int TYPE_SENSOR = 2;
+    public static final int TYPE_SETPOINT = 3;
+
+    // ==========================================
+    // 📦 ПОЛЯ
+    // ==========================================
+
     private IRepository repository;
-    private GateValve currentValve;
-    private GateValve originalValve;
-    private int valveId;
-    private boolean isNewValve = false;
+    private int entityType;
+    private boolean isNew = false;
     private boolean isSaved = false;
     private boolean isDeleting = false;
 
-    // UI
-    private TextView tvValveTitle;
+    // Объекты для разных типов
+    private GateValve currentValve;
+    private GateValve originalValve;
+    private Sensor currentSensor;
+    private Sensor originalSensor;
+    private Setpoint currentSetpoint;
+    private Setpoint originalSetpoint;
+
+    private int valveId;
+    private String sensorKks;
+    private int setpointId;
+
+    // UI элементы
+    private View valveFields;
+    private View sensorFields;
+    private View setpointFields;
+
+    // Общие поля
     private EditText etName;
     private EditText etKks;
+    private EditText etLocation;
+
+    // Поля задвижки
     private EditText etIsy;
     private EditText etPowerCabinet;
     private EditText etOnPlace;
@@ -57,12 +91,37 @@ public class DetailActivity extends AppCompatActivity {
     private EditText etCdaCabinet;
     private EditText etCdaCabinetPosition;
     private EditText etSlot;
+    private EditText etLocationDescription;
     private LinearLayout extraFieldsContainer;
     private View btnToggleExtra;
-    private TextView tvStatus;
-    private EditText etLocationDescription;
+
+    // Поля датчика
+    private EditText etStMarking;
+    private EditText etFullNameSensor;
+    private EditText etLocationSensor;
+    private EditText etModelSensor;
+    private EditText etModSensor;
+    private EditText etAdditionalInfo;
+    private EditText etMin;
+    private EditText etMax;
+    private EditText etUnitMeasure;
+    private EditText etCva;
+    private EditText etDampingTime;
+
+    // Поля уставки
+    private EditText etPositionName;
+    private EditText etSetpointValue;
+    private EditText etDelayTime;
+    private EditText etOperation;
+    private EditText etNotes;
+    private EditText etEquipmentGroup;
+    private EditText etLocationSetpoint;
 
     private boolean isExtraVisible = false;
+
+    // ==========================================
+    // 🚀 ЖИЗНЕННЫЙ ЦИКЛ
+    // ==========================================
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,32 +143,40 @@ public class DetailActivity extends AppCompatActivity {
         setupKeyboardAutoScroll();
 
         // ==========================================
-        // 🔥 ПРОВЕРЯЕМ — НОВАЯ ИЛИ РЕДАКТИРОВАНИЕ
+        // 📥 ЧТЕНИЕ ПАРАМЕТРОВ
         // ==========================================
-        isNewValve = getIntent().getBooleanExtra(EXTRA_IS_NEW, false);
-        valveId = getIntent().getIntExtra(EXTRA_VALVE_ID, -1);
 
-        if (isNewValve) {
-            getSupportActionBar().setTitle("Новая задвижка");
-            if (tvStatus != null) {
-                tvStatus.setVisibility(View.GONE);
-            }
-            currentValve = new GateValve();
-            originalValve = new GateValve();
-            displayValveData();
+        entityType = getIntent().getIntExtra(EXTRA_TYPE, TYPE_VALVE);
+        isNew = getIntent().getBooleanExtra(EXTRA_IS_NEW, false);
+
+        showFieldsForType();
+
+        if (isNew) {
+            // 🔥 НОВАЯ ЗАПИСЬ → ВСЕГДА В БД2
+            getSupportActionBar().setTitle(getNewTitle());
+            createEmptyEntity();
+            displayData();
         } else {
-            if (valveId == -1) {
-                Toast.makeText(this, R.string.valve_id_not_passed, Toast.LENGTH_SHORT).show();
-                finish();
-                return;
-            }
-            loadValveData();
+            loadEntityData();
         }
     }
 
+    // ==========================================
+    // 🔧 ИНИЦИАЛИЗАЦИЯ
+    // ==========================================
+
     private void initViews() {
+        // Общие поля
         etName = findViewById(R.id.etName);
         etKks = findViewById(R.id.etKks);
+        etLocation = findViewById(R.id.etLocation);
+
+        // Контейнеры для разных типов
+        valveFields = findViewById(R.id.valveFields);
+        sensorFields = findViewById(R.id.sensorFields);
+        setpointFields = findViewById(R.id.setpointFields);
+
+        // Поля задвижки
         etIsy = findViewById(R.id.etIsy);
         etPowerCabinet = findViewById(R.id.etPowerCabinet);
         etOnPlace = findViewById(R.id.etOnPlace);
@@ -120,57 +187,208 @@ public class DetailActivity extends AppCompatActivity {
         etCdaCabinet = findViewById(R.id.etCdaCabinet);
         etCdaCabinetPosition = findViewById(R.id.etCdaCabinetPosition);
         etSlot = findViewById(R.id.etSlot);
+        etLocationDescription = findViewById(R.id.etLocationDescription);
         extraFieldsContainer = findViewById(R.id.extraFieldsContainer);
         btnToggleExtra = findViewById(R.id.btnToggleExtra);
-        tvStatus = findViewById(R.id.tvStatus);
-        etLocationDescription = findViewById(R.id.etLocationDescription);
 
+        // Поля датчика
+        etStMarking = findViewById(R.id.etStMarking);
+        etFullNameSensor = findViewById(R.id.etFullNameSensor);
+        etLocationSensor = findViewById(R.id.etLocationSensor);
+        etModelSensor = findViewById(R.id.etModelSensor);
+        etModSensor = findViewById(R.id.etModSensor);
+        etAdditionalInfo = findViewById(R.id.etAdditionalInfo);
+        etMin = findViewById(R.id.etMin);
+        etMax = findViewById(R.id.etMax);
+        etUnitMeasure = findViewById(R.id.etUnitMeasure);
+        etCva = findViewById(R.id.etCva);
+        etDampingTime = findViewById(R.id.etDampingTime);
+
+        // Поля уставки
+        etPositionName = findViewById(R.id.etPositionName);
+        etSetpointValue = findViewById(R.id.etSetpointValue);
+        etDelayTime = findViewById(R.id.etDelayTime);
+        etOperation = findViewById(R.id.etOperation);
+        etNotes = findViewById(R.id.etNotes);
+        etEquipmentGroup = findViewById(R.id.etEquipmentGroup);
+        etLocationSetpoint = findViewById(R.id.etLocationSetpoint);
     }
 
-    private void setupListeners() {
-        btnToggleExtra.setOnClickListener(v -> {
-            isExtraVisible = !isExtraVisible;
-            extraFieldsContainer.setVisibility(isExtraVisible ? View.VISIBLE : View.GONE);
-            String text = isExtraVisible
-                    ? getString(R.string.hide_extra_fields)
-                    : getString(R.string.toggle_extra_fields);
-            ((android.widget.Button) btnToggleExtra).setText(text);
+    private void showFieldsForType() {
+        valveFields.setVisibility(entityType == TYPE_VALVE ? View.VISIBLE : View.GONE);
+        sensorFields.setVisibility(entityType == TYPE_SENSOR ? View.VISIBLE : View.GONE);
+        setpointFields.setVisibility(entityType == TYPE_SETPOINT ? View.VISIBLE : View.GONE);
 
-            ScrollView scrollView = findViewById(R.id.editScrollView);
-            if (scrollView != null) {
-                scrollView.post(() -> {
-                    scrollView.requestLayout();
-                    btnToggleExtra.post(() -> {
-                        scrollView.smoothScrollTo(0, btnToggleExtra.getBottom() + 50);
-                    });
-                });
-            }
-        });
+        // Общие поля переиспользуются
+        etName.setVisibility(entityType == TYPE_VALVE ? View.VISIBLE : View.GONE);
+        etKks.setVisibility(View.VISIBLE); // KKS есть у всех
+        etLocation.setVisibility(entityType == TYPE_SENSOR || entityType == TYPE_SETPOINT ? View.VISIBLE : View.GONE);
     }
 
-    private void loadValveData() {
+    private String getNewTitle() {
+        switch (entityType) {
+            case TYPE_VALVE: return "Новая задвижка";
+            case TYPE_SENSOR: return "Новый датчик";
+            case TYPE_SETPOINT: return "Новая уставка";
+            default: return "Новая запись";
+        }
+    }
+
+    private void createEmptyEntity() {
+        switch (entityType) {
+            case TYPE_VALVE:
+                currentValve = new GateValve();
+                originalValve = new GateValve();
+                break;
+            case TYPE_SENSOR:
+                currentSensor = new Sensor();
+                originalSensor = new Sensor();
+                break;
+            case TYPE_SETPOINT:
+                currentSetpoint = new Setpoint();
+                originalSetpoint = new Setpoint();
+                break;
+        }
+    }
+
+    // ==========================================
+    // 📥 ЗАГРУЗКА ДАННЫХ
+    // ==========================================
+
+    private void loadEntityData() {
         new Thread(() -> {
             try {
-                GateValve valve = repository.getGateValveById(valveId);
-                currentValve = valve;
-                originalValve = copyValve(valve);
-
-                runOnUiThread(() -> {
-                    if (currentValve != null) {
-                        displayValveData();
-                    } else {
-                        Toast.makeText(this, R.string.valve_not_found, Toast.LENGTH_SHORT).show();
-                        finish();
-                    }
-                });
+                switch (entityType) {
+                    case TYPE_VALVE:
+                        loadValveData();
+                        break;
+                    case TYPE_SENSOR:
+                        loadSensorData();
+                        break;
+                    case TYPE_SETPOINT:
+                        loadSetpointData();
+                        break;
+                }
             } catch (Exception e) {
                 e.printStackTrace();
                 runOnUiThread(() -> {
-                    Toast.makeText(this, R.string.error_loading_data, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Ошибка загрузки", Toast.LENGTH_SHORT).show();
                     finish();
                 });
             }
         }).start();
+    }
+
+    private void loadValveData() {
+        valveId = getIntent().getIntExtra(EXTRA_ID, -1);
+        if (valveId == -1) {
+            runOnUiThread(() -> {
+                Toast.makeText(this, "Ошибка: ID не передан", Toast.LENGTH_SHORT).show();
+                finish();
+            });
+            return;
+        }
+
+        // Сначала проверяем БД2
+        GateValve userValve = repository.getUserGateValveByOriginalId(valveId);
+        if (userValve != null && userValve.getIsDeleted() != 1) {
+            currentValve = userValve;
+            originalValve = copyValve(userValve);
+        } else {
+            GateValve refValve = repository.getGateValveById(valveId);
+            if (refValve != null) {
+                currentValve = refValve;
+                originalValve = copyValve(refValve);
+            } else {
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Задвижка не найдена", Toast.LENGTH_SHORT).show();
+                    finish();
+                });
+                return;
+            }
+        }
+
+        runOnUiThread(this::displayData);
+    }
+
+    private void loadSensorData() {
+        sensorKks = getIntent().getStringExtra(EXTRA_KKS);
+        if (sensorKks == null || sensorKks.isEmpty()) {
+            runOnUiThread(() -> {
+                Toast.makeText(this, "Ошибка: KKS не передан", Toast.LENGTH_SHORT).show();
+                finish();
+            });
+            return;
+        }
+
+        Sensor userSensor = repository.getUserSensorByOriginalKks(sensorKks);
+        if (userSensor != null && userSensor.getIsDeleted() != 1) {
+            currentSensor = userSensor;
+            originalSensor = copySensor(userSensor);
+        } else {
+            Sensor refSensor = repository.getSensorByKks(sensorKks);
+            if (refSensor != null) {
+                currentSensor = refSensor;
+                originalSensor = copySensor(refSensor);
+            } else {
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Датчик не найден", Toast.LENGTH_SHORT).show();
+                    finish();
+                });
+                return;
+            }
+        }
+
+        runOnUiThread(this::displayData);
+    }
+
+    private void loadSetpointData() {
+        setpointId = getIntent().getIntExtra(EXTRA_ID, -1);
+        if (setpointId == -1) {
+            runOnUiThread(() -> {
+                Toast.makeText(this, "Ошибка: ID не передан", Toast.LENGTH_SHORT).show();
+                finish();
+            });
+            return;
+        }
+
+        Setpoint userSetpoint = repository.getUserSetpointByOriginalId(setpointId);
+        if (userSetpoint != null && userSetpoint.getIsDeleted() != 1) {
+            currentSetpoint = userSetpoint;
+            originalSetpoint = copySetpoint(userSetpoint);
+        } else {
+            Setpoint refSetpoint = repository.getSetpointById(setpointId);
+            if (refSetpoint != null) {
+                currentSetpoint = refSetpoint;
+                originalSetpoint = copySetpoint(refSetpoint);
+            } else {
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Уставка не найдена", Toast.LENGTH_SHORT).show();
+                    finish();
+                });
+                return;
+            }
+        }
+
+        runOnUiThread(this::displayData);
+    }
+
+    // ==========================================
+    // 📊 ОТОБРАЖЕНИЕ ДАННЫХ
+    // ==========================================
+
+    private void displayData() {
+        switch (entityType) {
+            case TYPE_VALVE:
+                displayValveData();
+                break;
+            case TYPE_SENSOR:
+                displaySensorData();
+                break;
+            case TYPE_SETPOINT:
+                displaySetpointData();
+                break;
+        }
     }
 
     private void displayValveData() {
@@ -178,11 +396,10 @@ public class DetailActivity extends AppCompatActivity {
 
         String isy = currentValve.getIsy();
         if (isy != null && !isy.isEmpty()) {
-            getSupportActionBar().setTitle(isy + " - " + getString(R.string.detail_title));
+            getSupportActionBar().setTitle(isy + " - Задвижка");
         } else {
-            getSupportActionBar().setTitle(R.string.detail_title);
+            getSupportActionBar().setTitle("Задвижка");
         }
-
 
         etName.setText(currentValve.getName());
         etKks.setText(currentValve.getKks());
@@ -198,6 +415,69 @@ public class DetailActivity extends AppCompatActivity {
         etSlot.setText(currentValve.getSlot());
         etLocationDescription.setText(currentValve.getLocationDescription());
     }
+
+    private void displaySensorData() {
+        if (currentSensor == null) return;
+
+        String stMarking = currentSensor.getStMarkir();
+        if (stMarking != null && !stMarking.isEmpty()) {
+            getSupportActionBar().setTitle(stMarking + " - Датчик");
+        } else {
+            getSupportActionBar().setTitle("Датчик");
+        }
+
+        etStMarking.setText(currentSensor.getStMarkir());
+        etFullNameSensor.setText(currentSensor.getFullName());
+        etLocationSensor.setText(currentSensor.getLocation());
+        etKks.setText(currentSensor.getKks());
+        etModelSensor.setText(currentSensor.getModelSensor());
+        etModSensor.setText(currentSensor.getModSensor());
+        etAdditionalInfo.setText(currentSensor.getAdditionalInfo());
+        etMin.setText(String.valueOf(currentSensor.getMinVal()));
+        etMax.setText(String.valueOf(currentSensor.getMaxVal()));
+        etUnitMeasure.setText(currentSensor.getMeasureUnit());
+        etCva.setText(currentSensor.getCva());
+        etDampingTime.setText(currentSensor.getDampingTime());
+    }
+
+    private void displaySetpointData() {
+        if (currentSetpoint == null) return;
+
+        String positionName = currentSetpoint.getPositionName();
+        if (positionName != null && !positionName.isEmpty()) {
+            getSupportActionBar().setTitle(positionName + " - Уставка");
+        } else {
+            getSupportActionBar().setTitle("Уставка");
+        }
+
+        etPositionName.setText(currentSetpoint.getPositionName());
+        etName.setText(currentSetpoint.getName());
+        etSetpointValue.setText(currentSetpoint.getSetpointValue());
+        etDelayTime.setText(currentSetpoint.getDelayTime());
+        etOperation.setText(currentSetpoint.getOperation());
+        etNotes.setText(currentSetpoint.getNotes());
+        etEquipmentGroup.setText(currentSetpoint.getEquipmentGroup());
+        etLocationSetpoint.setText(currentSetpoint.getLocation());
+    }
+
+    // ==========================================
+    // 🔧 СЛУШАТЕЛИ
+    // ==========================================
+
+    private void setupListeners() {
+        btnToggleExtra.setOnClickListener(v -> {
+            isExtraVisible = !isExtraVisible;
+            extraFieldsContainer.setVisibility(isExtraVisible ? View.VISIBLE : View.GONE);
+            String text = isExtraVisible
+                    ? getString(R.string.hide_extra_fields)
+                    : getString(R.string.toggle_extra_fields);
+            ((android.widget.Button) btnToggleExtra).setText(text);
+        });
+    }
+
+    // ==========================================
+    // 💾 СОХРАНЕНИЕ
+    // ==========================================
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -218,6 +498,24 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     private void saveChanges() {
+        switch (entityType) {
+            case TYPE_VALVE:
+                saveValve();
+                break;
+            case TYPE_SENSOR:
+                saveSensor();
+                break;
+            case TYPE_SETPOINT:
+                saveSetpoint();
+                break;
+        }
+    }
+
+    // ==========================================
+    // 💾 СОХРАНЕНИЕ ЗАДВИЖКИ
+    // ==========================================
+
+    private void saveValve() {
         if (currentValve == null) return;
 
         String isy = etIsy.getText().toString().trim();
@@ -234,40 +532,28 @@ public class DetailActivity extends AppCompatActivity {
         String cdaCabinetPosition = etCdaCabinetPosition.getText().toString().trim();
         String slot = etSlot.getText().toString().trim();
 
-        boolean allFieldsEmpty = isy.isEmpty() &&
-                name.isEmpty() &&
-                powerCabinet.isEmpty() &&
-                locationDescription.isEmpty() &&
-                onPlace.isEmpty() &&
-                fullName.isEmpty() &&
-                kks.isEmpty() &&
-                nameEng.isEmpty() &&
-                ap50.isEmpty() &&
-                mark.isEmpty() &&
-                cdaCabinet.isEmpty() &&
-                cdaCabinetPosition.isEmpty() &&
-                slot.isEmpty();
+        boolean allFieldsEmpty = isy.isEmpty() && name.isEmpty() &&
+                powerCabinet.isEmpty() && locationDescription.isEmpty() &&
+                onPlace.isEmpty() && fullName.isEmpty() &&
+                kks.isEmpty() && nameEng.isEmpty() && ap50.isEmpty() &&
+                mark.isEmpty() && cdaCabinet.isEmpty() &&
+                cdaCabinetPosition.isEmpty() && slot.isEmpty();
 
-        if (allFieldsEmpty) {
-            if (isNewValve) {
-                Toast.makeText(this, "Создание отменено", Toast.LENGTH_SHORT).show();
-                finish();
-                return;
-            }
-
-            new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("Удалить задвижку?")
-                    .setMessage("Все поля очищены. Удалить задвижку \"" + currentValve.getName() + "\"?")
-                    .setPositiveButton("Удалить", (dialog, which) -> {
-                        deleteValve();
-                    })
-                    .setNegativeButton("Отмена", (dialog, which) -> {
-                        dialog.dismiss();
-                    })
-                    .show();
+        // 🔥 НОВАЯ ЗАПИСЬ + ВСЕ ПОЛЯ ПУСТЫЕ → ОТМЕНА
+        if (isNew && allFieldsEmpty) {
+            Toast.makeText(this, "Заполните хотя бы одно поле", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        // 🔥 РЕДАКТИРОВАНИЕ + ВСЕ ПОЛЯ ПУСТЫЕ → УДАЛЯЕМ
+        if (!isNew && allFieldsEmpty) {
+            showDeleteDialog("задвижку",
+                    currentValve.getName() != null ? currentValve.getName() : "без названия",
+                    this::deleteValve);
+            return;
+        }
+
+        // ✅ ЕСТЬ ХОТЯ БЫ ОДНО ПОЛЕ → СОХРАНЯЕМ
         GateValve valveToSave = new GateValve();
         valveToSave.setIsy(isy);
         valveToSave.setName(name);
@@ -275,7 +561,7 @@ public class DetailActivity extends AppCompatActivity {
         valveToSave.setLocationDescription(locationDescription);
         valveToSave.setOnPlace(onPlace);
         valveToSave.setFullName(fullName);
-        valveToSave.setKks(kks);
+        valveToSave.setKks(kks.isEmpty() ? null : kks);
         valveToSave.setNameEng(nameEng);
         valveToSave.setAp50(ap50);
         valveToSave.setMark(mark);
@@ -283,7 +569,7 @@ public class DetailActivity extends AppCompatActivity {
         valveToSave.setCdaCabinetPosition(cdaCabinetPosition);
         valveToSave.setSlot(slot);
 
-        if (!isNewValve && currentValve != null) {
+        if (currentValve != null) {
             valveToSave.setNameSpaceViewOpen(currentValve.getNameSpaceViewOpen());
             valveToSave.setNamespaceViewClose(currentValve.getNamespaceViewClose());
             valveToSave.setNamespaceViewPerifer(currentValve.getNamespaceViewPerifer());
@@ -292,95 +578,543 @@ public class DetailActivity extends AppCompatActivity {
             valveToSave.setDescriptionBlockingPerifer(currentValve.getDescriptionBlockingPerifer());
         }
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        String currentDateTime = sdf.format(new Date());
-        valveToSave.setEditedAtValve(currentDateTime);
+        String currentDateTime = getCurrentDateTime();
 
-        new Thread(() -> {
-            try {
-                if (isNewValve) {
-                    valveToSave.setIsEdited(1);
-                    long id = repository.insertGateValve(valveToSave);
+        if (isNew) {
+            valveToSave.setOriginalId(0);
+            valveToSave.setIsDeleted(0);
+            valveToSave.setIsEdited(1);
+            valveToSave.setCustom(true);
+            valveToSave.setCreatedAt(currentDateTime);
+            valveToSave.setEditedAtValve(currentDateTime);
+
+            new Thread(() -> {
+                try {
+                    long id = repository.insertUserGateValve(valveToSave);
                     if (id > 0) {
                         isSaved = true;
                         runOnUiThread(() -> {
                             Toast.makeText(this, "✅ Создано", Toast.LENGTH_SHORT).show();
-                            setResult(RESULT_OK);  // ← ДОБАВЛЕНО
+                            setResult(RESULT_OK);
                             finish();
                         });
                     } else {
-                        runOnUiThread(() -> {
-                            Toast.makeText(this, "❌ Ошибка создания", Toast.LENGTH_SHORT).show();
-                        });
+                        runOnUiThread(() -> Toast.makeText(this, "❌ Ошибка", Toast.LENGTH_SHORT).show());
                     }
-                } else {
-                    valveToSave.setId(currentValve.getId());
-                    valveToSave.setIsEdited(1);
-                    repository.updateGateValve(valveToSave);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    runOnUiThread(() -> Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                }
+            }).start();
+        } else {
+            boolean isFromUserDb = currentValve.getOriginalId() > 0 || currentValve.getCreatedAt() != null;
+
+            if (isFromUserDb) {
+                valveToSave.setId(currentValve.getId());
+                valveToSave.setOriginalId(currentValve.getOriginalId());
+                valveToSave.setIsDeleted(0);
+                valveToSave.setIsEdited(1);
+                valveToSave.setCustom(true);
+                valveToSave.setCreatedAt(currentValve.getCreatedAt());
+                valveToSave.setEditedAtValve(currentDateTime);
+
+                new Thread(() -> {
+                    try {
+                        repository.updateUserGateValve(valveToSave);
+                        isSaved = true;
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "✅ Сохранено", Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_OK);
+                            finish();
+                        });
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        runOnUiThread(() -> Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show());
+                    }
+                }).start();
+            } else {
+                valveToSave.setOriginalId(currentValve.getId());
+                valveToSave.setIsDeleted(0);
+                valveToSave.setIsEdited(1);
+                valveToSave.setCustom(true);
+                valveToSave.setCreatedAt(currentDateTime);
+                valveToSave.setEditedAtValve(currentDateTime);
+
+                new Thread(() -> {
+                    try {
+                        GateValve existing = repository.getUserGateValveByOriginalId(currentValve.getId());
+                        if (existing != null) {
+                            valveToSave.setId(existing.getId());
+                            repository.updateUserGateValve(valveToSave);
+                        } else {
+                            repository.insertUserGateValve(valveToSave);
+                        }
+                        isSaved = true;
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "✅ Скопировано", Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_OK);
+                            finish();
+                        });
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        runOnUiThread(() -> Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show());
+                    }
+                }).start();
+            }
+        }
+    }
+
+    private void saveNewValve(GateValve valve, String dateTime) {
+        valve.setOriginalId(0);
+        valve.setIsDeleted(0);
+        valve.setIsEdited(1);
+        valve.setCustom(true);
+        valve.setCreatedAt(dateTime);
+        valve.setEditedAtValve(dateTime);
+
+        new Thread(() -> {
+            try {
+                long id = repository.insertUserGateValve(valve);
+                if (id > 0) {
                     isSaved = true;
                     runOnUiThread(() -> {
-                        Toast.makeText(this, R.string.saved_success, Toast.LENGTH_SHORT).show();
-                        setResult(RESULT_OK);  // ← ДОБАВЛЕНО
+                        Toast.makeText(this, "✅ Создано", Toast.LENGTH_SHORT).show();
+                        setResult(RESULT_OK);
                         finish();
                     });
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                runOnUiThread(() -> {
-                    Toast.makeText(this, R.string.save_error, Toast.LENGTH_SHORT).show();
-                });
+                runOnUiThread(() -> Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show());
             }
         }).start();
+    }
+
+    private void saveExistingValve(GateValve valve, String dateTime) {
+        // Проверяем, из какой БД загружена запись
+        boolean isFromUserDb = currentValve.getOriginalId() > 0 ||
+                currentValve.getCreatedAt() != null;
+
+        if (isFromUserDb) {
+            // Обновляем в БД2
+            valve.setId(currentValve.getId());
+            valve.setOriginalId(currentValve.getOriginalId());
+            valve.setIsDeleted(0);
+            valve.setIsEdited(1);
+            valve.setCustom(true);
+            valve.setCreatedAt(currentValve.getCreatedAt());
+            valve.setEditedAtValve(dateTime);
+
+            new Thread(() -> {
+                try {
+                    repository.updateUserGateValve(valve);
+                    isSaved = true;
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "✅ Сохранено", Toast.LENGTH_SHORT).show();
+                        setResult(RESULT_OK);
+                        finish();
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    runOnUiThread(() -> Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show());
+                }
+            }).start();
+        } else {
+            // Копируем в БД2
+            valve.setOriginalId(currentValve.getId());
+            valve.setIsDeleted(0);
+            valve.setIsEdited(1);
+            valve.setCustom(true);
+            valve.setCreatedAt(dateTime);
+            valve.setEditedAtValve(dateTime);
+
+            new Thread(() -> {
+                try {
+                    GateValve existing = repository.getUserGateValveByOriginalId(currentValve.getId());
+                    if (existing != null) {
+                        valve.setId(existing.getId());
+                        repository.updateUserGateValve(valve);
+                    } else {
+                        repository.insertUserGateValve(valve);
+                    }
+                    isSaved = true;
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "✅ Скопировано", Toast.LENGTH_SHORT).show();
+                        setResult(RESULT_OK);
+                        finish();
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    runOnUiThread(() -> Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show());
+                }
+            }).start();
+        }
     }
 
     private void deleteValve() {
         isDeleting = true;
         new Thread(() -> {
             try {
-                repository.deleteGateValve(currentValve.getId());
+                boolean isFromUserDb = currentValve.getOriginalId() > 0 ||
+                        currentValve.getCreatedAt() != null;
+                if (isFromUserDb && currentValve.getOriginalId() > 0) {
+                    repository.markGateValveAsDeleted(currentValve.getOriginalId());
+                } else if (isFromUserDb) {
+                    repository.deleteUserGateValve(currentValve.getId());
+                } else {
+                    repository.markGateValveAsDeleted(currentValve.getId());
+                }
                 runOnUiThread(() -> {
                     Toast.makeText(this, "Удалено", Toast.LENGTH_SHORT).show();
-                    setResult(RESULT_OK);  // ← ДОБАВИТЬ (чтобы обновить список после удаления)
+                    setResult(RESULT_OK);
                     finish();
                 });
             } catch (Exception e) {
                 e.printStackTrace();
-                runOnUiThread(() -> {
-                    Toast.makeText(this, "❌ Ошибка удаления", Toast.LENGTH_SHORT).show();
-                });
+                runOnUiThread(() -> Toast.makeText(this, "Ошибка удаления", Toast.LENGTH_SHORT).show());
             }
         }).start();
     }
 
-    @Override
-    public void onBackPressed() {
-        if (isSaved || isDeleting) {
-            super.onBackPressed();
+    // ==========================================
+    // 💾 СОХРАНЕНИЕ ДАТЧИКА
+    // ==========================================
+
+    private void saveSensor() {
+        if (currentSensor == null) return;
+
+        String stMarking = etStMarking.getText().toString().trim();
+        String fullName = etFullNameSensor.getText().toString().trim();
+        String location = etLocationSensor.getText().toString().trim();
+        String kks = etKks.getText().toString().trim();
+        String modelSensor = etModelSensor.getText().toString().trim();
+        String modSensor = etModSensor.getText().toString().trim();
+        String additionalInfo = etAdditionalInfo.getText().toString().trim();
+        double min = parseDouble(etMin.getText().toString().trim());
+        double max = parseDouble(etMax.getText().toString().trim());
+        String unitMeasure = etUnitMeasure.getText().toString().trim();
+        String cva = etCva.getText().toString().trim();
+        String dampingTime = etDampingTime.getText().toString().trim();
+
+        boolean allFieldsEmpty = stMarking.isEmpty() && fullName.isEmpty() &&
+                location.isEmpty() && kks.isEmpty() && modelSensor.isEmpty() &&
+                modSensor.isEmpty() && additionalInfo.isEmpty() &&
+                min == 0 && max == 0 && unitMeasure.isEmpty() &&
+                cva.isEmpty() && dampingTime.isEmpty();
+
+        // 🔥 НОВАЯ ЗАПИСЬ + ВСЕ ПОЛЯ ПУСТЫЕ → ОТМЕНА
+        if (isNew && allFieldsEmpty) {
+            Toast.makeText(this, "Заполните хотя бы одно поле", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (hasChanges()) {
-            Toast.makeText(this, R.string.unsaved_changes, Toast.LENGTH_SHORT).show();
+        // 🔥 РЕДАКТИРОВАНИЕ + ВСЕ ПОЛЯ ПУСТЫЕ → УДАЛЯЕМ
+        if (!isNew && allFieldsEmpty) {
+            showDeleteDialog("датчик",
+                    currentSensor.getStMarkir() != null ? currentSensor.getStMarkir() : "без названия",
+                    this::deleteSensor);
+            return;
         }
-        super.onBackPressed();
+
+        // ✅ ЕСТЬ ХОТЯ БЫ ОДНО ПОЛЕ → СОХРАНЯЕМ
+        Sensor sensorToSave = new Sensor();
+        sensorToSave.setStMarkir(stMarking);
+        sensorToSave.setFullName(fullName);
+        sensorToSave.setLocation(location);
+
+        if (kks.isEmpty()) {
+            kks = generateUniqueKks();
+        }
+        sensorToSave.setKks(kks);
+
+        sensorToSave.setModelSensor(modelSensor);
+        sensorToSave.setModSensor(modSensor);
+        sensorToSave.setAdditionalInfo(additionalInfo);
+        sensorToSave.setMinVal(min);
+        sensorToSave.setMaxVal(max);
+        sensorToSave.setMeasureUnit(unitMeasure);
+        sensorToSave.setCva(cva);
+        sensorToSave.setDampingTime(dampingTime);
+
+        String currentDateTime = getCurrentDateTime();
+
+        if (isNew) {
+            sensorToSave.setOriginalKks(kks);
+            sensorToSave.setIsDeleted(0);
+            sensorToSave.setIsEdited(1);
+            sensorToSave.setCustom(true);
+            sensorToSave.setCreatedAt(currentDateTime);
+            sensorToSave.setEditedAt(currentDateTime);
+
+            new Thread(() -> {
+                try {
+                    long id = repository.insertUserSensor(sensorToSave);
+                    if (id > 0) {
+                        isSaved = true;
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "✅ Создано", Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_OK);
+                            finish();
+                        });
+                    } else {
+                        runOnUiThread(() -> Toast.makeText(this, "❌ Ошибка", Toast.LENGTH_SHORT).show());
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    runOnUiThread(() -> Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                }
+            }).start();
+        } else {
+            boolean isFromUserDb = currentSensor.getOriginalKks() != null && !currentSensor.getOriginalKks().isEmpty();
+
+            if (isFromUserDb) {
+                sensorToSave.setId(currentSensor.getId());
+                sensorToSave.setOriginalKks(currentSensor.getOriginalKks());
+                sensorToSave.setIsDeleted(0);
+                sensorToSave.setIsEdited(1);
+                sensorToSave.setCustom(true);
+                sensorToSave.setCreatedAt(currentSensor.getCreatedAt());
+                sensorToSave.setEditedAt(currentDateTime);
+
+                new Thread(() -> {
+                    try {
+                        repository.updateUserSensor(sensorToSave);
+                        isSaved = true;
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "✅ Сохранено", Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_OK);
+                            finish();
+                        });
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        runOnUiThread(() -> Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show());
+                    }
+                }).start();
+            } else {
+                sensorToSave.setOriginalKks(currentSensor.getKks());
+                sensorToSave.setIsDeleted(0);
+                sensorToSave.setIsEdited(1);
+                sensorToSave.setCustom(true);
+                sensorToSave.setCreatedAt(currentDateTime);
+                sensorToSave.setEditedAt(currentDateTime);
+
+                new Thread(() -> {
+                    try {
+                        Sensor existing = repository.getUserSensorByOriginalKks(currentSensor.getKks());
+                        if (existing != null) {
+                            sensorToSave.setId(existing.getId());
+                            repository.updateUserSensor(sensorToSave);
+                        } else {
+                            repository.insertUserSensor(sensorToSave);
+                        }
+                        isSaved = true;
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "✅ Скопировано", Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_OK);
+                            finish();
+                        });
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        runOnUiThread(() -> Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show());
+                    }
+                }).start();
+            }
+        }
     }
 
-    private boolean hasChanges() {
-        if (currentValve == null || originalValve == null) return false;
+    private void deleteSensor() {
+        isDeleting = true;
+        new Thread(() -> {
+            try {
+                boolean isFromUserDb = currentSensor.getOriginalKks() != null &&
+                        !currentSensor.getOriginalKks().isEmpty();
+                if (isFromUserDb && currentSensor.getOriginalKks() != null) {
+                    repository.markSensorAsDeleted(currentSensor.getOriginalKks());
+                } else if (isFromUserDb) {
+                    repository.deleteUserSensor(currentSensor.getId());
+                } else {
+                    repository.markSensorAsDeleted(currentSensor.getKks());
+                }
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Удалено", Toast.LENGTH_SHORT).show();
+                    setResult(RESULT_OK);
+                    finish();
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, "Ошибка удаления", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
 
-        return !TextUtils.equals(etIsy.getText().toString().trim(), originalValve.getIsy()) ||
-                !TextUtils.equals(etName.getText().toString().trim(), originalValve.getName()) ||
-                !TextUtils.equals(etPowerCabinet.getText().toString().trim(), originalValve.getPowerCabinet()) ||
-                !TextUtils.equals(etLocationDescription.getText().toString().trim(), originalValve.getLocationDescription()) ||
-                !TextUtils.equals(etOnPlace.getText().toString().trim(), originalValve.getOnPlace()) ||
-                !TextUtils.equals(etFullName.getText().toString().trim(), originalValve.getFullName()) ||
-                !TextUtils.equals(etKks.getText().toString().trim(), originalValve.getKks()) ||
-                !TextUtils.equals(etNameEng.getText().toString().trim(), originalValve.getNameEng()) ||
-                !TextUtils.equals(etAp50.getText().toString().trim(), originalValve.getAp50()) ||
-                !TextUtils.equals(etMark.getText().toString().trim(), originalValve.getMark()) ||
-                !TextUtils.equals(etCdaCabinet.getText().toString().trim(), originalValve.getCdaCabinet()) ||
-                !TextUtils.equals(etCdaCabinetPosition.getText().toString().trim(), originalValve.getCdaCabinetPosition()) ||
-                !TextUtils.equals(etSlot.getText().toString().trim(), originalValve.getSlot());
+    // ==========================================
+    // 💾 СОХРАНЕНИЕ УСТАВКИ
+    // ==========================================
+
+    private void saveSetpoint() {
+        if (currentSetpoint == null) return;
+
+        String positionName = etPositionName.getText().toString().trim();
+        String name = etName.getText().toString().trim();
+        String setpointValue = etSetpointValue.getText().toString().trim();
+        String delayTime = etDelayTime.getText().toString().trim();
+        String operation = etOperation.getText().toString().trim();
+        String notes = etNotes.getText().toString().trim();
+        String equipmentGroup = etEquipmentGroup.getText().toString().trim();
+        String location = etLocationSetpoint.getText().toString().trim();
+
+        boolean allFieldsEmpty = positionName.isEmpty() && name.isEmpty() &&
+                setpointValue.isEmpty() && delayTime.isEmpty() &&
+                operation.isEmpty() && notes.isEmpty() &&
+                equipmentGroup.isEmpty() && location.isEmpty();
+
+        // 🔥 НОВАЯ ЗАПИСЬ + ВСЕ ПОЛЯ ПУСТЫЕ → ОТМЕНА
+        if (isNew && allFieldsEmpty) {
+            Toast.makeText(this, "Заполните хотя бы одно поле", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 🔥 РЕДАКТИРОВАНИЕ + ВСЕ ПОЛЯ ПУСТЫЕ → УДАЛЯЕМ
+        if (!isNew && allFieldsEmpty) {
+            showDeleteDialog("уставку",
+                    currentSetpoint.getPositionName() != null ? currentSetpoint.getPositionName() : "без названия",
+                    this::deleteSetpoint);
+            return;
+        }
+
+        // ✅ ЕСТЬ ХОТЯ БЫ ОДНО ПОЛЕ → СОХРАНЯЕМ
+        Setpoint setpointToSave = new Setpoint();
+        setpointToSave.setPositionName(positionName);
+        setpointToSave.setName(name);
+        setpointToSave.setSetpointValue(setpointValue);
+        setpointToSave.setDelayTime(delayTime);
+        setpointToSave.setOperation(operation);
+        setpointToSave.setNotes(notes);
+        setpointToSave.setEquipmentGroup(equipmentGroup);
+        setpointToSave.setLocation(location);
+
+        String currentDateTime = getCurrentDateTime();
+
+        if (isNew) {
+            setpointToSave.setOriginalId(0);
+            setpointToSave.setIsDeleted(0);
+            setpointToSave.setIsEdited(1);
+            setpointToSave.setCustom(true);
+            setpointToSave.setCreatedAt(currentDateTime);
+            setpointToSave.setEditedAt(currentDateTime);
+
+            new Thread(() -> {
+                try {
+                    long id = repository.insertUserSetpoint(setpointToSave);
+                    if (id > 0) {
+                        isSaved = true;
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "✅ Создано", Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_OK);
+                            finish();
+                        });
+                    } else {
+                        runOnUiThread(() -> Toast.makeText(this, "❌ Ошибка", Toast.LENGTH_SHORT).show());
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    runOnUiThread(() -> Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                }
+            }).start();
+        } else {
+            boolean isFromUserDb = currentSetpoint.getOriginalId() > 0 || currentSetpoint.getCreatedAt() != null;
+
+            if (isFromUserDb) {
+                setpointToSave.setId(currentSetpoint.getId());
+                setpointToSave.setOriginalId(currentSetpoint.getOriginalId());
+                setpointToSave.setIsDeleted(0);
+                setpointToSave.setIsEdited(1);
+                setpointToSave.setCustom(true);
+                setpointToSave.setCreatedAt(currentSetpoint.getCreatedAt());
+                setpointToSave.setEditedAt(currentDateTime);
+
+                new Thread(() -> {
+                    try {
+                        repository.updateUserSetpoint(setpointToSave);
+                        isSaved = true;
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "✅ Сохранено", Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_OK);
+                            finish();
+                        });
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        runOnUiThread(() -> Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show());
+                    }
+                }).start();
+            } else {
+                setpointToSave.setOriginalId(currentSetpoint.getId());
+                setpointToSave.setIsDeleted(0);
+                setpointToSave.setIsEdited(1);
+                setpointToSave.setCustom(true);
+                setpointToSave.setCreatedAt(currentDateTime);
+                setpointToSave.setEditedAt(currentDateTime);
+
+                new Thread(() -> {
+                    try {
+                        Setpoint existing = repository.getUserSetpointByOriginalId(currentSetpoint.getId());
+                        if (existing != null) {
+                            setpointToSave.setId(existing.getId());
+                            repository.updateUserSetpoint(setpointToSave);
+                        } else {
+                            repository.insertUserSetpoint(setpointToSave);
+                        }
+                        isSaved = true;
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "✅ Скопировано", Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_OK);
+                            finish();
+                        });
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        runOnUiThread(() -> Toast.makeText(this, "Ошибка", Toast.LENGTH_SHORT).show());
+                    }
+                }).start();
+            }
+        }
+    }
+
+    private void deleteSetpoint() {
+        isDeleting = true;
+        new Thread(() -> {
+            try {
+                boolean isFromUserDb = currentSetpoint.getOriginalId() > 0 ||
+                        currentSetpoint.getCreatedAt() != null;
+                if (isFromUserDb && currentSetpoint.getOriginalId() > 0) {
+                    repository.markSetpointAsDeleted(currentSetpoint.getOriginalId());
+                } else if (isFromUserDb) {
+                    repository.deleteUserSetpoint(currentSetpoint.getId());
+                } else {
+                    repository.markSetpointAsDeleted(currentSetpoint.getId());
+                }
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Удалено", Toast.LENGTH_SHORT).show();
+                    setResult(RESULT_OK);
+                    finish();
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, "Ошибка удаления", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    // ==========================================
+    // 🧩 ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+    // ==========================================
+
+    private void showDeleteDialog(String entityName, String entityTitle, Runnable deleteAction) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Удалить " + entityName + "?")
+                .setMessage("Все поля очищены. Удалить " + entityName + " \"" + entityTitle + "\"?")
+                .setPositiveButton("Удалить", (dialog, which) -> deleteAction.run())
+                .setNegativeButton("Отмена", (dialog, which) -> dialog.dismiss())
+                .show();
     }
 
     private GateValve copyValve(GateValve source) {
@@ -406,20 +1140,169 @@ public class DetailActivity extends AppCompatActivity {
         copy.setDescriptionBlockingClose(source.getDescriptionBlockingClose());
         copy.setDescriptionBlockingPerifer(source.getDescriptionBlockingPerifer());
         copy.setLocationDescription(source.getLocationDescription());
+        copy.setOriginalId(source.getOriginalId());
+        copy.setIsDeleted(source.getIsDeleted());
+        copy.setIsEdited(source.getIsEdited());
+        copy.setEditedAtValve(source.getEditedAtValve());
+        copy.setCreatedAt(source.getCreatedAt());
         return copy;
     }
+
+    private Sensor copySensor(Sensor source) {
+        if (source == null) return null;
+        Sensor copy = new Sensor();
+        copy.setId(source.getId());
+        copy.setKeynum(source.getKeynum());
+        copy.setFa(source.getFa());
+        copy.setKks(source.getKks());
+        copy.setStMarkir(source.getStMarkir());
+        copy.setFullName(source.getFullName());
+        copy.setName(source.getName());
+        copy.setMedia(source.getMedia());
+        copy.setUnits(source.getUnits());
+        copy.setNominal(source.getNominal());
+        copy.setVolMin(source.getVolMin());
+        copy.setVolMax(source.getVolMax());
+        copy.setSpeed(source.getSpeed());
+        copy.setFaultPar(source.getFaultPar());
+        copy.setInsteadF(source.getInsteadF());
+        copy.setFilter(source.getFilter());
+        copy.setModelSensor(source.getModelSensor());
+        copy.setModSensor(source.getModSensor());
+        copy.setAdditionalInfo(source.getAdditionalInfo());
+        copy.setMinVal(source.getMinVal());
+        copy.setMaxVal(source.getMaxVal());
+        copy.setMeasureUnit(source.getMeasureUnit());
+        copy.setLocation(source.getLocation());
+        copy.setCva(source.getCva());
+        copy.setDampingTime(source.getDampingTime());
+        copy.setOriginalKks(source.getOriginalKks());
+        copy.setIsDeleted(source.getIsDeleted());
+        copy.setIsEdited(source.getIsEdited());
+        copy.setEditedAt(source.getEditedAt());
+        copy.setCreatedAt(source.getCreatedAt());
+        return copy;
+    }
+
+    private Setpoint copySetpoint(Setpoint source) {
+        if (source == null) return null;
+        Setpoint copy = new Setpoint();
+        copy.setId(source.getId());
+        copy.setName(source.getName());
+        copy.setPositionName(source.getPositionName());
+        copy.setLocation(source.getLocation());
+        copy.setSetpointValue(source.getSetpointValue());
+        copy.setDelayTime(source.getDelayTime());
+        copy.setOperation(source.getOperation());
+        copy.setNotes(source.getNotes());
+        copy.setEquipmentGroup(source.getEquipmentGroup());
+        copy.setOriginalId(source.getOriginalId());
+        copy.setIsDeleted(source.getIsDeleted());
+        copy.setIsEdited(source.getIsEdited());
+        copy.setEditedAt(source.getEditedAt());
+        copy.setCreatedAt(source.getCreatedAt());
+        return copy;
+    }
+
+    private double parseDouble(String value) {
+        if (value == null || value.isEmpty()) return 0;
+        try {
+            return Double.parseDouble(value.replace(',', '.'));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private String getCurrentDateTime() {
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (isSaved || isDeleting) {
+            super.onBackPressed();
+            return;
+        }
+
+        if (hasChanges()) {
+            Toast.makeText(this, R.string.unsaved_changes, Toast.LENGTH_SHORT).show();
+        }
+        super.onBackPressed();
+    }
+
+    private boolean hasChanges() {
+        switch (entityType) {
+            case TYPE_VALVE:
+                return hasValveChanges();
+            case TYPE_SENSOR:
+                return hasSensorChanges();
+            case TYPE_SETPOINT:
+                return hasSetpointChanges();
+            default:
+                return false;
+        }
+    }
+
+    private boolean hasValveChanges() {
+        if (currentValve == null || originalValve == null) return false;
+        return !TextUtils.equals(etIsy.getText().toString().trim(), originalValve.getIsy()) ||
+                !TextUtils.equals(etName.getText().toString().trim(), originalValve.getName()) ||
+                !TextUtils.equals(etPowerCabinet.getText().toString().trim(), originalValve.getPowerCabinet()) ||
+                !TextUtils.equals(etLocationDescription.getText().toString().trim(), originalValve.getLocationDescription()) ||
+                !TextUtils.equals(etOnPlace.getText().toString().trim(), originalValve.getOnPlace()) ||
+                !TextUtils.equals(etFullName.getText().toString().trim(), originalValve.getFullName()) ||
+                !TextUtils.equals(etKks.getText().toString().trim(), originalValve.getKks()) ||
+                !TextUtils.equals(etNameEng.getText().toString().trim(), originalValve.getNameEng()) ||
+                !TextUtils.equals(etAp50.getText().toString().trim(), originalValve.getAp50()) ||
+                !TextUtils.equals(etMark.getText().toString().trim(), originalValve.getMark()) ||
+                !TextUtils.equals(etCdaCabinet.getText().toString().trim(), originalValve.getCdaCabinet()) ||
+                !TextUtils.equals(etCdaCabinetPosition.getText().toString().trim(), originalValve.getCdaCabinetPosition()) ||
+                !TextUtils.equals(etSlot.getText().toString().trim(), originalValve.getSlot());
+    }
+
+    private boolean hasSensorChanges() {
+        if (currentSensor == null || originalSensor == null) return false;
+        return !TextUtils.equals(etStMarking.getText().toString().trim(), originalSensor.getStMarkir()) ||
+                !TextUtils.equals(etFullNameSensor.getText().toString().trim(), originalSensor.getFullName()) ||
+                !TextUtils.equals(etLocationSensor.getText().toString().trim(), originalSensor.getLocation()) ||
+                !TextUtils.equals(etKks.getText().toString().trim(), originalSensor.getKks()) ||
+                !TextUtils.equals(etModelSensor.getText().toString().trim(), originalSensor.getModelSensor()) ||
+                !TextUtils.equals(etModSensor.getText().toString().trim(), originalSensor.getModSensor()) ||
+                !TextUtils.equals(etAdditionalInfo.getText().toString().trim(), originalSensor.getAdditionalInfo()) ||
+                !TextUtils.equals(etMin.getText().toString().trim(), String.valueOf(originalSensor.getMinVal())) ||
+                !TextUtils.equals(etMax.getText().toString().trim(), String.valueOf(originalSensor.getMaxVal())) ||
+                !TextUtils.equals(etUnitMeasure.getText().toString().trim(), originalSensor.getMeasureUnit()) ||
+                !TextUtils.equals(etCva.getText().toString().trim(), originalSensor.getCva()) ||
+                !TextUtils.equals(etDampingTime.getText().toString().trim(), originalSensor.getDampingTime());
+    }
+
+    private boolean hasSetpointChanges() {
+        if (currentSetpoint == null || originalSetpoint == null) return false;
+        return !TextUtils.equals(etPositionName.getText().toString().trim(), originalSetpoint.getPositionName()) ||
+                !TextUtils.equals(etName.getText().toString().trim(), originalSetpoint.getName()) ||
+                !TextUtils.equals(etSetpointValue.getText().toString().trim(), originalSetpoint.getSetpointValue()) ||
+                !TextUtils.equals(etDelayTime.getText().toString().trim(), originalSetpoint.getDelayTime()) ||
+                !TextUtils.equals(etOperation.getText().toString().trim(), originalSetpoint.getOperation()) ||
+                !TextUtils.equals(etNotes.getText().toString().trim(), originalSetpoint.getNotes()) ||
+                !TextUtils.equals(etEquipmentGroup.getText().toString().trim(), originalSetpoint.getEquipmentGroup()) ||
+                !TextUtils.equals(etLocationSetpoint.getText().toString().trim(), originalSetpoint.getLocation());
+    }
+
+    // ==========================================
+    // 🔧 UI ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+    // ==========================================
 
     private void fixToolbarPadding(View toolbarView) {
         if (toolbarView == null) return;
 
         ViewCompat.setOnApplyWindowInsetsListener(toolbarView, (view, windowInsets) -> {
             int statusBarHeight = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
-            int leftPadding = view.getPaddingLeft();
-            int rightPadding = view.getPaddingRight();
-            int bottomPadding = view.getPaddingBottom();
-            int topPadding = view.getPaddingTop();
-
-            view.setPadding(leftPadding, statusBarHeight + topPadding, rightPadding, bottomPadding);
+            view.setPadding(
+                    view.getPaddingLeft(),
+                    statusBarHeight + view.getPaddingTop(),
+                    view.getPaddingRight(),
+                    view.getPaddingBottom()
+            );
             ViewCompat.setOnApplyWindowInsetsListener(view, null);
             return windowInsets;
         });
@@ -456,7 +1339,6 @@ public class DetailActivity extends AppCompatActivity {
 
                     float density = getResources().getDisplayMetrics().density;
                     int basePaddingPx = (int) (16 * density);
-
                     int bottomPadding = keypadHeight > 0 ? keypadHeight + basePaddingPx : basePaddingPx;
 
                     scrollView.setPadding(
@@ -472,5 +1354,14 @@ public class DetailActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+    private String generateUniqueKks() {
+        return "USR_" + System.currentTimeMillis();
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        return true;
     }
 }

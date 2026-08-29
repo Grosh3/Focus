@@ -1,5 +1,6 @@
 package com.mikesuvade.focus.ui.main;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,11 +40,15 @@ public class SensorAdapter extends RecyclerView.Adapter<SensorAdapter.ViewHolder
     }
 
     public void updateData(List<Sensor> newSensors) {
+        Log.d("SENSOR_ADAPTER", "=== updateData ===");
+        Log.d("SENSOR_ADAPTER", "newSensors size = " + (newSensors != null ? newSensors.size() : 0));
+
         this.sensors = newSensors != null ? newSensors : new ArrayList<>();
         this.expandedPositions.clear();
         notifyDataSetChanged();
-    }
 
+        Log.d("SENSOR_ADAPTER", "adapter now has " + this.sensors.size() + " items");
+    }
     public void setExpanded(int position, boolean expanded) {
         if (expanded) {
             if (!expandedPositions.contains(position)) {

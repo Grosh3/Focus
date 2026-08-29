@@ -18,6 +18,7 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
     // ==========================================
 
     // 1. Пользовательские задвижки
+    // 1. Пользовательские задвижки
     private static final String CREATE_USER_GATE_VALVES =
             "CREATE TABLE IF NOT EXISTS user_gate_valves (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
@@ -41,11 +42,11 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "location_description TEXT," +
                     "is_edited INTEGER DEFAULT 1," +
                     "edited_at TEXT," +
-                    "created_at TEXT," +
-                    "UNIQUE(original_id)" +
+                    "created_at TEXT" +
                     ")";
 
     // 2. Пользовательские датчики
+// 2. Пользовательские датчики
     private static final String CREATE_USER_SENSORS =
             "CREATE TABLE IF NOT EXISTS user_sensors (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
@@ -65,7 +66,7 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "speed TEXT," +
                     "fault_param TEXT," +
                     "instead_f TEXT," +
-                    "filter TEXT," +
+                    "filter_value TEXT," +
                     "sensor_model TEXT," +
                     "sensor_mod TEXT," +
                     "additional_info TEXT," +
@@ -77,10 +78,11 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "damping_time TEXT," +
                     "is_edited INTEGER DEFAULT 1," +
                     "edited_at TEXT," +
-                    "created_at TEXT," +
-                    "UNIQUE(original_kks)" +
+                    "created_at TEXT" +
                     ")";
 
+
+    // 3. Пользовательские уставки
     // 3. Пользовательские уставки
     private static final String CREATE_USER_SETPOINTS =
             "CREATE TABLE IF NOT EXISTS user_setpoints (" +
@@ -97,8 +99,7 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "equipment_group TEXT," +
                     "is_edited INTEGER DEFAULT 1," +
                     "edited_at TEXT," +
-                    "created_at TEXT," +
-                    "UNIQUE(original_id)" +
+                    "created_at TEXT" +
                     ")";
 
     // 4. Рабочие сессии (списки задвижек)
