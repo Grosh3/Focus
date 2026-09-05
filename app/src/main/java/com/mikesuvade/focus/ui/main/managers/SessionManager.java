@@ -48,6 +48,7 @@ public class SessionManager {
         void updateButtonState();
         void refreshData();
         void launchListDetailActivity(Intent intent);
+        void updateTitle(boolean showTitle);
     }
 
     public SessionManager(IRepository repository,
@@ -185,6 +186,7 @@ public class SessionManager {
             int size = viewModelCallback.getCurrentListSize();
             btnNewValve.setText(name + " (" + size + ")");
             btnNewValve.setOnClickListener(v -> openSession());
+            listener.updateTitle(false); // ← скрываем заголовок
             return;
         }
 
@@ -193,12 +195,13 @@ public class SessionManager {
             int size = viewModelCallback.getCurrentListSize();
             btnNewValve.setText("К СПИСКУ (" + size + ")");
             btnNewValve.setOnClickListener(v -> openNewList());
+            listener.updateTitle(false); // ← скрываем заголовок
             return;
         }
 
         btnNewValve.setVisibility(View.GONE);
+        listener.updateTitle(true); // ← показываем заголовок
     }
-
     public void showClearSelectionDialog() {
         new AlertDialog.Builder(btnNewValve.getContext())
                 .setTitle(R.string.dialog_clear_selection_title)
@@ -218,4 +221,5 @@ public class SessionManager {
     private String getCurrentDateTime() {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
     }
+
 }

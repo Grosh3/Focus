@@ -2,6 +2,7 @@ package com.mikesuvade.focus.domain.models;
 
 public class Sensor {
     private int id;
+    private int originalId;
     private int keynum;
     private int fa;
     private String kks;
@@ -135,6 +136,8 @@ public class Sensor {
 
     public boolean isCustom() { return isCustom; }
     public void setCustom(boolean custom) { isCustom = custom; }
+    public int getOriginalId() { return originalId; }
+    public void setOriginalId(int originalId) { this.originalId = originalId; }
 
     // ==========================================
     // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ

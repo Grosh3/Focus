@@ -33,6 +33,7 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
 
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
+        Log.d("SETPOINT_ADAPTER", "setOnItemClickListener: listener=" + (listener != null ? "NOT NULL" : "NULL"));
     }
 
     public void setOnItemLongClickListener(OnItemLongClickListener listener) {
@@ -40,9 +41,12 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
     }
 
     public void updateData(List<Setpoint> newSetpoints) {
+        Log.d("SETPOINT_ADAPTER", "updateData: size=" + (newSetpoints != null ? newSetpoints.size() : 0));
         this.setpoints = newSetpoints != null ? newSetpoints : new ArrayList<>();
         this.expandedPositions.clear();
         notifyDataSetChanged();
+        // 🔥 ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ ВСЕ ВЬЮХИ
+        notifyItemRangeChanged(0, this.setpoints.size());
     }
 
     public void setExpanded(int position, boolean expanded) {
@@ -97,9 +101,10 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
         private final TextView tvName;
         private final TextView tvSetpointValue;
         private final TextView tvOperation;
-        private final TextView tvDelayTime;      // ← теперь Выдержка (всегда видна)
+        private final TextView tvDelayTime;
         private final View expandedContent;
-        private final TextView tvLocation;       // ← Расположение (в баяне)
+        private final TextView tvLocation;
+        private final TextView tvEquipmentGroup;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -110,12 +115,19 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
             tvDelayTime = itemView.findViewById(R.id.tvDelayTime);
             expandedContent = itemView.findViewById(R.id.expandedContent);
             tvLocation = itemView.findViewById(R.id.tvLocation);
+            tvEquipmentGroup = itemView.findViewById(R.id.tvEquipmentGroup);
         }
 
         void bind(Setpoint setpoint, boolean isExpanded,
                   OnItemClickListener listener,
                   OnItemLongClickListener longClickListener,
                   int position) {
+
+            Log.d("SETPOINT_BIND", "=== bind START ===");
+            Log.d("SETPOINT_BIND", "position=" + position);
+            Log.d("SETPOINT_BIND", "setpoint=" + setpoint.getPositionName());
+            Log.d("SETPOINT_BIND", "isExpanded=" + isExpanded);
+            Log.d("SETPOINT_BIND", "listener=" + (listener != null ? "NOT NULL" : "NULL"));
 
             // Позиция
             String positionName = setpoint.getPositionName();
@@ -162,7 +174,7 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
                 tvOperation.setVisibility(View.GONE);
             }
 
-            // 🔥 Выдержка (всегда видна, если есть значение)
+            // Выдержка (всегда видна, если есть значение)
             String delayTime = setpoint.getDelayTime();
             if (delayTime != null && !delayTime.isEmpty() && !delayTime.equals("-") && !delayTime.equals("—")) {
                 tvDelayTime.setVisibility(View.VISIBLE);
@@ -175,7 +187,7 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
             if (isExpanded) {
                 expandedContent.setVisibility(View.VISIBLE);
 
-                // 🔥 Расположение (в баяне)
+                // Расположение (в баяне)
                 String location = setpoint.getLocation();
                 if (location != null && !location.isEmpty()) {
                     tvLocation.setVisibility(View.VISIBLE);
@@ -184,18 +196,31 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
                     tvLocation.setVisibility(View.GONE);
                 }
 
+                // ГРУППА ОБОРУДОВАНИЯ (в баяне)
+                String equipmentGroup = setpoint.getEquipmentGroup();
+                if (equipmentGroup != null && !equipmentGroup.isEmpty()) {
+                    tvEquipmentGroup.setVisibility(View.VISIBLE);
+                    tvEquipmentGroup.setText("Группа: " + equipmentGroup);
+                } else {
+                    tvEquipmentGroup.setVisibility(View.GONE);
+                }
+
             } else {
                 expandedContent.setVisibility(View.GONE);
             }
 
             // Слушатели
             itemView.setOnClickListener(v -> {
+                Log.d("SETPOINT_CLICK", "!!! itemView CLICKED !!! position=" + position);
                 if (listener != null) {
                     listener.onItemClick(setpoint, position);
+                } else {
+                    Log.e("SETPOINT_CLICK", "❌ listener is NULL!");
                 }
             });
 
             itemView.setOnLongClickListener(v -> {
+                Log.d("SETPOINT_LONG_CLICK", "!!! itemView LONG CLICKED !!! position=" + position);
                 if (longClickListener != null) {
                     return longClickListener.onItemLongClick(setpoint, position);
                 }

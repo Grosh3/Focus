@@ -36,6 +36,7 @@ public final class DatabaseContract {
     // ==================== SENSOR SCHEDULE ====================
     public static class SensorScheduleEntry implements BaseColumns {
         public static final String TABLE_NAME = "sensor_schedule";
+        public static final String COLUMN_ID = "_id";
         public static final String COLUMN_KEYNUM = "keynum";
         public static final String COLUMN_FA = "fa";
         public static final String COLUMN_KKS = "kks";

@@ -14,6 +14,7 @@ import com.mikesuvade.focus.domain.models.Sensor;
 
 import java.util.ArrayList;
 import java.util.List;
+import androidx.core.content.ContextCompat;
 
 public class SensorAdapter extends RecyclerView.Adapter<SensorAdapter.ViewHolder> {
 
@@ -150,6 +151,7 @@ public class SensorAdapter extends RecyclerView.Adapter<SensorAdapter.ViewHolder
             if (kks != null && !kks.isEmpty()) {
                 tvKks.setVisibility(View.VISIBLE);
                 tvKks.setText("KKS: " + kks);
+                tvKks.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.kks_green_dark));
             } else {
                 tvKks.setVisibility(View.GONE);
             }

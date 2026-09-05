@@ -93,6 +93,7 @@ public class ModeManager {
         callback.deactivateSearchState();
         callback.updateButtonState();
         callback.updateSearchHint();
+        callback.updateButtonState();
 
         valveAdapter.updateData(new java.util.ArrayList<>(), new java.util.ArrayList<>());
     }
@@ -118,6 +119,7 @@ public class ModeManager {
         callback.activateSearchState();
         callback.showKeyboard();
         callback.updateSearchHint();
+        callback.updateButtonState(); // → вызывает MainActivity.updateButtonState() → updateTitle()
     }
 
     public void switchToSetpoints() {
@@ -141,6 +143,7 @@ public class ModeManager {
         callback.activateSearchState();
         callback.showKeyboard();
         callback.updateSearchHint();
+        callback.updateButtonState();
     }
 
     public boolean isMainMode() {

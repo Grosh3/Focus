@@ -19,6 +19,7 @@ import com.mikesuvade.focus.domain.repository.IRepository;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -212,29 +213,51 @@ public class RepositoryImpl implements IRepository {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
         String cleanQuery = query.replaceAll("[\\s\\-.]", "");
+        boolean isShortQuery = cleanQuery.length() < 3;
 
-        String selection =
-                "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_FULL_NAME + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_LOCATION + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_KKS + ") LIKE LOWER(?)";
+        // 🔥 ЕСЛИ ЗАПРОС КОРОТКИЙ (< 3 символов) — НЕ ИЩЕМ В ОПИСАНИИ
+        String selection;
+        String[] args;
+        String orderBy;
 
-        String[] args = new String[]{
-                "%" + cleanQuery + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%"
-        };
+        if (isShortQuery) {
+            // Ищем ТОЛЬКО по st_marking и name (без full_name, location, kks)
+            selection =
+                    "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                            "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
 
-        String kksWithoutPrefix = query.replaceAll("^[0-9]{2,3}", "");
-        if (!kksWithoutPrefix.equals(query) && !kksWithoutPrefix.isEmpty()) {
-            selection += " OR LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_KKS + ") LIKE LOWER(?)";
-            String[] newArgs = new String[args.length + 1];
-            System.arraycopy(args, 0, newArgs, 0, args.length);
-            newArgs[args.length] = "%" + kksWithoutPrefix + "%";
-            args = newArgs;
+            args = new String[]{
+                    "%" + cleanQuery + "%",
+                    "%" + cleanQuery + "%"
+            };
+
+            orderBy =
+                    "CASE WHEN REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + "), ' ', ''), '-', ''), '.', '') LIKE LOWER('%" + cleanQuery + "%') THEN 1 " +
+                            "ELSE 2 END, " +
+                            DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + " ASC";
+        } else {
+            // Полный поиск по всем полям
+            selection =
+                    "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                            "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_FULL_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                            "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                            "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_LOCATION + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                            "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_KKS + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
+
+            args = new String[]{
+                    "%" + cleanQuery + "%",
+                    "%" + cleanQuery + "%",
+                    "%" + cleanQuery + "%",
+                    "%" + cleanQuery + "%",
+                    "%" + cleanQuery + "%"
+            };
+
+            orderBy =
+                    "CASE WHEN REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + "), ' ', ''), '-', ''), '.', '') LIKE LOWER('%" + cleanQuery + "%') THEN 1 " +
+                            "WHEN REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_FULL_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER('%" + cleanQuery + "%') THEN 2 " +
+                            "WHEN REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER('%" + cleanQuery + "%') THEN 3 " +
+                            "ELSE 4 END, " +
+                            DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + " ASC";
         }
 
         Cursor cursor = db.query(
@@ -243,7 +266,7 @@ public class RepositoryImpl implements IRepository {
                 selection,
                 args,
                 null, null,
-                DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + " ASC"
+                orderBy
         );
 
         while (cursor.moveToNext()) {
@@ -252,7 +275,6 @@ public class RepositoryImpl implements IRepository {
         cursor.close();
         return sensors;
     }
-
     @Override
     public long insertSensor(Sensor sensor) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
@@ -304,10 +326,12 @@ public class RepositoryImpl implements IRepository {
     @Override
     public Setpoint getSetpointById(int id) {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
+
+        // 🔥 ИСПРАВЛЕНО: используем "id" вместо "_id"
         Cursor cursor = db.query(
                 DatabaseContract.SetpointScheduleEntry.TABLE_NAME,
                 null,
-                DatabaseContract.SetpointScheduleEntry._ID + " = ?",
+                "id = ?",  // ← было "_id = ?"
                 new String[]{String.valueOf(id)},
                 null, null, null
         );
@@ -326,24 +350,38 @@ public class RepositoryImpl implements IRepository {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
         String cleanQuery = query.replaceAll("[\\s\\-.]", "");
+        boolean isShortQuery = cleanQuery.length() < 3;
 
-        String selection =
-                "(LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_SETPOINT_VALUE + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_OPERATION + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_LOCATION + ") LIKE LOWER(?)" +
-                        ") OR " +
-                        "(LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + ") LIKE LOWER(?))";
+        String selection;
+        String[] args;
 
-        String[] args = new String[]{
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + cleanQuery + "%"
-        };
+        if (isShortQuery) {
+            // Короткий запрос — только name и position_name
+            selection =
+                    "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
+                            "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + ") LIKE LOWER(?)";
+
+            args = new String[]{
+                    "%" + query + "%",
+                    "%" + query + "%"
+            };
+        } else {
+            // Полный поиск
+            selection =
+                    "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
+                            "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + ") LIKE LOWER(?) OR " +
+                            "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_SETPOINT_VALUE + ") LIKE LOWER(?) OR " +
+                            "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_OPERATION + ") LIKE LOWER(?) OR " +
+                            "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_NOTES + ") LIKE LOWER(?)";
+
+            args = new String[]{
+                    "%" + query + "%",
+                    "%" + query + "%",
+                    "%" + query + "%",
+                    "%" + query + "%",
+                    "%" + query + "%"
+            };
+        }
 
         Cursor cursor = db.query(
                 DatabaseContract.SetpointScheduleEntry.TABLE_NAME,
@@ -351,16 +389,64 @@ public class RepositoryImpl implements IRepository {
                 selection,
                 args,
                 null, null,
-                DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + " ASC"
+                null // Без сортировки в SQL, сортируем в Java
         );
 
         while (cursor.moveToNext()) {
             setpoints.add(cursorToSetpoint(cursor));
         }
         cursor.close();
+
+        // 🔥 СОРТИРОВКА В JAVA ПО РЕЛЕВАНТНОСТИ
+        return sortSetpointsByRelevance(setpoints, query);
+    }
+
+    /**
+     * Сортирует уставки по релевантности поисковому запросу
+     */
+    private List<Setpoint> sortSetpointsByRelevance(List<Setpoint> setpoints, String query) {
+        String lowerQuery = query.toLowerCase();
+
+        Collections.sort(setpoints, (a, b) -> {
+            int scoreA = getSetpointRelevanceScore(a, lowerQuery);
+            int scoreB = getSetpointRelevanceScore(b, lowerQuery);
+            return Integer.compare(scoreA, scoreB);
+        });
+
         return setpoints;
     }
 
+    /**
+     * Вычисляет оценку релевантности уставки
+     * Чем меньше число — тем выше релевантность
+     */
+    private int getSetpointRelevanceScore(Setpoint setpoint, String query) {
+        String name = setpoint.getName() != null ? setpoint.getName().toLowerCase() : "";
+        String positionName = setpoint.getPositionName() != null ? setpoint.getPositionName().toLowerCase() : "";
+        String setpointValue = setpoint.getSetpointValue() != null ? setpoint.getSetpointValue().toLowerCase() : "";
+        String operation = setpoint.getOperation() != null ? setpoint.getOperation().toLowerCase() : "";
+        String notes = setpoint.getNotes() != null ? setpoint.getNotes().toLowerCase() : "";
+
+        // Полное совпадение в name — самый высокий приоритет
+        if (name.equals(query)) return 1;
+        if (positionName.equals(query)) return 2;
+        if (setpointValue.equals(query)) return 3;
+        if (operation.equals(query)) return 4;
+        if (notes.equals(query)) return 5;
+
+        // Частичное совпадение
+        if (name.contains(query)) return 10;
+        if (positionName.contains(query)) return 20;
+        if (setpointValue.contains(query)) return 30;
+        if (operation.contains(query)) return 40;
+        if (notes.contains(query)) return 50;
+
+        // Совпадение в начале слова
+        if (name.startsWith(query)) return 11;
+        if (positionName.startsWith(query)) return 21;
+
+        return 100;
+    }
     @Override
     public List<Setpoint> searchSetpointsByGroup(String group) {
         List<Setpoint> setpoints = new ArrayList<>();
@@ -555,8 +641,9 @@ public class RepositoryImpl implements IRepository {
 
     private Sensor cursorToSensor(Cursor cursor) {
         Sensor sensor = new Sensor();
-        sensor.setKeynum(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_KEYNUM)));
-        sensor.setFa(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FA)));
+
+        // 🔥 ТОЛЬКО ТЕ КОЛОНКИ, КОТОРЫЕ ЕСТЬ В БД1
+        sensor.setId(cursor.getInt(cursor.getColumnIndexOrThrow("id")));
         sensor.setKks(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_KKS)));
         sensor.setStMarkir(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR)));
         sensor.setFullName(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FULL_NAME)));
@@ -569,7 +656,7 @@ public class RepositoryImpl implements IRepository {
         sensor.setSpeed(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_SPEED)));
         sensor.setFaultPar(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FAULT_PAR)));
         sensor.setInsteadF(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_INSTEAD_F)));
-        sensor.setFilter(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FILTER)));  // ← теперь filter_value
+        sensor.setFilter(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_FILTER)));
         sensor.setModelSensor(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MODEL_SENSOR)));
         sensor.setModSensor(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_MOD_SENSOR)));
         sensor.setAdditionalInfo(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_ADDITIONAL_INFO)));
@@ -579,6 +666,13 @@ public class RepositoryImpl implements IRepository {
         sensor.setLocation(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_LOCATION)));
         sensor.setCva(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_CVA)));
         sensor.setDampingTime(cursor.getString(cursor.getColumnIndexOrThrow(DatabaseContract.SensorScheduleEntry.COLUMN_DAMPING_TIME)));
+
+        // ❌ НЕТ keynum, fa, is_deleted, original_id
+        sensor.setKeynum(0);
+        sensor.setFa(0);
+        sensor.setIsDeleted(0);
+        sensor.setOriginalId(0);
+
         return sensor;
     }
     private Setpoint cursorToSetpoint(Cursor cursor) {
@@ -630,8 +724,11 @@ public class RepositoryImpl implements IRepository {
 
     private ContentValues sensorToContentValues(Sensor sensor) {
         ContentValues values = new ContentValues();
-        values.put(DatabaseContract.SensorScheduleEntry.COLUMN_KEYNUM, sensor.getKeynum());
-        values.put(DatabaseContract.SensorScheduleEntry.COLUMN_FA, sensor.getFa());
+
+        // ❌ УБРАТЬ keynum и fa (их нет в БД1)
+        // values.put(DatabaseContract.SensorScheduleEntry.COLUMN_KEYNUM, sensor.getKeynum());
+        // values.put(DatabaseContract.SensorScheduleEntry.COLUMN_FA, sensor.getFa());
+
         values.put(DatabaseContract.SensorScheduleEntry.COLUMN_KKS, sensor.getKks());
         values.put(DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR, sensor.getStMarkir());
         values.put(DatabaseContract.SensorScheduleEntry.COLUMN_FULL_NAME, sensor.getFullName());
@@ -654,9 +751,9 @@ public class RepositoryImpl implements IRepository {
         values.put(DatabaseContract.SensorScheduleEntry.COLUMN_LOCATION, sensor.getLocation());
         values.put(DatabaseContract.SensorScheduleEntry.COLUMN_CVA, sensor.getCva());
         values.put(DatabaseContract.SensorScheduleEntry.COLUMN_DAMPING_TIME, sensor.getDampingTime());
+
         return values;
     }
-
     private ContentValues setpointToContentValues(Setpoint setpoint) {
         ContentValues values = new ContentValues();
         values.put(DatabaseContract.SetpointScheduleEntry.COLUMN_NAME, setpoint.getName());
@@ -668,6 +765,24 @@ public class RepositoryImpl implements IRepository {
         values.put(DatabaseContract.SetpointScheduleEntry.COLUMN_NOTES, setpoint.getNotes());
         values.put(DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP, setpoint.getEquipmentGroup());
         return values;
+    }
+    @Override
+    public Sensor getSensorById(int id) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = db.query(
+                DatabaseContract.SensorScheduleEntry.TABLE_NAME,
+                null,
+                "id = ?",
+                new String[]{String.valueOf(id)},
+                null, null, null
+        );
+
+        Sensor sensor = null;
+        if (cursor.moveToFirst()) {
+            sensor = cursorToSensor(cursor);
+        }
+        cursor.close();
+        return sensor;
     }
 
     // ==========================================
@@ -761,19 +876,37 @@ public class RepositoryImpl implements IRepository {
     public long insertUserGateValve(GateValve valve) {
         SQLiteDatabase db = userDbHelper.getWritableDatabase();
         ContentValues values = userGateValveToContentValues(valve);
-        return db.insert("user_gate_valves", null, values);
+
+        Log.d("VALVE_DEBUG", "=== insertUserGateValve ===");
+        Log.d("VALVE_DEBUG", "valve.getId() = " + valve.getId());
+        Log.d("VALVE_DEBUG", "values = " + values.toString());
+
+        long result = db.insert("user_gate_valves", null, values);
+
+        Log.d("VALVE_DEBUG", "db.insert result = " + result);
+        return result;
     }
 
     @Override
     public int updateUserGateValve(GateValve valve) {
         SQLiteDatabase db = userDbHelper.getWritableDatabase();
         ContentValues values = userGateValveToContentValues(valve);
-        return db.update(
+
+        Log.d("REPO_UPDATE", "=== updateUserGateValve ===");
+        Log.d("REPO_UPDATE", "valve.getId() = " + valve.getId());
+        Log.d("REPO_UPDATE", "valve.getOriginalId() = " + valve.getOriginalId());
+        Log.d("REPO_UPDATE", "values = " + values.toString());
+
+        // ✅ Ищем по id (а не по original_id)
+        int result = db.update(
                 "user_gate_valves",
                 values,
-                "original_id = ?",
-                new String[]{String.valueOf(valve.getOriginalId())}
+                "id = ?",
+                new String[]{String.valueOf(valve.getId())}
         );
+
+        Log.d("REPO_UPDATE", "update result = " + result + " rows affected");
+        return result;
     }
 
     @Override
@@ -986,11 +1119,15 @@ public class RepositoryImpl implements IRepository {
         valve.setLocationDescription(cursor.getString(cursor.getColumnIndexOrThrow("location_description")));
         valve.setIsEdited(cursor.getInt(cursor.getColumnIndexOrThrow("is_edited")));
         valve.setEditedAtValve(cursor.getString(cursor.getColumnIndexOrThrow("edited_at")));
+
+        // 🔥 ДОБАВИТЬ ЭТУ СТРОКУ
+        valve.setCreatedAt(cursor.getString(cursor.getColumnIndexOrThrow("created_at")));
+
         return valve;
     }
-
     private ContentValues userGateValveToContentValues(GateValve valve) {
         ContentValues values = new ContentValues();
+        values.put("id", valve.getId());
         values.put("original_id", valve.getOriginalId());
         values.put("is_deleted", valve.getIsDeleted());
         values.put("name_eng", valve.getNameEng());
@@ -1012,7 +1149,26 @@ public class RepositoryImpl implements IRepository {
         values.put("is_edited", valve.getIsEdited());
         values.put("edited_at", valve.getEditedAtValve());
         values.put("created_at", valve.getCreatedAt());
+        Log.d("REPO_UPDATE", "created_at = " + valve.getCreatedAt());  // ← ДОБАВИТЬ
         return values;
+    }
+    @Override
+    public GateValve getUserGateValveById(int id) {
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor cursor = db.query(
+                "user_gate_valves",
+                null,
+                "id = ?",
+                new String[]{String.valueOf(id)},
+                null, null, null
+        );
+
+        GateValve valve = null;
+        if (cursor.moveToFirst()) {
+            valve = cursorToUserGateValve(cursor);
+        }
+        cursor.close();
+        return valve;
     }
 
     // ==========================================
@@ -1036,60 +1192,36 @@ public class RepositoryImpl implements IRepository {
         return sensors;
     }
 
-    @Override
-    public Sensor getUserSensorByOriginalKks(String originalKks) {
-        SQLiteDatabase db = userDbHelper.getReadableDatabase();
-        Cursor cursor = db.query(
-                "user_sensors",
-                null,
-                "original_kks = ?",
-                new String[]{originalKks},
-                null, null, null
-        );
 
-        Sensor sensor = null;
-        if (cursor.moveToFirst()) {
-            sensor = cursorToUserSensor(cursor);
-        }
-        cursor.close();
-        return sensor;
-    }
 
     @Override
     public List<Sensor> searchUserSensors(String query) {
+        Log.d("SEARCH_USER", "=== searchUserSensors START ===");
+        Log.d("SEARCH_USER", "query = " + query);
+
         List<Sensor> sensors = new ArrayList<>();
         SQLiteDatabase db = userDbHelper.getReadableDatabase();
 
         String cleanQuery = query.replaceAll("[\\s\\-.]", "");
+        Log.d("SEARCH_USER", "cleanQuery = " + cleanQuery);
 
-        // 🔥 ТАКОЙ ЖЕ ПОИСК, КАК В БД1
         String selection =
                 "REPLACE(REPLACE(REPLACE(LOWER(st_marking), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
-                        "LOWER(full_name) LIKE LOWER(?) OR " +
-                        "LOWER(installation_location) LIKE LOWER(?) OR " +
-                        "LOWER(name) LIKE LOWER(?) OR " +
-                        "LOWER(kks) LIKE LOWER(?)";
+                        "REPLACE(REPLACE(REPLACE(LOWER(full_name), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                        "REPLACE(REPLACE(REPLACE(LOWER(installation_location), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                        "REPLACE(REPLACE(REPLACE(LOWER(name), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                        "REPLACE(REPLACE(REPLACE(LOWER(kks), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
 
         String[] args = new String[]{
                 "%" + cleanQuery + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%"
+                "%" + cleanQuery + "%",
+                "%" + cleanQuery + "%",
+                "%" + cleanQuery + "%",
+                "%" + cleanQuery + "%"
         };
 
-        String kksWithoutPrefix = query.replaceAll("^[0-9]{2,3}", "");
-        if (!kksWithoutPrefix.equals(query) && !kksWithoutPrefix.isEmpty()) {
-            selection += " OR LOWER(kks) LIKE LOWER(?)";
-            String[] newArgs = new String[args.length + 1];
-            System.arraycopy(args, 0, newArgs, 0, args.length);
-            newArgs[args.length] = "%" + kksWithoutPrefix + "%";
-            args = newArgs;
-        }
-
-        Log.d("SEARCH_USER_SENSOR", "=== searchUserSensors ===");
-        Log.d("SEARCH_USER_SENSOR", "query = " + query);
-        Log.d("SEARCH_USER_SENSOR", "cleanQuery = " + cleanQuery);
+        Log.d("SEARCH_USER", "selection = " + selection);
+        Log.d("SEARCH_USER", "args[0] = '" + args[0] + "'");
 
         Cursor cursor = db.query(
                 "user_sensors",
@@ -1100,35 +1232,54 @@ public class RepositoryImpl implements IRepository {
                 "st_marking ASC"
         );
 
+        Log.d("SEARCH_USER", "cursor count = " + cursor.getCount());
+
         while (cursor.moveToNext()) {
             Sensor sensor = cursorToUserSensor(cursor);
             sensors.add(sensor);
-            Log.d("SEARCH_USER_SENSOR", "  found: " + sensor.getStMarkir() + " | " + sensor.getKks());
+            Log.d("SEARCH_USER", "  found: id=" + sensor.getId() +
+                    ", stMarking=" + sensor.getStMarkir() +
+                    ", kks=" + sensor.getKks() +
+                    ", originalId=" + sensor.getOriginalId() +
+                    ", isDeleted=" + sensor.getIsDeleted());
         }
         cursor.close();
 
-        Log.d("SEARCH_USER_SENSOR", "total found = " + sensors.size());
+        Log.d("SEARCH_USER", "total found = " + sensors.size());
+        Log.d("SEARCH_USER", "=== searchUserSensors END ===");
         return sensors;
     }
     @Override
     public long insertUserSensor(Sensor sensor) {
+        Log.d("SENSOR_DEBUG", "=== insertUserSensor ===");
+        Log.d("SENSOR_DEBUG", "sensor.getId() = " + sensor.getId());
+        Log.d("SENSOR_DEBUG", "sensor.getKks() = " + sensor.getKks());
+        Log.d("SENSOR_DEBUG", "sensor.getOriginalId() = " + sensor.getOriginalId());
+
         SQLiteDatabase db = userDbHelper.getWritableDatabase();
         ContentValues values = userSensorToContentValues(sensor);
-        return db.insert("user_sensors", null, values);
+
+        Log.d("SENSOR_DEBUG", "values = " + values.toString());
+
+        long result = db.insert("user_sensors", null, values);
+
+        Log.d("SENSOR_DEBUG", "db.insert result = " + result);
+        return result;
     }
 
     @Override
     public int updateUserSensor(Sensor sensor) {
         SQLiteDatabase db = userDbHelper.getWritableDatabase();
         ContentValues values = userSensorToContentValues(sensor);
+
+        // 🔥 ИСПРАВЛЕНО: ищем по id, а не по original_kks!
         return db.update(
                 "user_sensors",
                 values,
-                "original_kks = ?",
-                new String[]{sensor.getOriginalKks()}
+                "id = ?",  // ← было "original_kks = ?"
+                new String[]{String.valueOf(sensor.getId())}
         );
     }
-
     @Override
     public int deleteUserSensor(int id) {
         SQLiteDatabase db = userDbHelper.getWritableDatabase();
@@ -1139,97 +1290,11 @@ public class RepositoryImpl implements IRepository {
         );
     }
 
-    @Override
-    public void copySensorToUser(String originalKks) {
-        Sensor existing = getUserSensorByOriginalKks(originalKks);
-        if (existing != null) return;
-
-        Sensor ref = getSensorByKks(originalKks);
-        if (ref == null) return;
-
-        Sensor copy = new Sensor();
-        copy.setOriginalKks(ref.getKks());
-        copy.setKeynum(ref.getKeynum());
-        copy.setFa(ref.getFa());
-        copy.setKks(ref.getKks());
-        copy.setStMarkir(ref.getStMarkir());
-        copy.setFullName(ref.getFullName());
-        copy.setName(ref.getName());
-        copy.setMedia(ref.getMedia());
-        copy.setUnits(ref.getUnits());
-        copy.setNominal(ref.getNominal());
-        copy.setVolMin(ref.getVolMin());
-        copy.setVolMax(ref.getVolMax());
-        copy.setSpeed(ref.getSpeed());
-        copy.setFaultPar(ref.getFaultPar());
-        copy.setInsteadF(ref.getInsteadF());
-        copy.setFilter(ref.getFilter());
-        copy.setModelSensor(ref.getModelSensor());
-        copy.setModSensor(ref.getModSensor());
-        copy.setAdditionalInfo(ref.getAdditionalInfo());
-        copy.setMinVal(ref.getMinVal());
-        copy.setMaxVal(ref.getMaxVal());
-        copy.setMeasureUnit(ref.getMeasureUnit());
-        copy.setLocation(ref.getLocation());
-        copy.setCva(ref.getCva());
-        copy.setDampingTime(ref.getDampingTime());
-        copy.setIsEdited(1);
-        copy.setEditedAt(getCurrentDateTime());
-        copy.setCreatedAt(getCurrentDateTime());
-
-        insertUserSensor(copy);
-    }
-
-    @Override
-    public void markSensorAsDeleted(String originalKks) {
-        Sensor existing = getUserSensorByOriginalKks(originalKks);
-
-        if (existing != null) {
-            existing.setIsDeleted(1);
-            existing.setEditedAt(getCurrentDateTime());
-            updateUserSensor(existing);
-        } else {
-            Sensor ref = getSensorByKks(originalKks);
-            if (ref == null) return;
-
-            Sensor copy = new Sensor();
-            copy.setOriginalKks(ref.getKks());
-            copy.setIsDeleted(1);
-            copy.setKeynum(ref.getKeynum());
-            copy.setFa(ref.getFa());
-            copy.setKks(ref.getKks());
-            copy.setStMarkir(ref.getStMarkir());
-            copy.setFullName(ref.getFullName());
-            copy.setName(ref.getName());
-            copy.setMedia(ref.getMedia());
-            copy.setUnits(ref.getUnits());
-            copy.setNominal(ref.getNominal());
-            copy.setVolMin(ref.getVolMin());
-            copy.setVolMax(ref.getVolMax());
-            copy.setSpeed(ref.getSpeed());
-            copy.setFaultPar(ref.getFaultPar());
-            copy.setInsteadF(ref.getInsteadF());
-            copy.setFilter(ref.getFilter());
-            copy.setModelSensor(ref.getModelSensor());
-            copy.setModSensor(ref.getModSensor());
-            copy.setAdditionalInfo(ref.getAdditionalInfo());
-            copy.setMinVal(ref.getMinVal());
-            copy.setMaxVal(ref.getMaxVal());
-            copy.setMeasureUnit(ref.getMeasureUnit());
-            copy.setLocation(ref.getLocation());
-            copy.setCva(ref.getCva());
-            copy.setDampingTime(ref.getDampingTime());
-            copy.setIsEdited(1);
-            copy.setEditedAt(getCurrentDateTime());
-            copy.setCreatedAt(getCurrentDateTime());
-
-            insertUserSensor(copy);
-        }
-    }
 
     @Override
     public List<Sensor> getAllSensorsWithUser() {
         List<Sensor> result = new ArrayList<>();
+        Set<Integer> seenIds = new HashSet<>();  // ← ИСПОЛЬЗУЕМ ID
 
         List<Sensor> refs = getAllSensors();
 
@@ -1240,21 +1305,26 @@ public class RepositoryImpl implements IRepository {
             }
         }
 
-        Map<String, Sensor> userMap = new HashMap<>();
+        // 🔥 1. Добавляем пользовательские
         for (Sensor u : users) {
-            userMap.put(u.getOriginalKks(), u);
+            result.add(u);
+            int key = u.getOriginalId() > 0 ? u.getOriginalId() : u.getId();
+            seenIds.add(key);
+            Log.d("SENSOR_USER", "added user: " + u.getStMarkir() + " (id=" + u.getId() + ")");
         }
 
+        // 🔥 2. Добавляем справочные, которых нет в пользовательских
         for (Sensor ref : refs) {
-            Sensor deleted = getUserSensorByOriginalKks(ref.getKks());
+            Sensor deleted = getUserSensorByOriginalId(ref.getId());
             if (deleted != null && deleted.getIsDeleted() == 1) {
+                Log.d("SENSOR_USER", "skipping deleted: " + ref.getStMarkir());
                 continue;
             }
 
-            if (userMap.containsKey(ref.getKks())) {
-                result.add(userMap.get(ref.getKks()));
-            } else {
+            if (!seenIds.contains(ref.getId())) {
                 result.add(ref);
+                seenIds.add(ref.getId());
+                Log.d("SENSOR_USER", "added ref: " + ref.getStMarkir());
             }
         }
 
@@ -1267,45 +1337,62 @@ public class RepositoryImpl implements IRepository {
         Log.d("SEARCH_SENSOR", "query = " + query);
 
         List<Sensor> result = new ArrayList<>();
-        Set<String> seenKks = new HashSet<>();
+        Set<Integer> seenIds = new HashSet<>();
 
         try {
-            // 🔥 1. СНАЧАЛА ИЩЕМ В БД2 (пользовательские)
+            // 🔥 1. Ищем в БД2 (пользовательские)
+            Log.d("SEARCH_SENSOR", "Step 1: Searching in USER DB...");
             List<Sensor> userResults = searchUserSensors(query);
             Log.d("SEARCH_SENSOR", "userResults size = " + userResults.size());
 
-            for (Sensor sensor : userResults) {
-                if (sensor.getIsDeleted() != 1) {
-                    result.add(sensor);
-                    String key = sensor.getOriginalKks() != null && !sensor.getOriginalKks().isEmpty()
-                            ? sensor.getOriginalKks()
-                            : sensor.getKks();
-                    seenKks.add(key);
-                    Log.d("SEARCH_SENSOR", "  ✅ added user: " + sensor.getStMarkir() + " (key=" + key + ")");
-                } else {
-                    Log.d("SEARCH_SENSOR", "  ⏭️ skipping deleted user: " + sensor.getStMarkir());
+            if (userResults.isEmpty()) {
+                Log.d("SEARCH_SENSOR", "No results in USER DB");
+            } else {
+                for (Sensor sensor : userResults) {
+                    Log.d("SEARCH_SENSOR", "  USER result: id=" + sensor.getId() +
+                            ", stMarking=" + sensor.getStMarkir() +
+                            ", kks=" + sensor.getKks() +
+                            ", originalId=" + sensor.getOriginalId() +
+                            ", isDeleted=" + sensor.getIsDeleted());
+                    if (sensor.getIsDeleted() != 1) {
+                        result.add(sensor);
+                        int key = sensor.getOriginalId() > 0 ? sensor.getOriginalId() : sensor.getId();
+                        seenIds.add(key);
+                        Log.d("SEARCH_SENSOR", "  ✅ added user: " + sensor.getStMarkir());
+                    } else {
+                        Log.d("SEARCH_SENSOR", "  ⏭️ skipping deleted: " + sensor.getStMarkir());
+                    }
                 }
             }
 
-            // 🔥 2. ПОТОМ ИЩЕМ В БД1 (справочник)
+            // 🔥 2. Ищем в БД1 (справочник)
+            Log.d("SEARCH_SENSOR", "Step 2: Searching in REF DB...");
             List<Sensor> refResults = searchSensors(query);
             Log.d("SEARCH_SENSOR", "refResults size = " + refResults.size());
 
-            for (Sensor sensor : refResults) {
-                // Проверяем, не удалён ли этот датчик в БД2
-                Sensor deleted = getUserSensorByOriginalKks(sensor.getKks());
-                if (deleted != null && deleted.getIsDeleted() == 1) {
-                    Log.d("SEARCH_SENSOR", "  ⏭️ skipping deleted ref: " + sensor.getStMarkir());
-                    continue;
-                }
+            if (refResults.isEmpty()) {
+                Log.d("SEARCH_SENSOR", "No results in REF DB");
+            } else {
+                for (Sensor sensor : refResults) {
+                    Log.d("SEARCH_SENSOR", "  REF result: id=" + sensor.getId() +
+                            ", stMarking=" + sensor.getStMarkir() +
+                            ", kks=" + sensor.getKks());
 
-                // Проверяем, нет ли уже пользовательской версии
-                if (!seenKks.contains(sensor.getKks())) {
-                    result.add(sensor);
-                    seenKks.add(sensor.getKks());
-                    Log.d("SEARCH_SENSOR", "  ✅ added ref: " + sensor.getStMarkir());
-                } else {
-                    Log.d("SEARCH_SENSOR", "  ⏭️ skipping duplicate ref: " + sensor.getStMarkir());
+                    // Проверяем, не удалён ли этот датчик в БД2
+                    Sensor deleted = getUserSensorByOriginalId(sensor.getId());
+                    if (deleted != null && deleted.getIsDeleted() == 1) {
+                        Log.d("SEARCH_SENSOR", "  ⏭️ skipping deleted ref: " + sensor.getStMarkir());
+                        continue;
+                    }
+
+                    // Проверяем, нет ли уже пользовательской версии
+                    if (!seenIds.contains(sensor.getId())) {
+                        result.add(sensor);
+                        seenIds.add(sensor.getId());
+                        Log.d("SEARCH_SENSOR", "  ✅ added ref: " + sensor.getStMarkir());
+                    } else {
+                        Log.d("SEARCH_SENSOR", "  ⏭️ skipping duplicate ref: " + sensor.getStMarkir());
+                    }
                 }
             }
 
@@ -1315,8 +1402,27 @@ public class RepositoryImpl implements IRepository {
 
         } catch (Exception e) {
             Log.e("SEARCH_SENSOR", "Error in searchSensorsWithUser", e);
+            e.printStackTrace();
             return new ArrayList<>();
         }
+    }
+    @Override
+    public Sensor getUserSensorByOriginalId(int originalId) {
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor cursor = db.query(
+                "user_sensors",
+                null,
+                "original_id = ?",
+                new String[]{String.valueOf(originalId)},
+                null, null, null
+        );
+
+        Sensor sensor = null;
+        if (cursor.moveToFirst()) {
+            sensor = cursorToUserSensor(cursor);
+        }
+        cursor.close();
+        return sensor;
     }
     // ==========================================
     // 🟢 ПОЛЬЗОВАТЕЛЬСКАЯ БД - SETPOINTS
@@ -1430,12 +1536,22 @@ public class RepositoryImpl implements IRepository {
     public int updateUserSetpoint(Setpoint setpoint) {
         SQLiteDatabase db = userDbHelper.getWritableDatabase();
         ContentValues values = userSetpointToContentValues(setpoint);
-        return db.update(
+
+        Log.d("REPO_UPDATE", "=== updateUserSetpoint ===");
+        Log.d("REPO_UPDATE", "setpoint.getId() = " + setpoint.getId());
+        Log.d("REPO_UPDATE", "setpoint.getOriginalId() = " + setpoint.getOriginalId());
+        Log.d("REPO_UPDATE", "values = " + values.toString());
+
+        // ✅ Ищем по id (а не по original_id)
+        int result = db.update(
                 "user_setpoints",
                 values,
-                "original_id = ?",
-                new String[]{String.valueOf(setpoint.getOriginalId())}
+                "id = ?",
+                new String[]{String.valueOf(setpoint.getId())}
         );
+
+        Log.d("REPO_UPDATE", "update result = " + result + " rows affected");
+        return result;
     }
 
     @Override
@@ -1597,7 +1713,8 @@ public class RepositoryImpl implements IRepository {
     private Sensor cursorToUserSensor(Cursor cursor) {
         Sensor sensor = new Sensor();
         sensor.setId(cursor.getInt(cursor.getColumnIndexOrThrow("id")));
-        sensor.setOriginalKks(cursor.getString(cursor.getColumnIndexOrThrow("original_kks")));
+        sensor.setOriginalId(cursor.getInt(cursor.getColumnIndexOrThrow("original_id")));  // ← ДОБАВИТЬ
+        //sensor.setOriginalKks(cursor.getString(cursor.getColumnIndexOrThrow("original_kks")));
         sensor.setIsDeleted(cursor.getInt(cursor.getColumnIndexOrThrow("is_deleted")));
         sensor.setKeynum(cursor.getInt(cursor.getColumnIndexOrThrow("keynum")));
         sensor.setFa(cursor.getInt(cursor.getColumnIndexOrThrow("fa")));
@@ -1631,7 +1748,12 @@ public class RepositoryImpl implements IRepository {
 
     private ContentValues userSensorToContentValues(Sensor sensor) {
         ContentValues values = new ContentValues();
-        values.put("original_kks", sensor.getOriginalKks());
+
+        // 🔥 ДОБАВЛЯЕМ ID И ORIGINAL_ID
+        values.put("id", sensor.getId());
+        values.put("original_id", sensor.getOriginalId());
+
+        //values.put("original_kks", sensor.getOriginalKks());
         values.put("is_deleted", sensor.getIsDeleted());
         values.put("keynum", sensor.getKeynum());
         values.put("fa", sensor.getFa());
@@ -1647,7 +1769,7 @@ public class RepositoryImpl implements IRepository {
         values.put("speed", sensor.getSpeed());
         values.put("fault_param", sensor.getFaultPar());
         values.put("instead_f", sensor.getInsteadF());
-        values.put("filter_value", sensor.getFilter());  // ← переименовали
+        values.put("filter_value", sensor.getFilter());
         values.put("sensor_model", sensor.getModelSensor());
         values.put("sensor_mod", sensor.getModSensor());
         values.put("additional_info", sensor.getAdditionalInfo());
@@ -1660,7 +1782,113 @@ public class RepositoryImpl implements IRepository {
         values.put("is_edited", sensor.getIsEdited());
         values.put("edited_at", sensor.getEditedAt());
         values.put("created_at", sensor.getCreatedAt());
+
         return values;
+    }
+    @Override
+    public void copySensorToUser(int originalId) {
+        Sensor existing = getUserSensorByOriginalId(originalId);
+        if (existing != null) return;
+
+        Sensor ref = getSensorById(originalId);
+        if (ref == null) return;
+
+        // Генерируем отрицательный ID для копии
+        int newId = generateNegativeIdForSensor();
+
+        Sensor copy = new Sensor();
+        copy.setId(newId);
+        copy.setOriginalId(ref.getId());
+        copy.setKeynum(ref.getKeynum());
+        copy.setFa(ref.getFa());
+        copy.setKks(ref.getKks());
+        copy.setStMarkir(ref.getStMarkir());
+        copy.setFullName(ref.getFullName());
+        copy.setName(ref.getName());
+        copy.setMedia(ref.getMedia());
+        copy.setUnits(ref.getUnits());
+        copy.setNominal(ref.getNominal());
+        copy.setVolMin(ref.getVolMin());
+        copy.setVolMax(ref.getVolMax());
+        copy.setSpeed(ref.getSpeed());
+        copy.setFaultPar(ref.getFaultPar());
+        copy.setInsteadF(ref.getInsteadF());
+        copy.setFilter(ref.getFilter());
+        copy.setModelSensor(ref.getModelSensor());
+        copy.setModSensor(ref.getModSensor());
+        copy.setAdditionalInfo(ref.getAdditionalInfo());
+        copy.setMinVal(ref.getMinVal());
+        copy.setMaxVal(ref.getMaxVal());
+        copy.setMeasureUnit(ref.getMeasureUnit());
+        copy.setLocation(ref.getLocation());
+        copy.setCva(ref.getCva());
+        copy.setDampingTime(ref.getDampingTime());
+        copy.setIsDeleted(0);
+        copy.setIsEdited(1);
+        copy.setCreatedAt(getCurrentDateTime());
+        copy.setEditedAt(getCurrentDateTime());
+
+        insertUserSensor(copy);
+    }
+
+    @Override
+    public void markSensorAsDeleted(int originalId) {
+        Sensor existing = getUserSensorByOriginalId(originalId);
+
+        if (existing != null) {
+            existing.setIsDeleted(1);
+            existing.setEditedAt(getCurrentDateTime());
+            updateUserSensor(existing);
+        } else {
+            Sensor ref = getSensorById(originalId);
+            if (ref == null) return;
+
+            // Создаём копию с пометкой is_deleted = 1
+            int newId = generateNegativeIdForSensor();
+
+            Sensor copy = new Sensor();
+            copy.setId(newId);
+            copy.setOriginalId(ref.getId());
+            copy.setIsDeleted(1);
+            copy.setKeynum(ref.getKeynum());
+            copy.setFa(ref.getFa());
+            copy.setKks(ref.getKks());
+            copy.setStMarkir(ref.getStMarkir());
+            copy.setFullName(ref.getFullName());
+            copy.setName(ref.getName());
+            copy.setMedia(ref.getMedia());
+            copy.setUnits(ref.getUnits());
+            copy.setNominal(ref.getNominal());
+            copy.setVolMin(ref.getVolMin());
+            copy.setVolMax(ref.getVolMax());
+            copy.setSpeed(ref.getSpeed());
+            copy.setFaultPar(ref.getFaultPar());
+            copy.setInsteadF(ref.getInsteadF());
+            copy.setFilter(ref.getFilter());
+            copy.setModelSensor(ref.getModelSensor());
+            copy.setModSensor(ref.getModSensor());
+            copy.setAdditionalInfo(ref.getAdditionalInfo());
+            copy.setMinVal(ref.getMinVal());
+            copy.setMaxVal(ref.getMaxVal());
+            copy.setMeasureUnit(ref.getMeasureUnit());
+            copy.setLocation(ref.getLocation());
+            copy.setCva(ref.getCva());
+            copy.setDampingTime(ref.getDampingTime());
+            copy.setIsEdited(1);
+            copy.setCreatedAt(getCurrentDateTime());
+            copy.setEditedAt(getCurrentDateTime());
+
+            insertUserSensor(copy);
+        }
+    }
+
+    private int generateNegativeIdForSensor() {
+        int minId = 0;
+        List<Sensor> sensors = getAllUserSensors();
+        for (Sensor s : sensors) {
+            if (s.getId() < minId) minId = s.getId();
+        }
+        return minId - 1;
     }
 
     // ==========================================
@@ -1689,6 +1917,7 @@ public class RepositoryImpl implements IRepository {
     private ContentValues userSetpointToContentValues(Setpoint setpoint) {
         Log.d("REPO_INSERT", "=== userSetpointToContentValues START ===");
         ContentValues values = new ContentValues();
+        values.put("id", setpoint.getId());
 
         values.put("original_id", setpoint.getOriginalId());
         values.put("is_deleted", setpoint.getIsDeleted());
@@ -1707,6 +1936,70 @@ public class RepositoryImpl implements IRepository {
         Log.d("REPO_INSERT", "values = " + values.toString());
         Log.d("REPO_INSERT", "=== userSetpointToContentValues END ===");
         return values;
+    }
+    // В RepositoryImpl.java добавьте:
+
+// ==========================================
+// 🟢 ПОЛУЧЕНИЕ ГРУПП ОБОРУДОВАНИЯ
+// ==========================================
+
+    @Override
+    public List<String> getAllEquipmentGroups() {
+        List<String> groups = new ArrayList<>();
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+
+        String query = "SELECT DISTINCT " + DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP +
+                " FROM " + DatabaseContract.SetpointScheduleEntry.TABLE_NAME +
+                " WHERE " + DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP +
+                " IS NOT NULL AND " + DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP + " != ''" +
+                " ORDER BY " + DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP + " ASC";
+
+        Cursor cursor = db.rawQuery(query, null);
+        while (cursor.moveToNext()) {
+            String group = cursor.getString(0);
+            if (group != null && !group.isEmpty()) {
+                groups.add(group);
+            }
+        }
+        cursor.close();
+        return groups;
+    }
+
+    @Override
+    public List<String> getAllEquipmentGroupsWithUser() {
+        Set<String> groupSet = new HashSet<>();
+
+        // 1. Группы из БД1 (справочник)
+        List<String> refGroups = getAllEquipmentGroups();
+        for (String g : refGroups) {
+            if (g != null && !g.isEmpty()) {
+                groupSet.add(g.toUpperCase()); // 🔥 ВЕРХНИЙ РЕГИСТР
+            }
+        }
+
+        // 2. Группы из БД2 (пользовательские уставки) - только активные (is_deleted != 1)
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor cursor = db.query(
+                "user_setpoints",
+                new String[]{"equipment_group"},
+                "equipment_group IS NOT NULL AND equipment_group != '' AND is_deleted != 1",
+                null, null, null,
+                "equipment_group ASC"
+        );
+
+        while (cursor.moveToNext()) {
+            String group = cursor.getString(0);
+            if (group != null && !group.isEmpty()) {
+                // 🔥 ПРИВОДИМ К ВЕРХНЕМУ РЕГИСТРУ
+                groupSet.add(group.toUpperCase());
+            }
+        }
+        cursor.close();
+
+        // Сортируем
+        List<String> result = new ArrayList<>(groupSet);
+        Collections.sort(result);
+        return result;
     }
     // ==========================================
     // 🟢 ПОЛЬЗОВАТЕЛЬСКАЯ БД - WORK SESSIONS
@@ -2114,4 +2407,90 @@ public class RepositoryImpl implements IRepository {
         cursor.close();
         Log.d("DB_CHECK", "=== logUserSensors END ===");
     }
+    @Override
+    public List<Setpoint> searchSetpointsByGroupWithUser(String group) {
+        Log.d("SEARCH_SETPOINT", "=== searchSetpointsByGroupWithUser ===");
+        Log.d("SEARCH_SETPOINT", "group = " + group);
+
+        List<Setpoint> result = new ArrayList<>();
+        Set<Integer> seenIds = new HashSet<>();
+
+        try {
+            // 🔥 1. Ищем в БД2 (пользовательские) по группе
+            List<Setpoint> userResults = searchUserSetpointsByGroup(group);
+            Log.d("SEARCH_SETPOINT", "userResults size = " + userResults.size());
+
+            for (Setpoint setpoint : userResults) {
+                if (setpoint.getIsDeleted() != 1) {
+                    result.add(setpoint);
+                    int key = setpoint.getOriginalId() > 0 ? setpoint.getOriginalId() : setpoint.getId();
+                    seenIds.add(key);
+                    Log.d("SEARCH_SETPOINT", "  added user: " + setpoint.getPositionName() + " (group=" + setpoint.getEquipmentGroup() + ")");
+                }
+            }
+
+            // 🔥 2. Ищем в БД1 (справочник) по группе
+            List<Setpoint> refResults = searchSetpointsByGroup(group);
+            Log.d("SEARCH_SETPOINT", "refResults size = " + refResults.size());
+
+            for (Setpoint setpoint : refResults) {
+                // Проверяем, не удалена ли эта уставка в БД2
+                Setpoint deleted = getUserSetpointByOriginalId(setpoint.getId());
+                if (deleted != null && deleted.getIsDeleted() == 1) {
+                    Log.d("SEARCH_SETPOINT", "  skipping deleted: " + setpoint.getPositionName());
+                    continue;
+                }
+
+                if (!seenIds.contains(setpoint.getId())) {
+                    result.add(setpoint);
+                    seenIds.add(setpoint.getId());
+                    Log.d("SEARCH_SETPOINT", "  added ref: " + setpoint.getPositionName() + " (group=" + setpoint.getEquipmentGroup() + ")");
+                }
+            }
+
+            Log.d("SEARCH_SETPOINT", "result size = " + result.size());
+            return result;
+
+        } catch (Exception e) {
+            Log.e("SEARCH_SETPOINT", "Error searching setpoints by group", e);
+            return new ArrayList<>();
+        }
+    }
+    @Override
+    public List<Setpoint> searchUserSetpointsByGroup(String group) {
+        List<Setpoint> setpoints = new ArrayList<>();
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+
+        // Убираем # из запроса для поиска
+        String cleanGroup = group.replaceFirst("^#", "").trim();
+        String searchPattern = "%" + cleanGroup + "%";
+
+        Log.d("SEARCH_USER_SETPOINT", "=== searchUserSetpointsByGroup ===");
+        Log.d("SEARCH_USER_SETPOINT", "cleanGroup = " + cleanGroup);
+        Log.d("SEARCH_USER_SETPOINT", "searchPattern = " + searchPattern);
+
+        // Ищем в equipment_group (без учёта регистра)
+        String selection = "LOWER(equipment_group) LIKE LOWER(?)";
+        String[] args = new String[]{searchPattern};
+
+        Cursor cursor = db.query(
+                "user_setpoints",
+                null,
+                selection,
+                args,
+                null, null,
+                "position_name ASC"
+        );
+
+        while (cursor.moveToNext()) {
+            Setpoint setpoint = cursorToUserSetpoint(cursor);
+            setpoints.add(setpoint);
+            Log.d("SEARCH_USER_SETPOINT", "  found: " + setpoint.getPositionName() + " (group=" + setpoint.getEquipmentGroup() + ")");
+        }
+        cursor.close();
+
+        Log.d("SEARCH_USER_SETPOINT", "total found = " + setpoints.size());
+        return setpoints;
+    }
+
 }

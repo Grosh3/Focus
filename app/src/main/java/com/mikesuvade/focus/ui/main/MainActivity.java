@@ -38,6 +38,7 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.GateValve;
+import com.mikesuvade.focus.domain.models.Sensor;
 import com.mikesuvade.focus.domain.models.ValveWorkSession;
 import com.mikesuvade.focus.domain.repository.IRepository;
 import com.mikesuvade.focus.ui.detail.DetailActivity;
@@ -47,7 +48,6 @@ import com.mikesuvade.focus.ui.main.managers.ModeManager;
 import com.mikesuvade.focus.ui.main.managers.SearchManager;
 import com.mikesuvade.focus.ui.main.managers.SessionManager;
 import com.mikesuvade.focus.ui.saved.SavedListsActivity;
-import com.mikesuvade.focus.ui.saved.SavedMeasurementsActivity;
 import com.mikesuvade.focus.ui.settings.SettingsActivity;
 import com.mikesuvade.focus.ui.temperature.TemperatureActivity;
 import com.mikesuvade.focus.utils.AppState;
@@ -99,6 +99,7 @@ public class MainActivity extends AppCompatActivity implements
     private boolean isSearchActive = false;
     private int statusBarHeightPx = 0;
     private int navigationBarHeight = 0;
+    private TextView tvTitle;
 
     // ActivityResultLauncher
     private final ActivityResultLauncher<Intent> detailResultLauncher = registerForActivityResult(
@@ -129,13 +130,45 @@ public class MainActivity extends AppCompatActivity implements
             }
     );
 
+    // 🔥 ЛАУНЧЕР ДЛЯ ДАТЧИКОВ
+    private final ActivityResultLauncher<Intent> sensorDetailResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    Log.d("MAIN_ACTIVITY", "Sensor edited, refreshing...");
+                    refreshData();
+                }
+            }
+    );
+
+    // 🔥 ЛАУНЧЕР ДЛЯ УСТАВОК
+    private final ActivityResultLauncher<Intent> setpointDetailResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    Log.d("MAIN_ACTIVITY", "Setpoint edited, refreshing...");
+                    refreshData();
+                }
+            }
+    );
+
+    public ActivityResultLauncher<Intent> getSensorDetailResultLauncher() {
+        return sensorDetailResultLauncher;
+    }
+
+    public ActivityResultLauncher<Intent> getSetpointDetailResultLauncher() {
+        return setpointDetailResultLauncher;
+    }
+
     // ==========================================
     // 🚀 ЖИЗНЕННЫЙ ЦИКЛ
     // ==========================================
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
+
         androidx.activity.EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
@@ -148,11 +181,15 @@ public class MainActivity extends AppCompatActivity implements
         setupViewModel();
         setupManagers();
         setupRecyclerView();
+        fixRecyclerViewBottomPadding();
         setupSearch();
+        setupHideKeyboardOnTouch();
         setupListeners();
 
         restoreLastSession();
         updateButtonState();
+        checkRefDb();
+        updateTitleForMode();
     }
 
     @Override
@@ -205,6 +242,7 @@ public class MainActivity extends AppCompatActivity implements
         tvOverlayDescription = findViewById(R.id.tvOverlayDescription);
         progressOverlay = findViewById(R.id.progressOverlay);
         cardOverlayDescription = findViewById(R.id.cardOverlayDescription);
+        tvTitle = findViewById(R.id.tvTitle);
 
         btnNewValve.setVisibility(View.GONE);
 
@@ -479,6 +517,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void loadAllGateValvesWithUser() {
         searchManager.loadAllValves();
+        updateTitleForMode();
     }
 
     @Override
@@ -522,11 +561,24 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void refreshData() {
         String query = etSearch.getText().toString().trim();
+
         if (modeManager.isMainMode()) {
             if (query.length() >= 2) {
                 searchManager.searchValves(query);
             } else {
                 searchManager.loadAllValves();
+            }
+        } else if (modeManager.isSensorsMode()) {
+            if (query.length() >= 2) {
+                searchManager.searchSensors(query);
+            } else {
+                searchManager.loadAllSensors();
+            }
+        } else if (modeManager.isSetpointsMode()) {
+            if (query.length() >= 2) {
+                searchManager.searchSetpoints(query);
+            } else {
+                searchManager.loadAllSetpoints();
             }
         }
     }
@@ -631,12 +683,27 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     @Override
-    public void launchDetailActivity(Intent intent) {
+    public void launchValveDetailActivity(Intent intent) {
+        Log.d("MAIN_ACTIVITY", "launchValveDetailActivity");
         detailResultLauncher.launch(intent);
     }
 
     @Override
+    public void launchSensorDetailActivity(Intent intent) {
+        Log.d("MAIN_ACTIVITY", "launchSensorDetailActivity");
+        sensorDetailResultLauncher.launch(intent);
+    }
+
+    @Override
+    public void launchSetpointDetailActivity(Intent intent) {
+        Log.d("MAIN_ACTIVITY", "launchSetpointDetailActivity");
+        setpointDetailResultLauncher.launch(intent);
+    }
+
+    @Override
     public void onCheckBoxChanged(GateValve valve, boolean isChecked) {
+        Log.d(TAG, "onCheckBoxChanged: " + valve.getName() + " = " + isChecked);
+
         if (isChecked) {
             if (viewModel.isInCurrentList(valve)) {
                 Toast.makeText(this, "Задвижка уже в списке", Toast.LENGTH_SHORT).show();
@@ -709,14 +776,11 @@ public class MainActivity extends AppCompatActivity implements
     // ==========================================
 
     private void showMeasurementTypeDialog() {
-        // Инфлейтим разметку
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_measurement_type, null);
 
-        // 🔥 НАХОДИМ КНОПКИ (используем View, а не Activity)
         TextView tvMv = dialogView.findViewById(R.id.tvMv);
         TextView tvOhm = dialogView.findViewById(R.id.tvOhm);
 
-        // Обработчики кликов
         tvMv.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, TemperatureActivity.class);
             intent.putExtra("MODE", "MV");
@@ -729,7 +793,6 @@ public class MainActivity extends AppCompatActivity implements
             startActivity(intent);
         });
 
-        // Создаём и показываем диалог
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(dialogView)
                 .setCancelable(true)
@@ -832,5 +895,111 @@ public class MainActivity extends AppCompatActivity implements
         } else {
             super.onBackPressed();
         }
+    }
+
+    private void checkRefDb() {
+        new Thread(() -> {
+            try {
+                IRepository repo = ((MyApp) getApplication()).getRepository();
+
+                List<Sensor> all = repo.getAllSensors();
+                Log.d("DB_CHECK", "=== ALL SENSORS FROM REF DB ===");
+                Log.d("DB_CHECK", "count = " + all.size());
+                for (Sensor s : all) {
+                    Log.d("DB_CHECK", "  " + s.getStMarkir() + " | " + s.getFullName() + " | " + s.getKks());
+                }
+
+                String testQuery = "МИ 4 24";
+                List<Sensor> found = repo.searchSensors(testQuery);
+                Log.d("DB_CHECK", "=== SEARCH FOR '" + testQuery + "' ===");
+                Log.d("DB_CHECK", "found = " + found.size());
+                for (Sensor s : found) {
+                    Log.d("DB_CHECK", "  found: " + s.getStMarkir());
+                }
+
+            } catch (Exception e) {
+                Log.e("DB_CHECK", "Error", e);
+            }
+        }).start();
+    }
+    private void fixRecyclerViewBottomPadding() {
+        RecyclerView recyclerView = rvGateValves; // Ваш RecyclerView
+        if (recyclerView == null) return;
+
+        // Разрешаем скролл под паддинг (карточки уходят под кнопки, но последняя приподнимается)
+        recyclerView.setClipToPadding(false);
+
+        // Слушаем высоту системной панели навигации
+        ViewCompat.setOnApplyWindowInsetsListener(recyclerView, (v, insets) -> {
+            int navBarHeight = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+
+            // Запас 16dp для красоты
+            int extraPadding = (int) (16 * getResources().getDisplayMetrics().density);
+
+            recyclerView.setPadding(
+                    recyclerView.getPaddingLeft(),
+                    recyclerView.getPaddingTop(),
+                    recyclerView.getPaddingRight(),
+                    navBarHeight + extraPadding
+            );
+
+            return insets;
+        });
+    }
+    @Override
+    public void updateTitle(boolean showTitle) {
+        if (tvTitle == null) return;
+
+        if (showTitle) {
+            tvTitle.setVisibility(View.VISIBLE);
+
+            // 🔥 ОПРЕДЕЛЯЕМ ЗАГОЛОВОК В ЗАВИСИМОСТИ ОТ РЕЖИМА
+            if (modeManager.isMainMode()) {
+                tvTitle.setText("Арматура");
+            } else if (modeManager.isSensorsMode()) {
+                tvTitle.setText("Датчики");
+            } else if (modeManager.isSetpointsMode()) {
+                tvTitle.setText("Уставки");
+            } else {
+                tvTitle.setText("Поиск");
+            }
+        } else {
+            tvTitle.setVisibility(View.GONE);
+        }
+    }
+    private void updateTitleForMode() {
+        if (tvTitle == null) return;
+
+        if (btnNewValve.getVisibility() == View.VISIBLE) {
+            tvTitle.setVisibility(View.GONE);
+        } else {
+            tvTitle.setVisibility(View.VISIBLE);
+
+            if (modeManager.isMainMode()) {
+                tvTitle.setText(getString(R.string.title_armatura));
+            } else if (modeManager.isSensorsMode()) {
+                tvTitle.setText(getString(R.string.title_sensors));
+            } else if (modeManager.isSetpointsMode()) {
+                tvTitle.setText(getString(R.string.title_setpoints));
+            } else {
+                tvTitle.setText(getString(R.string.title_search));
+            }
+        }
+    }
+    private void setupHideKeyboardOnTouch() {
+        rootLayout.setOnTouchListener((v, event) -> {
+            if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+                View currentFocus = getCurrentFocus();
+                if (currentFocus != null && currentFocus instanceof EditText) {
+                    hideKeyboard();
+                    currentFocus.clearFocus();
+                }
+            }
+            return false;
+        });
+    }
+    @Override
+    public void hideKeyboardOnClick() {
+        hideKeyboard(); // Вызываем существующий приватный метод
     }
 }

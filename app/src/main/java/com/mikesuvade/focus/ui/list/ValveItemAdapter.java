@@ -17,6 +17,7 @@ import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.GateValve;
 import com.mikesuvade.focus.domain.models.ValveItem;
+import com.mikesuvade.focus.domain.repository.IRepository;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -74,10 +75,42 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         ValveItem item = items.get(position);
-        GateValve valve = ((MyApp) context.getApplicationContext())
-                .getRepository()
-                .getGateValveById(item.getGateValveId());
+
+        // 🔥 ИСПРАВЛЕНО: используем объединенный источник
+        GateValve valve = getGateValveMerged(item.getGateValveId());
+
         holder.bind(item, valve, listener, context, position);
+    }
+
+    /**
+     * Получить задвижку из объединенного источника (БД1 + БД2)
+     */
+    private GateValve getGateValveMerged(int gateValveId) {
+        IRepository repository = ((MyApp) context.getApplicationContext()).getRepository();
+
+        Log.d("VALVE_DEBUG", "=== getGateValveMerged (Adapter) ===");
+        Log.d("VALVE_DEBUG", "gateValveId = " + gateValveId);
+
+        // 🔥 1. Сначала пробуем найти в БД2 (пользовательские) по ID
+        GateValve userValve = repository.getUserGateValveById(gateValveId);
+        if (userValve != null && userValve.getIsDeleted() != 1) {
+            Log.d("VALVE_DEBUG", "✅ Found in USER DB by ID: " + userValve.getName());
+            return userValve;
+        }
+
+        // 🔥 2. Если не нашли по ID, пробуем найти по original_id
+        List<GateValve> allUserValves = repository.getAllUserGateValves();
+        for (GateValve uv : allUserValves) {
+            if (uv.getOriginalId() == gateValveId && uv.getIsDeleted() != 1) {
+                Log.d("VALVE_DEBUG", "✅ Found in USER DB by original_id: " + uv.getName());
+                return uv;
+            }
+        }
+
+        // 🔥 3. Если не нашли в БД2, ищем в БД1
+        GateValve ref = repository.getGateValveById(gateValveId);
+        Log.d("VALVE_DEBUG", "Found in REF DB: " + (ref != null ? ref.getName() : "NULL"));
+        return ref;
     }
 
     @Override
@@ -316,4 +349,5 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
             Log.d("LIST_DEBUG", "=== bind END ===");
         }
     }
+
 }

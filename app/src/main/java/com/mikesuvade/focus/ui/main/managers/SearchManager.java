@@ -65,8 +65,8 @@ public class SearchManager {
     }
 
     public void searchSensors(String query) {
-        Log.d(TAG, "=== searchSensors ===");
-        Log.d(TAG, "query = " + query);
+        Log.d("SEARCH_MANAGER", "=== searchSensors ===");
+        Log.d("SEARCH_MANAGER", "query = '" + query + "'");
 
         new Thread(() -> {
             try {
@@ -79,34 +79,42 @@ public class SearchManager {
                     return;
                 }
 
+                Log.d("SEARCH_MANAGER", "calling repository.searchSensorsWithUser()");
                 List<Sensor> results = repository.searchSensorsWithUser(query);
-                Log.d(TAG, "results size = " + results.size());
+                Log.d("SEARCH_MANAGER", "results size = " + results.size());
 
                 new Handler(Looper.getMainLooper()).post(() -> {
                     sensorAdapter.updateData(results);
                     tvEmptySearch.setVisibility(results.isEmpty() ? View.VISIBLE : View.GONE);
                 });
             } catch (Exception e) {
-                Log.e(TAG, "Error searching sensors", e);
+                Log.e("SEARCH_MANAGER", "Error searching sensors", e);
             }
         }).start();
     }
-
     public void searchSetpoints(String query) {
         Log.d(TAG, "=== searchSetpoints ===");
         Log.d(TAG, "query = " + query);
 
         new Thread(() -> {
             try {
-                if (query.trim().equalsIgnoreCase("#все")) {
-                    List<Setpoint> all = repository.getAllSetpointsWithUser();
+                // ✅ Проверяем, является ли запрос поиском по группе (начинается с #)
+                if (query.trim().startsWith("#")) {
+                    String groupQuery = query.trim();
+                    Log.d(TAG, "Searching by equipment group: " + groupQuery);
+
+                    // Ищем уставки по группе оборудования
+                    List<Setpoint> results = repository.searchSetpointsByGroupWithUser(groupQuery);
+                    Log.d(TAG, "results size = " + results.size());
+
                     new Handler(Looper.getMainLooper()).post(() -> {
-                        setpointAdapter.updateData(all);
-                        tvEmptySearch.setVisibility(all.isEmpty() ? View.VISIBLE : View.GONE);
+                        setpointAdapter.updateData(results);
+                        tvEmptySearch.setVisibility(results.isEmpty() ? View.VISIBLE : View.GONE);
                     });
                     return;
                 }
 
+                // Обычный поиск по уставкам (без #)
                 List<Setpoint> results = repository.searchSetpointsWithUser(query);
                 Log.d(TAG, "results size = " + results.size());
 

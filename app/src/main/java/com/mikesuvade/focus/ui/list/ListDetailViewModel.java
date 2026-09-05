@@ -559,16 +559,16 @@ public class ListDetailViewModel extends ViewModel {
             }
         }
 
-        // 🔥 СОРТИРУЕМ ПО ИСУ (isy)
+        // 🔥 СОРТИРУЕМ ПО ИСУ (isy) - используем объединенный источник
         Collections.sort(unchecked, (a, b) -> {
-            String isyA = getIsyForItem(a);
-            String isyB = getIsyForItem(b);
+            String isyA = getIsyForItemMerged(a);
+            String isyB = getIsyForItemMerged(b);
             return compareIsy(isyA, isyB);
         });
 
         Collections.sort(checked, (a, b) -> {
-            String isyA = getIsyForItem(a);
-            String isyB = getIsyForItem(b);
+            String isyA = getIsyForItemMerged(a);
+            String isyB = getIsyForItemMerged(b);
             return compareIsy(isyA, isyB);
         });
 
@@ -580,10 +580,24 @@ public class ListDetailViewModel extends ViewModel {
     }
 
     /**
+     * Получить ИСУ для элемента из объединенного источника
+     */
+    private String getIsyForItemMerged(ValveItem item) {
+        GateValve valve = getGateValveMerged(item.getGateValveId());
+        if (valve != null && valve.getIsy() != null && !valve.getIsy().isEmpty()) {
+            return valve.getIsy();
+        }
+        return "ZZZZ";
+    }
+
+    /**
      * Получить ИСУ для элемента
      */
+    /**
+     * Получить ИСУ для элемента из объединенного источника
+     */
     private String getIsyForItem(ValveItem item) {
-        GateValve valve = repository.getGateValveById(item.getGateValveId());
+        GateValve valve = getGateValveMerged(item.getGateValveId());
         if (valve != null && valve.getIsy() != null && !valve.getIsy().isEmpty()) {
             return valve.getIsy();
         }
@@ -612,6 +626,24 @@ public class ListDetailViewModel extends ViewModel {
 
     private String getCurrentDateTime() {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+    }
+    private GateValve getGateValveMerged(int gateValveId) {
+        // 🔥 1. Сначала пробуем найти в БД2 (пользовательские) по ID
+        GateValve userValve = repository.getUserGateValveById(gateValveId);
+        if (userValve != null && userValve.getIsDeleted() != 1) {
+            return userValve;
+        }
+
+        // 🔥 2. Если не нашли по ID, пробуем найти по original_id
+        List<GateValve> allUserValves = repository.getAllUserGateValves();
+        for (GateValve uv : allUserValves) {
+            if (uv.getOriginalId() == gateValveId && uv.getIsDeleted() != 1) {
+                return uv;
+            }
+        }
+
+        // 🔥 3. Если не нашли в БД2, ищем в БД1
+        return repository.getGateValveById(gateValveId);
     }
 
 }

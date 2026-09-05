@@ -128,5 +128,42 @@
     <string name="dialog_measurement_title">Выберите тип замера</string>
     <string name="measurement_mv">мВ</string>
     <string name="measurement_ohm">Ом</string>
+    <!-- Группы оборудования для уставок -->
+    <!-- Группы оборудования для уставок -->
+    <string-array name="equipment_groups">
+        <item>#ОБЩЕБЛОЧНЫЕ</item>
+        <item>#КОТЕЛ</item>
+        <item>#ТУРБИНА</item>
+        <item>#ПТН</item>
+        <item>#ПЭН</item>
+        <item>#АСАРБ</item>
+        <item>#РВП</item>
+        <item>#БРОУ</item>
+        <item>#УКТЗМ</item>
+        <item>#ГРП</item>
+        <item>#БНС</item>
+        <item>#МЩКО</item>
+        <item>#МЩМАШЗАЛА</item>
+        <item>#МЩПТ</item>
+        <item>#МЩВТ</item>
+        <item>#МЩОБЩЕСТАНЦИОННОЙБОЙЛЕРНОЙ</item>
+        <item>#БОЙЛЕРНАЯ</item>
+        <item>#ПЭУ</item>
+        <item>#ПОК</item>
+        <item>#ОМХ</item>
+        <item>#МАЗУТОНАСОСНАЯ</item>
+        <item>#УЗЗВ</item>
+        <item>#ХВО</item>
+        <item>#БОУ</item>
+        <item>#ЭКСПРЕССЛАБОРАТОРИЯ</item>
+        <item>#ЭЛЕКТРОЛИЗНАЯ</item>
+        <item>#АЗКС</item>
+        <item>#ВОЗДУШНАЯ КОМПРЕССОРНАЯ</item>
+    </string-array>
+    <!-- Заголовки для MainActivity -->
+    <string name="title_armatura">Арматура</string>
+    <string name="title_sensors">Датчики</string>
+    <string name="title_setpoints">Уставки</string>
+    <string name="title_search">Поиск</string>
 
 </resources>

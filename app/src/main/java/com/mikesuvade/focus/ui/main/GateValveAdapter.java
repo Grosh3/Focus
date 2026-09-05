@@ -131,6 +131,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         GateValve valve = valves.get(position);
+        Log.d("GATE_ADAPTER", "onBindViewHolder: position=" + position + ", id=" + valve.getId());
         boolean isExpanded = expandedPositions.contains(position);
         boolean isSelected = selectedPositions.contains(position);
 
@@ -179,6 +180,9 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                   OnCheckBoxClickListener checkBoxListener,
                   OnBlockingClickListener blockingClickListener,
                   int position) {
+            Log.d("GATE_ADAPTER", "bind: valve.getId() = " + valve.getId());
+            Log.d("GATE_ADAPTER", "bind: valve.getName() = " + valve.getName());
+            Log.d("GATE_ADAPTER", "bind: valve.getOriginalId() = " + valve.getOriginalId());
 
             // ISY и NAME
             String isy = valve.getIsy();

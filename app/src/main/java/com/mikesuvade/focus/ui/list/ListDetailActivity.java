@@ -21,6 +21,7 @@ import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.GateValve;
 import com.mikesuvade.focus.domain.models.ValveItem;
 import com.mikesuvade.focus.domain.models.ValveWorkSession;
+import com.mikesuvade.focus.domain.repository.IRepository;
 import com.mikesuvade.focus.utils.AppState;
 
 import java.text.SimpleDateFormat;
@@ -444,37 +445,19 @@ public class ListDetailActivity extends AppCompatActivity {
         Log.d("SESSY", "=== showSaveDialog END ===");
     }
     private void showValveInfoDialog(ValveItem item) {
-        GateValve valve = ((MyApp) getApplication()).getRepository().getGateValveById(item.getGateValveId());
+        // 🔥 Используем объединенный источник
+        GateValve valve = getGateValveMerged(item.getGateValveId());
         if (valve == null) {
+            Log.e("VALVE_DEBUG", "❌ Valve not found for gateValveId=" + item.getGateValveId());
             Toast.makeText(this, "Задвижка не найдена", Toast.LENGTH_SHORT).show();
             return;
         }
 
         StringBuilder info = new StringBuilder();
 
+        // 🔥 1. ИСУ и название
         String isy = valve.getIsy();
         String name = valve.getName();
-
-        String powerCabinet = valve.getPowerCabinet();
-        String locationDescription = valve.getLocationDescription();
-        if (powerCabinet != null && !powerCabinet.isEmpty()) {
-            info.append("- ").append(powerCabinet);
-            if (locationDescription != null && !locationDescription.isEmpty()) {
-                info.append(" ").append(locationDescription);
-            }
-            info.append("\n");
-        } else if (locationDescription != null && !locationDescription.isEmpty()) {
-            info.append("- ").append(locationDescription).append("\n");
-        }
-
-        String onPlace = valve.getOnPlace();
-        if (onPlace != null && !onPlace.isEmpty()) {
-            info.append("- ").append(onPlace).append("\n");
-        }
-
-        if (info.length() == 0) {
-            info.append("Нет данных о задвижке");
-        }
 
         String title = "";
         if (isy != null && !isy.isEmpty()) {
@@ -487,10 +470,77 @@ public class ListDetailActivity extends AppCompatActivity {
             title = "Задвижка";
         }
 
+        // 🔥 2. Шкаф и сборка
+        String powerCabinet = valve.getPowerCabinet();
+        String locationDescription = valve.getLocationDescription();
+        if (powerCabinet != null && !powerCabinet.isEmpty()) {
+            info.append("- ").append(powerCabinet);
+            if (locationDescription != null && !locationDescription.isEmpty()) {
+                info.append(" ").append(locationDescription);
+            }
+            info.append("\n");
+        } else if (locationDescription != null && !locationDescription.isEmpty()) {
+            info.append("- ").append(locationDescription).append("\n");
+        }
+
+        // 🔥 3. Расположение
+        String onPlace = valve.getOnPlace();
+        if (onPlace != null && !onPlace.isEmpty()) {
+            info.append("- ").append(onPlace).append("\n");
+        }
+
+        // 🔥 4. KKS (если есть)
+        String kks = valve.getKks();
+        if (kks != null && !kks.isEmpty()) {
+            info.append("- KKS: ").append(kks).append("\n");
+        }
+
+        // 🔥 5. Полное описание (если есть)
+        String fullName = valve.getFullName();
+        if (fullName != null && !fullName.isEmpty()) {
+            info.append("- ").append(fullName).append("\n");
+        }
+
+        if (info.length() == 0) {
+            info.append("Нет данных о задвижке");
+        }
+
         new AlertDialog.Builder(this)
                 .setTitle(title)
                 .setMessage(info.toString().trim())
                 .setPositiveButton("Закрыть", (dialog, which) -> dialog.dismiss())
                 .show();
+    }
+
+    private GateValve getGateValveMerged(int gateValveId) {
+        IRepository repository = ((MyApp) getApplication()).getRepository();
+
+        Log.d("VALVE_DEBUG", "=== getGateValveMerged ===");
+        Log.d("VALVE_DEBUG", "gateValveId = " + gateValveId);
+
+        // 🔥 1. Сначала пробуем найти в БД2 (пользовательские) по ID
+        GateValve userValve = repository.getUserGateValveById(gateValveId);
+        if (userValve != null && userValve.getIsDeleted() != 1) {
+            Log.d("VALVE_DEBUG", "✅ Found in USER DB by ID: " + userValve.getName() + " (id=" + userValve.getId() + ")");
+            return userValve;
+        }
+
+        // 🔥 2. Если не нашли по ID, пробуем найти по original_id (для задвижек из БД1)
+        List<GateValve> allUserValves = repository.getAllUserGateValves();
+        for (GateValve uv : allUserValves) {
+            if (uv.getOriginalId() == gateValveId && uv.getIsDeleted() != 1) {
+                Log.d("VALVE_DEBUG", "✅ Found in USER DB by original_id: " + uv.getName() + " (id=" + uv.getId() + ", originalId=" + uv.getOriginalId() + ")");
+                return uv;
+            }
+        }
+
+        // 🔥 3. Если не нашли в БД2, ищем в БД1 (справочник)
+        GateValve ref = repository.getGateValveById(gateValveId);
+        if (ref != null) {
+            Log.d("VALVE_DEBUG", "✅ Found in REF DB: " + ref.getName());
+        } else {
+            Log.d("VALVE_DEBUG", "❌ NOT found anywhere!");
+        }
+        return ref;
     }
 }

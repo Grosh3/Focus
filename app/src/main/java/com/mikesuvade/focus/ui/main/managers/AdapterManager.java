@@ -36,8 +36,11 @@ public class AdapterManager {
         void syncAdapterSelection();
         void updateButtonState();
         void showToast(String message);
-        void launchDetailActivity(Intent intent);
+        void launchValveDetailActivity(Intent intent);
+        void launchSensorDetailActivity(Intent intent);
+        void launchSetpointDetailActivity(Intent intent);
         void onCheckBoxChanged(GateValve valve, boolean isChecked);
+        void hideKeyboardOnClick();
     }
 
     public AdapterManager(Context context, AdapterCallbacks callbacks) {
@@ -70,11 +73,13 @@ public class AdapterManager {
 
     private void setupValveAdapter() {
         valveAdapter.setOnItemClickListener((valve, position) -> {
+            callbacks.hideKeyboardOnClick();
             Log.d(TAG, "Valve click: " + position);
             callbacks.toggleExpanded(position);
         });
 
         valveAdapter.setOnItemLongClickListener(valve -> {
+
             String displayName = valve.getIsy();
             if (displayName == null || displayName.isEmpty()) {
                 displayName = valve.getName();
@@ -90,7 +95,9 @@ public class AdapterManager {
                         Intent intent = new Intent(context, DetailActivity.class);
                         intent.putExtra(DetailActivity.EXTRA_TYPE, DetailActivity.TYPE_VALVE);
                         intent.putExtra(DetailActivity.EXTRA_ID, valve.getId());
-                        callbacks.launchDetailActivity(intent);
+                        boolean isFromUserDb = valve.getId() < 0;
+                        intent.putExtra(DetailActivity.EXTRA_IS_FROM_USER_DB, isFromUserDb);
+                        callbacks.launchValveDetailActivity(intent);
                     })
                     .setNegativeButton("Отмена", null)
                     .show();
@@ -132,20 +139,37 @@ public class AdapterManager {
     }
 
     private void setupSensorAdapter() {
+        // 🔥 КОРОТКИЙ КЛИК - РАЗВОРАЧИВАЕМ КАРТОЧКУ (БАЯН)
         sensorAdapter.setOnItemClickListener((sensor, position) -> {
+            callbacks.hideKeyboardOnClick();
             Log.d(TAG, "Sensor click: " + position);
             callbacks.toggleExpanded(position);
         });
 
+        // 🔥 ДЛИННЫЙ КЛИК - ДИАЛОГ РЕДАКТИРОВАНИЯ
         sensorAdapter.setOnItemLongClickListener((sensor, position) -> {
+
+            String displayName = sensor.getStMarkir();
+            if (displayName == null || displayName.isEmpty()) {
+                displayName = sensor.getFullName();
+            }
+            if (displayName == null || displayName.isEmpty()) {
+                displayName = sensor.getKks();
+            }
+            if (displayName == null || displayName.isEmpty()) {
+                displayName = "Без названия";
+            }
+
             new AlertDialog.Builder(context)
                     .setTitle("Редактировать датчик?")
-                    .setMessage("Вы хотите отредактировать \"" + sensor.getStMarkir() + "\"?")
+                    .setMessage("Вы хотите отредактировать \"" + displayName + "\"?")
                     .setPositiveButton("Редактировать", (dialog, which) -> {
                         Intent intent = new Intent(context, DetailActivity.class);
                         intent.putExtra(DetailActivity.EXTRA_TYPE, DetailActivity.TYPE_SENSOR);
-                        intent.putExtra(DetailActivity.EXTRA_KKS, sensor.getKks());
-                        callbacks.launchDetailActivity(intent);
+                        intent.putExtra(DetailActivity.EXTRA_ID, sensor.getId());
+                        boolean isFromUserDb = sensor.getId() < 0;
+                        intent.putExtra(DetailActivity.EXTRA_IS_FROM_USER_DB, isFromUserDb);
+                        callbacks.launchSensorDetailActivity(intent);
                     })
                     .setNegativeButton("Отмена", null)
                     .show();
@@ -154,20 +178,34 @@ public class AdapterManager {
     }
 
     private void setupSetpointAdapter() {
+        // 🔥 КОРОТКИЙ КЛИК - РАЗВОРАЧИВАЕМ КАРТОЧКУ (БАЯН)
         setpointAdapter.setOnItemClickListener((setpoint, position) -> {
+            callbacks.hideKeyboardOnClick();
             Log.d(TAG, "Setpoint click: " + position);
             callbacks.toggleExpanded(position);
         });
 
+        // 🔥 ДЛИННЫЙ КЛИК - ДИАЛОГ РЕДАКТИРОВАНИЯ
         setpointAdapter.setOnItemLongClickListener((setpoint, position) -> {
+
+            String displayName = setpoint.getPositionName();
+            if (displayName == null || displayName.isEmpty()) {
+                displayName = setpoint.getName();
+            }
+            if (displayName == null || displayName.isEmpty()) {
+                displayName = "Без названия";
+            }
+
             new AlertDialog.Builder(context)
                     .setTitle("Редактировать уставку?")
-                    .setMessage("Вы хотите отредактировать \"" + setpoint.getPositionName() + "\"?")
+                    .setMessage("Вы хотите отредактировать \"" + displayName + "\"?")
                     .setPositiveButton("Редактировать", (dialog, which) -> {
                         Intent intent = new Intent(context, DetailActivity.class);
                         intent.putExtra(DetailActivity.EXTRA_TYPE, DetailActivity.TYPE_SETPOINT);
                         intent.putExtra(DetailActivity.EXTRA_ID, setpoint.getId());
-                        callbacks.launchDetailActivity(intent);
+                        boolean isFromUserDb = setpoint.getId() < 0;
+                        intent.putExtra(DetailActivity.EXTRA_IS_FROM_USER_DB, isFromUserDb);
+                        callbacks.launchSetpointDetailActivity(intent);
                     })
                     .setNegativeButton("Отмена", null)
                     .show();

@@ -19,9 +19,12 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
 
     // 1. Пользовательские задвижки
     // 1. Пользовательские задвижки
+    // ==========================================
+// 1. Пользовательские задвижки — БЕЗ AUTOINCREMENT
+// ==========================================
     private static final String CREATE_USER_GATE_VALVES =
             "CREATE TABLE IF NOT EXISTS user_gate_valves (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "id INTEGER PRIMARY KEY," +  // ← убрали AUTOINCREMENT
                     "original_id INTEGER," +
                     "is_deleted INTEGER DEFAULT 0," +
                     "name_eng TEXT," +
@@ -45,12 +48,13 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "created_at TEXT" +
                     ")";
 
-    // 2. Пользовательские датчики
-// 2. Пользовательские датчики
+    // ==========================================
+// 2. Пользовательские датчики — ОСТАВЛЯЕМ AUTOINCREMENT
+// ==========================================
     private static final String CREATE_USER_SENSORS =
             "CREATE TABLE IF NOT EXISTS user_sensors (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "original_kks TEXT," +
+                    "id INTEGER PRIMARY KEY," +           // ← БЕЗ AUTOINCREMENT
+                    "original_id INTEGER," +               // ← ДОБАВИЛИ
                     "is_deleted INTEGER DEFAULT 0," +
                     "keynum INTEGER," +
                     "fa INTEGER," +
@@ -81,12 +85,12 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "created_at TEXT" +
                     ")";
 
-
-    // 3. Пользовательские уставки
-    // 3. Пользовательские уставки
+    // ==========================================
+// 3. Пользовательские уставки — БЕЗ AUTOINCREMENT
+// ==========================================
     private static final String CREATE_USER_SETPOINTS =
             "CREATE TABLE IF NOT EXISTS user_setpoints (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "id INTEGER PRIMARY KEY," +  // ← убрали AUTOINCREMENT
                     "original_id INTEGER," +
                     "is_deleted INTEGER DEFAULT 0," +
                     "name TEXT," +
@@ -101,7 +105,6 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "edited_at TEXT," +
                     "created_at TEXT" +
                     ")";
-
     // 4. Рабочие сессии (списки задвижек)
     private static final String CREATE_USER_WORK_SESSIONS =
             "CREATE TABLE IF NOT EXISTS user_work_sessions (" +

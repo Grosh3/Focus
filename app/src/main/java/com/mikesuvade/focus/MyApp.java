@@ -15,7 +15,7 @@ import com.mikesuvade.focus.ui.settings.SettingsActivity;
 
 public class MyApp extends Application {
 
-    private static final String TAG = "MyApp";
+    private static final String TAG = "MY_APP";
     private static final String PREFS_NAME = "theme_prefs";
     private static final String KEY_THEME = "current_theme";
 
@@ -26,20 +26,29 @@ public class MyApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        instance = this;
+        Log.d(TAG, "=== MyApp.onCreate START ===");
 
-        // 🔥 ПРИМЕНЯЕМ СОХРАНЁННУЮ ТЕМУ ПРИ СТАРТЕ
-        applySavedTheme();
+        try {
+            instance = this;
+            applySavedTheme();
 
-        DatabaseHelper dbHelper = DatabaseHelper.getInstance(this);
-        userDatabaseHelper = UserDatabaseHelper.getInstance(this);
+            Log.d(TAG, "About to init DatabaseHelper");
+            DatabaseHelper dbHelper = DatabaseHelper.getInstance(this);
 
-        repository = new RepositoryImpl(dbHelper, userDatabaseHelper);
+            Log.d(TAG, "About to init UserDatabaseHelper");
+            userDatabaseHelper = UserDatabaseHelper.getInstance(this);
 
-        Log.d(TAG, "Application initialized successfully");
+            Log.d(TAG, "About to create Repository");
+            repository = new RepositoryImpl(dbHelper, userDatabaseHelper);
+
+            Log.d(TAG, "Application initialized successfully");
+
+        } catch (Exception e) {
+            Log.e(TAG, "ERROR in onCreate", e);
+            e.printStackTrace();
+        }
     }
 
-    // 🔥 НОВЫЙ МЕТОД — применяет сохранённую тему
     private void applySavedTheme() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         int savedTheme = prefs.getInt(KEY_THEME, SettingsActivity.THEME_SYSTEM);
@@ -58,7 +67,7 @@ public class MyApp extends Application {
         }
 
         AppCompatDelegate.setDefaultNightMode(mode);
-        Log.d(TAG, "Applied theme: " + savedTheme + " (mode=" + mode + ")");
+        Log.d(TAG, "Applied theme: " + savedTheme);
     }
 
     public static MyApp getInstance() {
