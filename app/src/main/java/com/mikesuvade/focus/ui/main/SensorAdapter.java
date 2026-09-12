@@ -1,5 +1,10 @@
 package com.mikesuvade.focus.ui.main;
 
+import android.content.Context;
+import android.graphics.Color;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.BackgroundColorSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -7,6 +12,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mikesuvade.focus.R;
@@ -14,12 +20,12 @@ import com.mikesuvade.focus.domain.models.Sensor;
 
 import java.util.ArrayList;
 import java.util.List;
-import androidx.core.content.ContextCompat;
 
 public class SensorAdapter extends RecyclerView.Adapter<SensorAdapter.ViewHolder> {
 
     private List<Sensor> sensors = new ArrayList<>();
     private List<Integer> expandedPositions = new ArrayList<>();
+    private String searchQuery = "";
 
     private OnItemClickListener listener;
     private OnItemLongClickListener longClickListener;
@@ -50,6 +56,11 @@ public class SensorAdapter extends RecyclerView.Adapter<SensorAdapter.ViewHolder
 
         Log.d("SENSOR_ADAPTER", "adapter now has " + this.sensors.size() + " items");
     }
+
+    public void setSearchQuery(String query) {
+        this.searchQuery = query != null ? query : "";
+    }
+
     public void setExpanded(int position, boolean expanded) {
         if (expanded) {
             if (!expandedPositions.contains(position)) {
@@ -82,12 +93,42 @@ public class SensorAdapter extends RecyclerView.Adapter<SensorAdapter.ViewHolder
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Sensor sensor = sensors.get(position);
         boolean isExpanded = expandedPositions.contains(position);
-        holder.bind(sensor, isExpanded, listener, longClickListener, position);
+        holder.bind(sensor, isExpanded, listener, longClickListener, position, searchQuery, this);
     }
 
     @Override
     public int getItemCount() {
         return sensors.size();
+    }
+
+    /**
+     * Подсвечивает найденный текст в строке
+     */
+    private SpannableString highlightText(String text, String query, Context context) {
+        if (text == null || query == null || query.isEmpty()) {
+            return new SpannableString(text != null ? text : "");
+        }
+
+        SpannableString spannable = new SpannableString(text);
+        String lowerText = text.toLowerCase();
+        String lowerQuery = query.toLowerCase();
+
+        // 🔥 ЦВЕТ ИЗ РЕСУРСОВ
+        int highlightColor = ContextCompat.getColor(context, R.color.kks_highlight);
+
+        int startIndex = lowerText.indexOf(lowerQuery);
+        while (startIndex >= 0) {
+            int endIndex = startIndex + lowerQuery.length();
+            spannable.setSpan(
+                    new BackgroundColorSpan(highlightColor),
+                    startIndex,
+                    endIndex,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            );
+            startIndex = lowerText.indexOf(lowerQuery, endIndex);
+        }
+
+        return spannable;
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
@@ -121,7 +162,9 @@ public class SensorAdapter extends RecyclerView.Adapter<SensorAdapter.ViewHolder
         void bind(Sensor sensor, boolean isExpanded,
                   OnItemClickListener listener,
                   OnItemLongClickListener longClickListener,
-                  int position) {
+                  int position,
+                  String searchQuery,
+                  SensorAdapter adapter) {
 
             String stMarking = sensor.getStMarkir();
             if (stMarking != null && !stMarking.isEmpty()) {
@@ -147,10 +190,13 @@ public class SensorAdapter extends RecyclerView.Adapter<SensorAdapter.ViewHolder
                 tvLocation.setVisibility(View.GONE);
             }
 
+            // 🔥 KKS С ПОДСВЕТКОЙ
             String kks = sensor.getKks();
             if (kks != null && !kks.isEmpty()) {
                 tvKks.setVisibility(View.VISIBLE);
-                tvKks.setText("KKS: " + kks);
+                SpannableString highlightedKks = adapter.highlightText(
+                        "KKS: " + kks, searchQuery, itemView.getContext());
+                tvKks.setText(highlightedKks);
                 tvKks.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.kks_green_dark));
             } else {
                 tvKks.setVisibility(View.GONE);

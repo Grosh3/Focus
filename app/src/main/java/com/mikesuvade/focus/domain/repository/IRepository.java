@@ -137,5 +137,9 @@ public interface IRepository {
     // ==========================================
     void exportUserDatabase(String filePath);
     void importUserDatabase(String filePath);
+    // ==========================================
+    Setpoint getAnyUserSetpointByOriginalId(int originalId);
+    Sensor getAnyUserSensorByOriginalId(int originalId);
+    GateValve getAnyUserGateValveByOriginalId(int originalId);
 
 }

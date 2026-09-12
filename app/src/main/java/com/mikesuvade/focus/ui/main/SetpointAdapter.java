@@ -14,6 +14,7 @@ import com.mikesuvade.focus.domain.models.Setpoint;
 
 import java.util.ArrayList;
 import java.util.List;
+import androidx.core.content.ContextCompat;
 
 public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHolder> {
 
@@ -170,6 +171,14 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
                     operationText += " (" + notes + ")";
                 }
                 tvOperation.setText(operationText);
+
+                if (isCriticalOperation(operation)) {
+                    tvOperation.setTextColor(ContextCompat.getColor(
+                            itemView.getContext(), R.color.critical_operation_red));
+                } else {
+                    tvOperation.setTextColor(ContextCompat.getColor(
+                            itemView.getContext(), R.color.operation_default));
+                }
             } else {
                 tvOperation.setVisibility(View.GONE);
             }
@@ -226,6 +235,22 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
                 }
                 return false;
             });
+        }
+        /**
+         * Проверяет, является ли операция критической (отключение)
+         */
+        private boolean isCriticalOperation(String operation) {
+            if (operation == null || operation.isEmpty()) return false;
+
+            String[] criticalOps = itemView.getContext().getResources()
+                    .getStringArray(R.array.critical_operations);
+
+            for (String critical : criticalOps) {
+                if (operation.contains(critical)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }

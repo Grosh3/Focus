@@ -1,5 +1,8 @@
 <resources>
-    <!-- ===== БАЗОВЫЕ ЦВЕТА ===== -->
+
+    <!-- ========================================== -->
+    <!-- 1️⃣ БАЗОВЫЕ ЦВЕТА (СВЕТЛАЯ ТЕМА) -->
+    <!-- ========================================== -->
     <color name="primary">#1A73E8</color>
     <color name="primary_container">#D2E3FC</color>
     <color name="secondary">#03DAC6</color>
@@ -18,11 +21,9 @@
     <color name="card_background">#FFFFFF</color>
     <color name="card_elevation">#E8EAED</color>
 
-    <color name="error">#D32F2F</color>
-    <color name="success">#388E3C</color>
-    <color name="warning">#F57C00</color>
-
-    <!-- ===== ТЁМНЫЕ ЦВЕТА (как базовые, чтобы не было предупреждений) ===== -->
+    <!-- ========================================== -->
+    <!-- 2️⃣ БАЗОВЫЕ ЦВЕТА (ТЁМНАЯ ТЕМА) -->
+    <!-- ========================================== -->
     <color name="primary_dark">#4FC3F7</color>
     <color name="primary_container_dark">#1A237E</color>
     <color name="secondary_dark">#4DB6AC</color>
@@ -41,9 +42,57 @@
     <color name="card_background_dark">#2D2D2D</color>
     <color name="card_elevation_dark">#3D3D3D</color>
 
+    <!-- ========================================== -->
+    <!-- 3️⃣ ЦВЕТА ДЛЯ ОВЕРЛЕЯ -->
+    <!-- ========================================== -->
+    <color name="overlay_background">#CC000000</color>
+
+    <!-- ========================================== -->
+    <!-- 4️⃣ ЦВЕТА СТАТУСОВ -->
+    <!-- ========================================== -->
+    <color name="status_success">#4CAF50</color>   <!-- Зеленый - подключен/установлена -->
+    <color name="status_error">#F44336</color>     <!-- Красный - отключен/снята -->
+    <color name="status_warning">#FF9800</color>   <!-- Оранжевый - ККВ снята -->
+
+    <!-- Двигатель -->
+    <color name="status_motor_on">#4CAF50</color>  <!-- Дв подключен -->
+    <color name="status_motor_off">#F44336</color> <!-- Дв отключен -->
+
+    <!-- ККВ -->
+    <color name="status_box_installed">#4CAF50</color>  <!-- ККВ установлена -->
+    <color name="status_box_removed">#FF9800</color>    <!-- ККВ снята -->
+
+    <!-- ========================================== -->
+    <!-- 5️⃣ ЦВЕТА КНОПОК -->
+    <!-- ========================================== -->
+    <color name="btn_default">#888888</color>          <!-- Кнопка по умолчанию (серая) -->
+    <color name="btn_motor_on">#4CAF50</color>         <!-- Двигатель включен -->
+    <color name="btn_motor_off">#F44336</color>        <!-- Двигатель выключен -->
+    <color name="btn_box_installed">#4CAF50</color>    <!-- ККВ установлена -->
+    <color name="btn_box_removed">#FF9800</color>      <!-- ККВ снята -->
+
+    <!-- ========================================== -->
+    <!-- 6️⃣ ЦВЕТА ДЛЯ КАРТОЧЕК -->
+    <!-- ========================================== -->
+    <color name="card_checked_background">#FEF9E7</color>  <!-- Мягкий бежевый для отмеченных карточек -->
+
+    <!-- ========================================== -->
+    <!-- 7️⃣ ЦВЕТА ПОДСВЕТКИ -->
+    <!-- ========================================== -->
+    <color name="kks_highlight">#FFEB3B</color>           <!-- Желтый для подсветки KKS -->
+    <color name="critical_operation_red">#D32F2F</color>  <!-- Темно-красный для критических операций -->
+    <color name="operation_default">#1565C0</color>       <!-- Синий для обычных операций -->
+
+    <!-- ========================================== -->
+    <!-- 8️⃣ ДОПОЛНИТЕЛЬНЫЕ ЦВЕТА -->
+    <!-- ========================================== -->
+    <color name="error">#D32F2F</color>
     <color name="error_dark">#EF5350</color>
+    <color name="success">#388E3C</color>
     <color name="success_dark">#66BB6A</color>
+    <color name="warning">#F57C00</color>
     <color name="warning_dark">#FFA726</color>
 
     <color name="kks_green_dark">#2E7D32</color>
+
 </resources>

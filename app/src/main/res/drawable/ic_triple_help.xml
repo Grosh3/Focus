@@ -1,0 +1,59 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="144dp"
+    android:height="48dp"
+    android:viewportWidth="144"
+    android:viewportHeight="48">
+
+    <!-- ========================================== -->
+    <!-- 1️⃣ ПОДЛОЖКА С РАЗДЕЛИТЕЛЯМИ                -->
+    <!-- ========================================== -->
+    <path
+        android:pathData="M0,0 L144,0 L144,48 L0,48 Z"
+        android:fillColor="#F5F5F5"
+        android:strokeColor="#E0E0E0"
+        android:strokeWidth="1"/>
+
+    <path
+        android:pathData="M48,0 L48,48"
+        android:strokeWidth="1"
+        android:strokeColor="#E0E0E0"/>
+
+    <path
+        android:pathData="M96,0 L96,48"
+        android:strokeWidth="1"
+        android:strokeColor="#E0E0E0"/>
+
+    <!-- ========================================== -->
+    <!-- 2️⃣ ИКОНКА ДВИГАТЕЛЯ (ЛЕВАЯ ЧАСТЬ)          -->
+    <!-- ========================================== -->
+    <path
+        android:pathData="M24,14 L24,18 M24,30 L24,34 M16,24 L20,24 M28,24 L32,24 M18,18 L20,20 M28,28 L30,30 M18,30 L20,28 M28,18 L30,20 M24,20 A4,4 0 1,0 24,28 A4,4 0 1,0 24,20"
+        android:strokeWidth="2"
+        android:strokeColor="#757575"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+
+    <!-- ========================================== -->
+    <!-- 3️⃣ ИКОНКА ККВ (СРЕДНЯЯ ЧАСТЬ)              -->
+    <!-- ========================================== -->
+    <path
+        android:pathData="M60,14 L84,14 M60,24 L84,24 M60,34 L84,34 M66,14 L66,34 M78,14 L78,34"
+        android:strokeWidth="2"
+        android:strokeColor="#757575"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+
+    <!-- ========================================== -->
+    <!-- 4️⃣ ИКОНКА СТРЕЛКИ (ПРАВАЯ ЧАСТЬ)           -->
+    <!-- ========================================== -->
+    <path
+        android:pathData="M108,16 L124,24 L108,32"
+        android:strokeWidth="2"
+        android:strokeColor="#757575"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+
+</vector>

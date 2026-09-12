@@ -316,6 +316,16 @@ public class MainViewModel extends ViewModel {
                 ValveItem item = new ValveItem();
                 item.setParentSessionId(sessionId);
                 item.setGateValveId(valve.getId());
+
+                // 🔥 СОХРАНЯЕМ ВСЕ ДАННЫЕ ЗАДВИЖКИ
+                item.setGateValveName(valve.getName() != null ? valve.getName() : "");
+                item.setGateValveIsy(valve.getIsy() != null ? valve.getIsy() : "");
+                item.setGateValveKks(valve.getKks() != null ? valve.getKks() : "");
+                item.setGateValvePowerCabinet(valve.getPowerCabinet() != null ? valve.getPowerCabinet() : "");
+                item.setGateValveLocationDescription(valve.getLocationDescription() != null ? valve.getLocationDescription() : "");
+                item.setGateValveOnPlace(valve.getOnPlace() != null ? valve.getOnPlace() : "");
+                item.setGateValveFullName(valve.getFullName() != null ? valve.getFullName() : "");
+
                 item.setIsAssembled(1);
                 item.setMotorDisabled(0);
                 item.setBoxRemoved(0);

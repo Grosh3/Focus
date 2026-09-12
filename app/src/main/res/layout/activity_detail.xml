@@ -288,7 +288,7 @@
                     style="@style/RoundedOutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Мод датчика"
+                    android:hint="Модификация(Исполнение)"
                     android:layout_marginBottom="8dp">
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etModSensor"
@@ -539,8 +539,23 @@
 
             </LinearLayout>
 
+            <!-- ========================================== -->
+            <!-- 🗑️ КНОПКА УДАЛЕНИЯ                        -->
+            <!-- ========================================== -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDelete"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="16dp"
+                android:text="@string/delete_entity"
+                android:textColor="?attr/colorError"
+                app:strokeColor="?attr/colorError"
+                android:visibility="gone" />
+
         </LinearLayout>
-    </ScrollView> <!-- 🔥 ЗАКРЫТИЕ ScrollView -->
+    </ScrollView>
 
     <!-- ========================================== -->
     <!-- 2️⃣ ОВЕРЛЕЙ ДЛЯ ГРУПП ОБОРУДОВАНИЯ -->

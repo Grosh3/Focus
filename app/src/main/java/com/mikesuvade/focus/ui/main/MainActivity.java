@@ -200,7 +200,6 @@ public class MainActivity extends AppCompatActivity implements
         AppState appState = AppState.getInstance();
         Log.d("MAIN_ACTIVITY", "hasActiveSession = " + appState.hasActiveSession());
         Log.d("MAIN_ACTIVITY", "lastOpenedSessionId = " + appState.getLastOpenedSessionId());
-        Log.d("MAIN_ACTIVITY", "lastOpenedSessionName = " + appState.getLastOpenedSessionName());
 
         if (modeManager != null && modeManager.isMainMode()) {
             if (!appState.hasActiveSession()) {
@@ -210,7 +209,12 @@ public class MainActivity extends AppCompatActivity implements
                 sessionManager.restoreLastSession();
                 Log.d("MAIN_ACTIVITY", "Restoring session");
             }
-            updateButtonState();
+
+            // 🔥 ДОБАВЛЯЕМ ЗАДЕРЖКУ ДЛЯ СИНХРОНИЗАЦИИ
+            rvGateValves.postDelayed(() -> {
+                sessionManager.syncAdapterSelection();
+                updateButtonState();
+            }, 100);
         }
         Log.d("MAIN_ACTIVITY", "=== onResume END ===");
     }
@@ -711,13 +715,16 @@ public class MainActivity extends AppCompatActivity implements
             }
             if (AppState.getInstance().hasActiveSession()) {
                 viewModel.addToActiveSession(valve);
-                viewModel.addToCurrentList(valve);
             } else {
-                viewModel.addToCurrentList(valve);
+                // 🔥 СОХРАНЯЕМ ID В НЕСОХРАНЕННЫЙ СПИСОК
+                AppState.getInstance().addUnsavedId(valve.getId());
             }
+            viewModel.addToCurrentList(valve);
             Toast.makeText(this, "Добавлено: " + valve.getName(), Toast.LENGTH_SHORT).show();
         } else {
             viewModel.removeFromCurrentList(valve);
+            // 🔥 УДАЛЯЕМ ID ИЗ НЕСОХРАНЕННОГО СПИСКА
+            AppState.getInstance().removeUnsavedId(valve.getId());
             Toast.makeText(this, "Удалено: " + valve.getName(), Toast.LENGTH_SHORT).show();
         }
     }
@@ -729,6 +736,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void clearCurrentList() {
         viewModel.clearCurrentList();
+        AppState.getInstance().clearUnsavedListIds(); // 🔥 ДОБАВИТЬ
     }
 
     @Override
@@ -1001,5 +1009,26 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void hideKeyboardOnClick() {
         hideKeyboard(); // Вызываем существующий приватный метод
+    }
+    @Override
+    public void syncAdapterSelectionWithIds(List<Integer> currentIds) {
+        Log.d(TAG, "=== syncAdapterSelectionWithIds ===");
+        Log.d(TAG, "currentIds = " + currentIds);
+
+        // Получаем текущие задвижки из адаптера
+        List<GateValve> allValves = adapterManager.getValveAdapter().getValves();
+        Log.d(TAG, "allValves size = " + allValves.size());
+
+        List<Integer> selectedPositions = new ArrayList<>();
+        for (int i = 0; i < allValves.size(); i++) {
+            GateValve valve = allValves.get(i);
+            if (currentIds.contains(valve.getId())) {
+                selectedPositions.add(i);
+                Log.d(TAG, "Found match at position " + i + ": " + valve.getName());
+            }
+        }
+
+        Log.d(TAG, "selectedPositions = " + selectedPositions);
+        adapterManager.syncAdapterSelection(selectedPositions);
     }
 }

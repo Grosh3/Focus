@@ -5,13 +5,18 @@ import android.os.Bundle;
 import android.text.InputType;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -29,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-
 public class ListDetailActivity extends AppCompatActivity {
 
     private ListDetailViewModel viewModel;
@@ -46,7 +50,19 @@ public class ListDetailActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // 🔥 ВКЛЮЧАЕМ EDGE-TO-EDGE
+        androidx.activity.EdgeToEdge.enable(this);
+
         setContentView(R.layout.activity_list_detail);
+
+        // 🔥 УСТАНАВЛИВАЕМ ТЁМНЫЕ ИКОНКИ СТАТУС-БАРА
+        setStatusBarIconsDark(true);
+
+        // 🔥 ДОБАВЛЯЕМ ОТСТУПЫ ДЛЯ СИСТЕМНЫХ БАРОВ
+        fixTopPanelPadding();
+        fixRecyclerViewBottomPadding();
+        //fixActionButtonsBottomPadding();
 
         Log.d("SESSY", "=== ListDetailActivity.onCreate START ===");
 
@@ -114,6 +130,7 @@ public class ListDetailActivity extends AppCompatActivity {
                 }
                 viewModel.setListName("Новый список");
                 viewModel.loadFromGateValves(valves);
+                updateTitle("Новый список");
             } else {
                 Log.d("SESSY", "names is NULL or EMPTY - creating empty session");
                 viewModel.createEmptySession();
@@ -124,6 +141,7 @@ public class ListDetailActivity extends AppCompatActivity {
             isExistingSession = true;
             Log.d("SESSY", "isExistingSession = TRUE (loading existing session)");
             viewModel.loadSession(currentSessionId);
+            updateTitle("Загрузка...");
             showListNumber();
 
         } else {
@@ -141,8 +159,10 @@ public class ListDetailActivity extends AppCompatActivity {
         tvListTitle = findViewById(R.id.tvListTitle);
         Log.d("SESSY", "tvListTitle = " + (tvListTitle != null ? "found" : "NULL"));
 
-        tvListNumber = findViewById(R.id.tvListNumber);
-        Log.d("SESSY", "tvListNumber = " + (tvListNumber != null ? "found" : "NULL"));
+        // 🔥 УСТАНАВЛИВАЕМ НАЗВАНИЕ ПО УМОЛЧАНИЮ
+        if (tvListTitle != null) {
+            tvListTitle.setText("Новый список");
+        }
 
         View btnAssemble = findViewById(R.id.btnAssemble);
         if (btnAssemble != null) {
@@ -168,7 +188,6 @@ public class ListDetailActivity extends AppCompatActivity {
 
         Log.d("SESSY", "=== initViews END ===");
     }
-
     private void setupRecyclerViews() {
         Log.d("SESSY", "=== setupRecyclerViews START ===");
 
@@ -181,7 +200,6 @@ public class ListDetailActivity extends AppCompatActivity {
                 public void onMoveClick(ValveItem item) {
                     Log.d("LIST_DEBUG", "onMoveClick LEFT: item.gateValveId=" + item.getGateValveId());
                     hasChanges = true;
-                    // 🔥 ИСПРАВЛЕНО: из левого → в правый (toLeft = false)
                     viewModel.moveItem(item, false);
                 }
 
@@ -235,7 +253,6 @@ public class ListDetailActivity extends AppCompatActivity {
                 public void onMoveClick(ValveItem item) {
                     Log.d("LIST_DEBUG", "onMoveClick RIGHT: item.gateValveId=" + item.getGateValveId());
                     hasChanges = true;
-                    // 🔥 ИСПРАВЛЕНО: из правого → в левый (toLeft = true)
                     viewModel.moveItem(item, true);
                 }
 
@@ -302,6 +319,15 @@ public class ListDetailActivity extends AppCompatActivity {
             }
         });
 
+        // 🔥 СЛУШАЕМ ИЗМЕНЕНИЕ НАЗВАНИЯ
+        viewModel.getListName().observe(this, name -> {
+            Log.d("SESSY", "=== OBSERVER: listName changed ===");
+            Log.d("SESSY", "new name = " + name);
+            if (name != null && !name.isEmpty()) {
+                updateTitle(name);
+            }
+        });
+
         Log.d("SESSY", "=== setupObservers END ===");
     }
 
@@ -320,24 +346,35 @@ public class ListDetailActivity extends AppCompatActivity {
     }
 
     private void showDeleteDialog(ValveItem item) {
-        GateValve valve = ((MyApp) getApplication()).getRepository().getGateValveById(item.getGateValveId());
+        // 🔥 ДОБАВЬ ЭТИ ЛОГИ
+        Log.d("DELETE_DEBUG", "=== showDeleteDialog ===");
+        Log.d("DELETE_DEBUG", "item.getGateValveId() = " + item.getGateValveId());
+        Log.d("DELETE_DEBUG", "item.getGateValveName() = " + item.getGateValveName());
+        Log.d("DELETE_DEBUG", "item.getGateValveIsy() = " + item.getGateValveIsy());
 
-        String name = valve != null && valve.getIsy() != null && !valve.getIsy().isEmpty()
-                ? valve.getIsy()
-                : (valve != null ? valve.getName() : "Неизвестная задвижка");
+        String name = item.getGateValveIsy();
+        if (name == null || name.isEmpty()) {
+            name = item.getGateValveName();
+        }
+        if (name == null || name.isEmpty()) {
+            name = "Неизвестная задвижка";
+        }
+
+        Log.d("DELETE_DEBUG", "final name = " + name);
+
+        final String finalName = name;
 
         new AlertDialog.Builder(this)
                 .setTitle("Удалить из списка?")
-                .setMessage("Удалить задвижку \"" + name + "\" из списка?")
+                .setMessage("Удалить задвижку \"" + finalName + "\" из списка?")
                 .setPositiveButton("Да", (dialog, which) -> {
                     hasChanges = true;
                     viewModel.removeItem(item);
-                    Toast.makeText(this, "Удалено: " + name, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Удалено: " + finalName, Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Нет", (dialog, which) -> dialog.dismiss())
                 .show();
     }
-
     @Override
     public void onBackPressed() {
         Log.d("DATEFRESH", "=== onBackPressed START ===");
@@ -387,7 +424,6 @@ public class ListDetailActivity extends AppCompatActivity {
             }
             Log.d("SESSY", "Save dialog: name = " + name);
 
-            // 🔥 ПОЛУЧАЕМ sessionId
             String sessionId = viewModel.getSessionId();
             Log.d("SESSY", "sessionId from ViewModel = " + sessionId);
 
@@ -397,16 +433,16 @@ public class ListDetailActivity extends AppCompatActivity {
                 Log.d("SESSY", "Generated new sessionId: " + sessionId);
             }
 
+            // 🔥 УСТАНАВЛИВАЕМ ИМЯ В ViewModel И ОБНОВЛЯЕМ ЗАГОЛОВОК
             viewModel.setListName(name);
+            updateTitle(name); // <-- ДОБАВИТЬ ЭТУ СТРОКУ
             viewModel.saveSession(name);
 
-            // 🔥 СОЗДАЁМ СЕССИЮ ДЛЯ AppState
             ValveWorkSession session = new ValveWorkSession();
             session.setSessionId(sessionId);
             session.setEquipmentDescription(name);
             session.setSaveDate(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
 
-            // 🔥 ЭТИ ЛОГИ ДОЛЖНЫ ПОЯВИТЬСЯ
             Log.d("APPSTATE", "=== SETTING APPSTATE SESSION ===");
             Log.d("APPSTATE", "sessionId = " + sessionId);
             Log.d("APPSTATE", "name = " + name);
@@ -429,7 +465,6 @@ public class ListDetailActivity extends AppCompatActivity {
             finish();
         });
 
-        // 🔥 СОЗДАЁМ AlertDialog
         AlertDialog alertDialog = builder.create();
 
         alertDialog.setOnDismissListener(dismissListener -> {
@@ -444,22 +479,23 @@ public class ListDetailActivity extends AppCompatActivity {
         alertDialog.show();
         Log.d("SESSY", "=== showSaveDialog END ===");
     }
+
     private void showValveInfoDialog(ValveItem item) {
-        // 🔥 Используем объединенный источник
-        GateValve valve = getGateValveMerged(item.getGateValveId());
+        // 🔥 ПОЛУЧАЕМ ЗАДВИЖКУ ИЗ ОБЪЕДИНЕННОГО ИСТОЧНИКА
+        final GateValve valve = getGateValveMerged(item);
+
         if (valve == null) {
-            Log.e("VALVE_DEBUG", "❌ Valve not found for gateValveId=" + item.getGateValveId());
             Toast.makeText(this, "Задвижка не найдена", Toast.LENGTH_SHORT).show();
             return;
         }
 
         StringBuilder info = new StringBuilder();
+        String title = "";
 
         // 🔥 1. ИСУ и название
         String isy = valve.getIsy();
         String name = valve.getName();
 
-        String title = "";
         if (isy != null && !isy.isEmpty()) {
             title += isy + "    ";
         }
@@ -473,6 +509,7 @@ public class ListDetailActivity extends AppCompatActivity {
         // 🔥 2. Шкаф и сборка
         String powerCabinet = valve.getPowerCabinet();
         String locationDescription = valve.getLocationDescription();
+
         if (powerCabinet != null && !powerCabinet.isEmpty()) {
             info.append("- ").append(powerCabinet);
             if (locationDescription != null && !locationDescription.isEmpty()) {
@@ -489,13 +526,13 @@ public class ListDetailActivity extends AppCompatActivity {
             info.append("- ").append(onPlace).append("\n");
         }
 
-        // 🔥 4. KKS (если есть)
+        // 🔥 4. KKS
         String kks = valve.getKks();
         if (kks != null && !kks.isEmpty()) {
             info.append("- KKS: ").append(kks).append("\n");
         }
 
-        // 🔥 5. Полное описание (если есть)
+        // 🔥 5. Полное описание
         String fullName = valve.getFullName();
         if (fullName != null && !fullName.isEmpty()) {
             info.append("- ").append(fullName).append("\n");
@@ -512,35 +549,108 @@ public class ListDetailActivity extends AppCompatActivity {
                 .show();
     }
 
-    private GateValve getGateValveMerged(int gateValveId) {
+    private GateValve getGateValveMerged(ValveItem item) {
+        // 🔥 СНАЧАЛА ПРОВЕРЯЕМ ДАННЫЕ В ValveItem
+        if (item.getGateValveName() != null && !item.getGateValveName().isEmpty()) {
+            GateValve valve = new GateValve();
+            valve.setId(item.getGateValveId());
+            valve.setName(item.getGateValveName());
+            valve.setIsy(item.getGateValveIsy());
+            valve.setKks(item.getGateValveKks());
+            valve.setPowerCabinet(item.getGateValvePowerCabinet());
+            valve.setLocationDescription(item.getGateValveLocationDescription());
+            valve.setOnPlace(item.getGateValveOnPlace());
+            valve.setFullName(item.getGateValveFullName());
+            return valve;
+        }
+
+        // Если в ValveItem нет данных - ищем в БД
         IRepository repository = ((MyApp) getApplication()).getRepository();
 
-        Log.d("VALVE_DEBUG", "=== getGateValveMerged ===");
-        Log.d("VALVE_DEBUG", "gateValveId = " + gateValveId);
-
-        // 🔥 1. Сначала пробуем найти в БД2 (пользовательские) по ID
-        GateValve userValve = repository.getUserGateValveById(gateValveId);
+        // 1. Сначала пробуем найти в БД2 (пользовательские) по ID
+        GateValve userValve = repository.getUserGateValveById(item.getGateValveId());
         if (userValve != null && userValve.getIsDeleted() != 1) {
-            Log.d("VALVE_DEBUG", "✅ Found in USER DB by ID: " + userValve.getName() + " (id=" + userValve.getId() + ")");
             return userValve;
         }
 
-        // 🔥 2. Если не нашли по ID, пробуем найти по original_id (для задвижек из БД1)
+        // 2. Если не нашли по ID, пробуем найти по original_id
         List<GateValve> allUserValves = repository.getAllUserGateValves();
         for (GateValve uv : allUserValves) {
-            if (uv.getOriginalId() == gateValveId && uv.getIsDeleted() != 1) {
-                Log.d("VALVE_DEBUG", "✅ Found in USER DB by original_id: " + uv.getName() + " (id=" + uv.getId() + ", originalId=" + uv.getOriginalId() + ")");
+            if (uv.getOriginalId() == item.getGateValveId() && uv.getIsDeleted() != 1) {
                 return uv;
             }
         }
 
-        // 🔥 3. Если не нашли в БД2, ищем в БД1 (справочник)
-        GateValve ref = repository.getGateValveById(gateValveId);
-        if (ref != null) {
-            Log.d("VALVE_DEBUG", "✅ Found in REF DB: " + ref.getName());
-        } else {
-            Log.d("VALVE_DEBUG", "❌ NOT found anywhere!");
+        // 3. Если не нашли в БД2, ищем в БД1 (справочник)
+        return repository.getGateValveById(item.getGateValveId());
+    }
+    private void setStatusBarIconsDark(boolean dark) {
+        Window window = getWindow();
+        if (window != null) {
+            WindowInsetsControllerCompat controller =
+                    new WindowInsetsControllerCompat(window, window.getDecorView());
+            controller.setAppearanceLightStatusBars(dark);
         }
-        return ref;
+    }
+    private void fixTopPanelPadding() {
+        View topPanel = findViewById(R.id.topPanel);
+        if (topPanel == null) return;
+
+        ViewCompat.setOnApplyWindowInsetsListener(topPanel, (view, windowInsets) -> {
+            int statusBarHeight = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+
+            view.setPadding(
+                    view.getPaddingLeft(),
+                    statusBarHeight + view.getPaddingTop(),
+                    view.getPaddingRight(),
+                    view.getPaddingBottom()
+            );
+
+            ViewCompat.setOnApplyWindowInsetsListener(view, null);
+            return windowInsets;
+        });
+    }
+    private void fixRecyclerViewBottomPadding() {
+        RecyclerView rvLeft = findViewById(R.id.rvLeft);
+        RecyclerView rvRight = findViewById(R.id.rvRight);
+
+        ViewCompat.setOnApplyWindowInsetsListener(rvLeft, (v, insets) -> {
+            int navBarHeight = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            int extraPadding = (int) (16 * getResources().getDisplayMetrics().density);
+
+            rvLeft.setPadding(
+                    rvLeft.getPaddingLeft(),
+                    rvLeft.getPaddingTop(),
+                    rvLeft.getPaddingRight(),
+                    navBarHeight + extraPadding
+            );
+
+            return insets;
+        });
+
+        ViewCompat.setOnApplyWindowInsetsListener(rvRight, (v, insets) -> {
+            int navBarHeight = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            int extraPadding = (int) (16 * getResources().getDisplayMetrics().density);
+
+            rvRight.setPadding(
+                    rvRight.getPaddingLeft(),
+                    rvRight.getPaddingTop(),
+                    rvRight.getPaddingRight(),
+                    navBarHeight + extraPadding
+            );
+
+            return insets;
+        });
+    }
+    private void updateTitle(String title) {
+        if (tvListTitle != null) {
+            if (title != null && !title.isEmpty()) {
+                tvListTitle.setVisibility(View.VISIBLE);
+                tvListTitle.setText(title);
+            } else {
+                tvListTitle.setVisibility(View.VISIBLE);
+                tvListTitle.setText("Новый список");
+            }
+        }
     }
 }

@@ -138,6 +138,7 @@ public class DetailActivity extends AppCompatActivity {
     private EditText etValveName;
     private EditText etValveKks;
     private EditText etValveFullName;
+    private Button btnDelete;
 
     // Поля датчика
     private EditText etSensorKks;
@@ -169,6 +170,12 @@ public class DetailActivity extends AppCompatActivity {
         isNew = getIntent().getBooleanExtra(EXTRA_IS_NEW, false);
 
         showFieldsForType();
+        if (isNew) {
+            btnDelete.setVisibility(View.GONE);
+        } else {
+            btnDelete.setVisibility(View.VISIBLE);
+            btnDelete.setOnClickListener(v -> showDeleteConfirmationDialog());
+        }
 
         if (isNew) {
             getSupportActionBar().setTitle(getNewTitle());
@@ -182,6 +189,7 @@ public class DetailActivity extends AppCompatActivity {
     private void initViews() {
         fieldsContainer = findViewById(R.id.fieldsContainer);
         overlayGroups = findViewById(R.id.overlayGroups);
+        btnDelete = findViewById(R.id.btnDelete);
 
         // Задвижка
         etIsy = findViewById(R.id.etIsy);
@@ -1726,5 +1734,49 @@ public class DetailActivity extends AppCompatActivity {
             // ВАЖНО: Возвращаем insets дальше, чтобы fixToolbarPadding() тоже мог их прочитать
             return insets;
         });
+    }
+    private void showDeleteConfirmationDialog() {
+        String entityName;
+        String displayName;
+
+        switch (entityType) {
+            case TYPE_VALVE:
+                entityName = "задвижку";
+                displayName = currentValve != null && currentValve.getIsy() != null
+                        ? currentValve.getIsy()
+                        : (currentValve != null ? currentValve.getName() : "");
+                break;
+            case TYPE_SENSOR:
+                entityName = "датчик";
+                displayName = currentSensor != null && currentSensor.getStMarkir() != null
+                        ? currentSensor.getStMarkir()
+                        : "";
+                break;
+            case TYPE_SETPOINT:
+                entityName = "уставку";
+                displayName = currentSetpoint != null && currentSetpoint.getPositionName() != null
+                        ? currentSetpoint.getPositionName()
+                        : (currentSetpoint != null ? currentSetpoint.getName() : "");
+                break;
+            default:
+                return;
+        }
+
+        if (displayName == null || displayName.isEmpty()) displayName = "без названия";
+
+        new AlertDialog.Builder(this)
+                .setTitle("Удалить " + entityName + "?")
+                .setMessage("Удалить \"" + displayName + "\"?\nДействие нельзя отменить.")
+                .setPositiveButton("Удалить", (d, w) -> performDelete())
+                .setNegativeButton("Отмена", null)
+                .show();
+    }
+
+    private void performDelete() {
+        switch (entityType) {
+            case TYPE_VALVE:    deleteValve();    break;
+            case TYPE_SENSOR:   deleteSensor();   break;
+            case TYPE_SETPOINT: deleteSetpoint(); break;
+        }
     }
 }

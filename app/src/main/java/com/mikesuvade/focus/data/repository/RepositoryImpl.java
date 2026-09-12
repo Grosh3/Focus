@@ -31,9 +31,14 @@ import java.util.Set;
 public class RepositoryImpl implements IRepository {
 
     private static final String TAG = "RepositoryImpl";
+
     private final DatabaseHelper dbHelper;
     private final UserDatabaseHelper userDbHelper;
-
+    private static final java.util.Set<String> STOP_WORDS = new java.util.HashSet<>(java.util.Arrays.asList(
+            "в", "во", "на", "и", "с", "со", "к", "ко", "от", "по", "за", "из",
+            "до", "у", "о", "об", "для", "при", "над", "под", "без", "через",
+            "не", "а", "но", "или", "№"
+    ));
     public RepositoryImpl(DatabaseHelper dbHelper, UserDatabaseHelper userDbHelper) {
         this.dbHelper = dbHelper;
         this.userDbHelper = userDbHelper;
@@ -82,64 +87,122 @@ public class RepositoryImpl implements IRepository {
         List<GateValve> valves = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
-        String cleanQuery = query.replaceAll("[\\s-]", "");
-        String prefixQuery = query + "%";
+        String cleanQuery = query.replaceAll("[\\s\\-\\.\\u2013\\u2014]", "");
+        boolean isShortQuery = cleanQuery.length() < 3;
+        boolean isKksQuery = containsLatin(cleanQuery);
+        boolean hasDigit = cleanQuery.matches(".*[0-9].*");
 
-        String selection =
-                "(LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_KKS + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ISY + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_POWER_CABINET + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_FULL_NAME + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ON_PLACE + ") LIKE LOWER(?)" +
-                        ") OR " +
-                        "(LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_KKS + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ISY + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_POWER_CABINET + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_FULL_NAME + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ON_PLACE + ") LIKE LOWER(?)" +
-                        ") OR " +
-                        "(LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_KKS + ") LIKE LOWER(?) OR " +
-                        "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_ISY + ") LIKE LOWER(?)" +
-                        ")";
+        String isyClean =
+                "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(isy), ' ', ''), '-', ''), '–', ''), '—', ''), '.', '')";
+        String nameClean =
+                "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(name), ' ', ''), '-', ''), '–', ''), '—', ''), '.', '')";
+        String powerCabinetClean =
+                "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(power_cabinet), ' ', ''), '-', ''), '–', ''), '—', ''), '.', '')";
+        String kksClean =
+                "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(kks), ' ', ''), '-', ''), '–', ''), '—', ''), '.', '')";
 
-        String[] args = new String[]{
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + cleanQuery + "%",
-                "%" + cleanQuery + "%",
-                "%" + cleanQuery + "%",
-                "%" + cleanQuery + "%",
-                "%" + cleanQuery + "%",
-                "%" + cleanQuery + "%",
-                prefixQuery,
-                prefixQuery,
-                prefixQuery
-        };
+        // === KKS ===
+        if (isKksQuery) {
+            String kksQuery = buildKksQuery(cleanQuery);
+            String selection = "(" + kksClean + " LIKE LOWER(?) OR " + kksClean + " LIKE LOWER(?))";
+            Cursor cursor = db.query(
+                    DatabaseContract.GateValvesEntry.TABLE_NAME, null, selection,
+                    new String[]{"%" + cleanQuery + "%", "%" + kksQuery + "%"},
+                    null, null, null);
+            while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
+            cursor.close();
+            return valves;
+        }
+
+        // === КОРОТКИЙ ===
+        if (isShortQuery) {
+            String selection = "(" + isyClean + " LIKE LOWER(?)"
+                    + " OR " + nameClean + " LIKE LOWER(?)"
+                    + " OR " + powerCabinetClean + " LIKE LOWER(?))";
+            Cursor cursor = db.query(
+                    DatabaseContract.GateValvesEntry.TABLE_NAME, null, selection,
+                    new String[]{cleanQuery + "%", cleanQuery + "%", cleanQuery + "%"},
+                    null, null, null);
+            while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
+            cursor.close();
+            return valves;
+        }
+
+        // === КОДОВЫЙ (<=6) ===
+        if (cleanQuery.length() <= 6) {
+            if (hasDigit) {
+                // Есть цифры — префикс
+                String selection = "(" + isyClean + " LIKE LOWER(?)"
+                        + " OR " + nameClean + " LIKE LOWER(?)"
+                        + " OR " + powerCabinetClean + " LIKE LOWER(?))";
+                Cursor cursor = db.query(
+                        DatabaseContract.GateValvesEntry.TABLE_NAME, null, selection,
+                        new String[]{cleanQuery + "%", cleanQuery + "%", cleanQuery + "%"},
+                        null, null, null);
+                while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
+                cursor.close();
+
+                if (!valves.isEmpty()) return valves;
+
+            } else {
+                // Без цифр — сначала точное, потом префикс
+                String exactSelection = "(" + isyClean + " = LOWER(?)"
+                        + " OR " + nameClean + " = LOWER(?)"
+                        + " OR " + powerCabinetClean + " = LOWER(?))";
+                Cursor cursor = db.query(
+                        DatabaseContract.GateValvesEntry.TABLE_NAME, null, exactSelection,
+                        new String[]{cleanQuery, cleanQuery, cleanQuery},
+                        null, null, null);
+                while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
+                cursor.close();
+
+                if (!valves.isEmpty()) return valves;
+
+                String prefixSelection = "(" + isyClean + " LIKE LOWER(?)"
+                        + " OR " + nameClean + " LIKE LOWER(?)"
+                        + " OR " + powerCabinetClean + " LIKE LOWER(?))";
+                cursor = db.query(
+                        DatabaseContract.GateValvesEntry.TABLE_NAME, null, prefixSelection,
+                        new String[]{cleanQuery + "%", cleanQuery + "%", cleanQuery + "%"},
+                        null, null, null);
+                while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
+                cursor.close();
+
+                if (!valves.isEmpty()) return valves;
+            }
+            // Если пусто — фразовый fallback
+        }
+
+        // === ФРАЗОВЫЙ (только full_name) ===
+        List<String> prefixes = buildWordPrefixes(query);
+
+        if (prefixes.isEmpty()) {
+            String selection = "LOWER(" + DatabaseContract.GateValvesEntry.COLUMN_FULL_NAME + ") LIKE LOWER(?)";
+            Cursor cursor = db.query(
+                    DatabaseContract.GateValvesEntry.TABLE_NAME, null, selection,
+                    new String[]{"%" + cleanQuery + "%"},
+                    null, null, null);
+            while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
+            cursor.close();
+            return valves;
+        }
+
+        int n = prefixes.size();
+        String fullNameCond = buildFieldCondition(DatabaseContract.GateValvesEntry.COLUMN_FULL_NAME, n);
+
+        List<String> argList = new ArrayList<>();
+        for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");
 
         Cursor cursor = db.query(
-                DatabaseContract.GateValvesEntry.TABLE_NAME,
-                null,
-                selection,
-                args,
-                null, null,
-                "LENGTH(" + DatabaseContract.GateValvesEntry.COLUMN_NAME + ") ASC, " +
-                        DatabaseContract.GateValvesEntry.COLUMN_NAME + " ASC"
-        );
-
-        while (cursor.moveToNext()) {
-            valves.add(cursorToGateValve(cursor));
-        }
+                DatabaseContract.GateValvesEntry.TABLE_NAME, null,
+                fullNameCond,
+                argList.toArray(new String[0]),
+                null, null, null);
+        while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
         cursor.close();
+
         return valves;
     }
-
     @Override
     public long insertGateValve(GateValve valve) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
@@ -167,6 +230,38 @@ public class RepositoryImpl implements IRepository {
                 DatabaseContract.GateValvesEntry._ID + " = ?",
                 new String[]{String.valueOf(id)}
         );
+    }
+    @Override
+    public GateValve getAnyUserGateValveByOriginalId(int originalId) {
+        if (originalId <= 0) return null;
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor cursor = db.query(
+                "user_gate_valves",
+                null,
+                "original_id = ?",
+                new String[]{String.valueOf(originalId)},
+                null, null,
+                "is_deleted ASC, edited_at DESC, id DESC LIMIT 1"
+        );
+        GateValve valve = null;
+        if (cursor.moveToFirst()) {
+            valve = cursorToUserGateValve(cursor);
+        }
+        cursor.close();
+        return valve;
+    }
+
+    private int generateNegativeIdForValve() {
+        int minId = 0;
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery("SELECT MIN(id) FROM user_gate_valves", null);
+        if (c.moveToFirst() && !c.isNull(0)) {
+            minId = c.getInt(0);
+        }
+        c.close();
+        int newId = minId - 1;
+        if (newId == 0) newId = -1;
+        return newId;
     }
 
     // ==================== SENSORS ====================
@@ -214,66 +309,107 @@ public class RepositoryImpl implements IRepository {
 
         String cleanQuery = query.replaceAll("[\\s\\-.]", "");
         boolean isShortQuery = cleanQuery.length() < 3;
+        boolean isKksQuery = containsLatin(cleanQuery);
+        boolean isMarking = isMarkingQuery(cleanQuery);
 
-        // 🔥 ЕСЛИ ЗАПРОС КОРОТКИЙ (< 3 символов) — НЕ ИЩЕМ В ОПИСАНИИ
         String selection;
-        String[] args;
-        String orderBy;
+        List<String> argList = new ArrayList<>();
 
         if (isShortQuery) {
-            // Ищем ТОЛЬКО по st_marking и name (без full_name, location, kks)
+            // Короткий запрос — st_marking + name по cleanQuery
             selection =
                     "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
                             "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
 
-            args = new String[]{
-                    "%" + cleanQuery + "%",
-                    "%" + cleanQuery + "%"
-            };
+            argList.add("%" + cleanQuery + "%");
+            argList.add("%" + cleanQuery + "%");
 
-            orderBy =
-                    "CASE WHEN REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + "), ' ', ''), '-', ''), '.', '') LIKE LOWER('%" + cleanQuery + "%') THEN 1 " +
-                            "ELSE 2 END, " +
-                            DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + " ASC";
-        } else {
-            // Полный поиск по всем полям
+        } else if (isKksQuery) {
+            // KKS-запрос — только по kks
+            String kksQuery = buildKksQuery(cleanQuery);
+
             selection =
-                    "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
-                            "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_FULL_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
-                            "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
-                            "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_LOCATION + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                    "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_KKS + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
                             "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_KKS + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
 
-            args = new String[]{
-                    "%" + cleanQuery + "%",
-                    "%" + cleanQuery + "%",
-                    "%" + cleanQuery + "%",
-                    "%" + cleanQuery + "%",
-                    "%" + cleanQuery + "%"
-            };
+            argList.add("%" + cleanQuery + "%");
+            argList.add("%" + kksQuery + "%");
 
-            orderBy =
-                    "CASE WHEN REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + "), ' ', ''), '-', ''), '.', '') LIKE LOWER('%" + cleanQuery + "%') THEN 1 " +
-                            "WHEN REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_FULL_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER('%" + cleanQuery + "%') THEN 2 " +
-                            "WHEN REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER('%" + cleanQuery + "%') THEN 3 " +
-                            "ELSE 4 END, " +
-                            DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + " ASC";
+        } else if (isMarking) {
+            // Режим маркировки — только st_marking по cleanQuery
+            selection =
+                    "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
+
+            argList.add("%" + cleanQuery + "%");
+
+        } else {
+            // Фразовый режим: st_marking по cleanQuery, остальные — префиксно
+            List<String> prefixes = buildWordPrefixes(query);
+            if (prefixes.isEmpty()) {
+                return sensors;
+            }
+
+            int n = prefixes.size();
+
+            String stMarkingCond =
+                    "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SensorScheduleEntry.COLUMN_ST_MARKIR + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
+            String nameCond = buildFieldCondition(DatabaseContract.SensorScheduleEntry.COLUMN_NAME, n);
+            String fullNameCond = buildFieldCondition(DatabaseContract.SensorScheduleEntry.COLUMN_FULL_NAME, n);
+            String locationCond = buildFieldCondition(DatabaseContract.SensorScheduleEntry.COLUMN_LOCATION, n);
+
+            selection = "(" + stMarkingCond + " OR " + nameCond + " OR " + fullNameCond + " OR " + locationCond + ")";
+
+            argList.add("%" + cleanQuery + "%");   // st_marking
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // name
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // full_name
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // location
         }
 
         Cursor cursor = db.query(
                 DatabaseContract.SensorScheduleEntry.TABLE_NAME,
                 null,
                 selection,
-                args,
+                argList.toArray(new String[0]),
                 null, null,
-                orderBy
+                null
         );
 
         while (cursor.moveToNext()) {
             sensors.add(cursorToSensor(cursor));
         }
         cursor.close();
-        return sensors;
+
+        return sortSensorsByRelevance(sensors, cleanQuery);
+    }
+
+
+
+    private int getSensorRelevanceScore(Sensor sensor, String query, String kksQuery) {
+        String stMarking = sensor.getStMarkir() != null ? sensor.getStMarkir().toLowerCase() : "";
+        String fullName = sensor.getFullName() != null ? sensor.getFullName().toLowerCase() : "";
+        String name = sensor.getName() != null ? sensor.getName().toLowerCase() : "";
+        String kks = sensor.getKks() != null ? sensor.getKks().toLowerCase() : "";
+
+        // Полное совпадение
+        if (stMarking.equals(query)) return 1;
+        if (fullName.equals(query)) return 2;
+        if (name.equals(query)) return 3;
+        if (kks.equals(kksQuery)) return 4;
+        if (kks.equals(query)) return 5;
+
+        // Частичное совпадение
+        if (stMarking.contains(query)) return 10;
+        if (fullName.contains(query)) return 20;
+        if (name.contains(query)) return 30;
+        if (kks.contains(kksQuery)) return 40;
+        if (kks.contains(query)) return 50;
+
+        // Совпадение в начале
+        if (stMarking.startsWith(query)) return 11;
+        if (fullName.startsWith(query)) return 21;
+        if (kks.startsWith(kksQuery)) return 41;
+
+        return 100;
     }
     @Override
     public long insertSensor(Sensor sensor) {
@@ -302,6 +438,25 @@ public class RepositoryImpl implements IRepository {
                 DatabaseContract.SensorScheduleEntry.COLUMN_KKS + " = ?",
                 new String[]{kks}
         );
+    }
+    @Override
+    public Sensor getAnyUserSensorByOriginalId(int originalId) {
+        if (originalId <= 0) return null;
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor cursor = db.query(
+                "user_sensors",
+                null,
+                "original_id = ?",
+                new String[]{String.valueOf(originalId)},
+                null, null,
+                "is_deleted ASC, edited_at DESC, id DESC LIMIT 1"
+        );
+        Sensor sensor = null;
+        if (cursor.moveToFirst()) {
+            sensor = cursorToUserSensor(cursor);
+        }
+        cursor.close();
+        return sensor;
     }
 
     // ==================== SETPOINTS ====================
@@ -349,47 +504,101 @@ public class RepositoryImpl implements IRepository {
         List<Setpoint> setpoints = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
+        String trimmed = query.trim();
+
+        // Ветка 1: #все
+        if (trimmed.equalsIgnoreCase("#все")) {
+            Cursor c = db.query(
+                    DatabaseContract.SetpointScheduleEntry.TABLE_NAME,
+                    null, null, null, null, null,
+                    DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP + " ASC, " +
+                            DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + " ASC"
+            );
+            while (c.moveToNext()) {
+                setpoints.add(cursorToSetpoint(c));
+            }
+            c.close();
+            return setpoints;
+        }
+
+        // Ветка 2: #группа
+        if (trimmed.startsWith("#")) {
+            String groupQuery = trimmed.toLowerCase();
+            if (groupQuery.length() <= 1) {
+                return setpoints;
+            }
+            Cursor c = db.query(
+                    DatabaseContract.SetpointScheduleEntry.TABLE_NAME,
+                    null,
+                    "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_EQUIPMENT_GROUP + ") LIKE LOWER(?)",
+                    new String[]{"%" + groupQuery + "%"},
+                    null, null,
+                    DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + " ASC"
+            );
+            while (c.moveToNext()) {
+                setpoints.add(cursorToSetpoint(c));
+            }
+            c.close();
+            return setpoints;
+        }
+
+        // Ветка 3-6: обычный поиск
         String cleanQuery = query.replaceAll("[\\s\\-.]", "");
         boolean isShortQuery = cleanQuery.length() < 3;
+        boolean isMarking = isMarkingQuery(cleanQuery);
 
         String selection;
-        String[] args;
+        List<String> argList = new ArrayList<>();
 
         if (isShortQuery) {
-            // Короткий запрос — только name и position_name
+            // Короткий — position_name + name по cleanQuery
             selection =
-                    "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
-                            "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + ") LIKE LOWER(?)";
+                    "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                            "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
 
-            args = new String[]{
-                    "%" + query + "%",
-                    "%" + query + "%"
-            };
+            argList.add("%" + cleanQuery + "%");
+            argList.add("%" + cleanQuery + "%");
+
+        } else if (isMarking) {
+            // Маркировка — только position_name по cleanQuery
+            selection =
+                    "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
+
+            argList.add("%" + cleanQuery + "%");
+
         } else {
-            // Полный поиск
-            selection =
-                    "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_NAME + ") LIKE LOWER(?) OR " +
-                            "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + ") LIKE LOWER(?) OR " +
-                            "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_SETPOINT_VALUE + ") LIKE LOWER(?) OR " +
-                            "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_OPERATION + ") LIKE LOWER(?) OR " +
-                            "LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_NOTES + ") LIKE LOWER(?)";
+            // Фраза: position_name по cleanQuery + префикс по name/operation/notes/location
+            List<String> prefixes = buildWordPrefixes(query);
+            if (prefixes.isEmpty()) {
+                return setpoints;
+            }
 
-            args = new String[]{
-                    "%" + query + "%",
-                    "%" + query + "%",
-                    "%" + query + "%",
-                    "%" + query + "%",
-                    "%" + query + "%"
-            };
+            int n = prefixes.size();
+
+            String posNameCond =
+                    "REPLACE(REPLACE(REPLACE(LOWER(" + DatabaseContract.SetpointScheduleEntry.COLUMN_POSITION_NAME + "), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
+            String nameCond = buildFieldCondition(DatabaseContract.SetpointScheduleEntry.COLUMN_NAME, n);
+            String operationCond = buildFieldCondition(DatabaseContract.SetpointScheduleEntry.COLUMN_OPERATION, n);
+            String notesCond = buildFieldCondition(DatabaseContract.SetpointScheduleEntry.COLUMN_NOTES, n);
+            String locationCond = buildFieldCondition(DatabaseContract.SetpointScheduleEntry.COLUMN_LOCATION, n);
+
+            selection = "(" + posNameCond + " OR " + nameCond + " OR " + operationCond
+                    + " OR " + notesCond + " OR " + locationCond + ")";
+
+            argList.add("%" + cleanQuery + "%");   // position_name
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // name
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // operation
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // notes
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // location
         }
 
         Cursor cursor = db.query(
                 DatabaseContract.SetpointScheduleEntry.TABLE_NAME,
                 null,
                 selection,
-                args,
+                argList.toArray(new String[0]),
                 null, null,
-                null // Без сортировки в SQL, сортируем в Java
+                null
         );
 
         while (cursor.moveToNext()) {
@@ -397,7 +606,6 @@ public class RepositoryImpl implements IRepository {
         }
         cursor.close();
 
-        // 🔥 СОРТИРОВКА В JAVA ПО РЕЛЕВАНТНОСТИ
         return sortSetpointsByRelevance(setpoints, query);
     }
 
@@ -785,6 +993,93 @@ public class RepositoryImpl implements IRepository {
         return sensor;
     }
 
+    /**
+     * Разбивает поисковый запрос на префиксы слов.
+     * Служебные слова и слишком короткие токены игнорируются.
+     * Для слов длиной 5-6 — отрезается 1 символ, 7+ — 2 символа.
+     */
+    private List<String> buildWordPrefixes(String query) {
+        List<String> prefixes = new ArrayList<>();
+        if (query == null) return prefixes;
+
+        String lower = query.toLowerCase().trim();
+        if (lower.isEmpty()) return prefixes;
+
+        String[] words = lower.split("\\s+");
+        for (String word : words) {
+            if (word.isEmpty()) continue;
+            if (STOP_WORDS.contains(word)) continue;
+            if (word.length() <= 2) continue;
+
+            String prefix = word;
+            if (word.length() >= 7) {
+                prefix = word.substring(0, word.length() - 2);
+            } else if (word.length() >= 5) {
+                prefix = word.substring(0, word.length() - 1);
+            }
+            if (!prefix.isEmpty()) {
+                prefixes.add(prefix);
+            }
+        }
+        return prefixes;
+    }
+
+    /**
+     * Собирает SQL-условие для одного поля:
+     * (LOWER(field) LIKE LOWER(?) AND LOWER(field) LIKE LOWER(?) ...)
+     */
+    private String buildFieldCondition(String field, int prefixCount) {
+        if (prefixCount <= 0) return "";
+        StringBuilder sb = new StringBuilder("(");
+        for (int i = 0; i < prefixCount; i++) {
+            if (i > 0) sb.append(" AND ");
+            sb.append("LOWER(").append(field).append(") LIKE LOWER(?)");
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
+    /**
+     * Вычисляет kksQuery — запрос с отрезанным префиксом.
+     * ^[A-Za-z][0-9]+ → отрезается; ^[0-9]+ → отрезается.
+     * Остаток должен быть >= 3 символов.
+     */
+    private String buildKksQuery(String cleanQuery) {
+        String kksQuery = cleanQuery;
+
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("^[A-Za-z][0-9]+")
+                .matcher(kksQuery);
+        if (m.find()) {
+            String rest = kksQuery.substring(m.end());
+            if (rest.length() >= 3) {
+                return rest;
+            }
+            return kksQuery;
+        }
+
+        String rest = kksQuery.replaceFirst("^[0-9]+", "");
+        if (!rest.isEmpty() && rest.length() >= 3) {
+            return rest;
+        }
+        return kksQuery;
+    }
+
+    /**
+     * Проверяет, содержит ли строка латиницу.
+     */
+    private boolean containsLatin(String s) {
+        if (s == null) return false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
     // ==========================================
     // 🟢 ПОЛЬЗОВАТЕЛЬСКАЯ БД - GATE VALVES
     // ==========================================
@@ -830,45 +1125,117 @@ public class RepositoryImpl implements IRepository {
         List<GateValve> valves = new ArrayList<>();
         SQLiteDatabase db = userDbHelper.getReadableDatabase();
 
-        String cleanQuery = query.replaceAll("[\\s-]", "");
+        String cleanQuery = query.replaceAll("[\\s\\-\\.\\u2013\\u2014]", "");
+        boolean isShortQuery = cleanQuery.length() < 3;
+        boolean isKksQuery = containsLatin(cleanQuery);
+        boolean hasDigit = cleanQuery.matches(".*[0-9].*");
 
-        // 🔥 ТАКОЙ ЖЕ ПОИСК, КАК В БД1
-        String selection =
-                "REPLACE(REPLACE(LOWER(name), ' ', ''), '-', '') LIKE LOWER(?) OR " +
-                        "REPLACE(REPLACE(LOWER(kks), ' ', ''), '-', '') LIKE LOWER(?) OR " +
-                        "REPLACE(REPLACE(LOWER(isy), ' ', ''), '-', '') LIKE LOWER(?) OR " +
-                        "LOWER(full_name) LIKE LOWER(?) OR " +
-                        "LOWER(on_place) LIKE LOWER(?)";
+        String isyClean =
+                "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(isy), ' ', ''), '-', ''), '–', ''), '—', ''), '.', '')";
+        String nameClean =
+                "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(name), ' ', ''), '-', ''), '–', ''), '—', ''), '.', '')";
+        String powerCabinetClean =
+                "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(power_cabinet), ' ', ''), '-', ''), '–', ''), '—', ''), '.', '')";
+        String kksClean =
+                "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(kks), ' ', ''), '-', ''), '–', ''), '—', ''), '.', '')";
 
-        String[] args = new String[]{
-                "%" + cleanQuery + "%",
-                "%" + cleanQuery + "%",
-                "%" + cleanQuery + "%",
-                "%" + query + "%",
-                "%" + query + "%"
-        };
+        // === KKS ===
+        if (isKksQuery) {
+            String kksQuery = buildKksQuery(cleanQuery);
+            String selection = "(" + kksClean + " LIKE LOWER(?) OR " + kksClean + " LIKE LOWER(?))";
+            Cursor cursor = db.query(
+                    "user_gate_valves", null, selection,
+                    new String[]{"%" + cleanQuery + "%", "%" + kksQuery + "%"},
+                    null, null, null);
+            while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
+            cursor.close();
+            return valves;
+        }
 
-        Log.d("SEARCH_USER_VALVE", "=== searchUserGateValves ===");
-        Log.d("SEARCH_USER_VALVE", "query = " + query);
-        Log.d("SEARCH_USER_VALVE", "cleanQuery = " + cleanQuery);
+        // === КОРОТКИЙ ===
+        if (isShortQuery) {
+            String selection = "(" + isyClean + " LIKE LOWER(?)"
+                    + " OR " + nameClean + " LIKE LOWER(?)"
+                    + " OR " + powerCabinetClean + " LIKE LOWER(?))";
+            Cursor cursor = db.query(
+                    "user_gate_valves", null, selection,
+                    new String[]{cleanQuery + "%", cleanQuery + "%", cleanQuery + "%"},
+                    null, null, null);
+            while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
+            cursor.close();
+            return valves;
+        }
+
+        // === КОДОВЫЙ (<=6) ===
+        if (cleanQuery.length() <= 6) {
+            if (hasDigit) {
+                String selection = "(" + isyClean + " LIKE LOWER(?)"
+                        + " OR " + nameClean + " LIKE LOWER(?)"
+                        + " OR " + powerCabinetClean + " LIKE LOWER(?))";
+                Cursor cursor = db.query(
+                        "user_gate_valves", null, selection,
+                        new String[]{cleanQuery + "%", cleanQuery + "%", cleanQuery + "%"},
+                        null, null, null);
+                while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
+                cursor.close();
+
+                if (!valves.isEmpty()) return valves;
+
+            } else {
+                String exactSelection = "(" + isyClean + " = LOWER(?)"
+                        + " OR " + nameClean + " = LOWER(?)"
+                        + " OR " + powerCabinetClean + " = LOWER(?))";
+                Cursor cursor = db.query(
+                        "user_gate_valves", null, exactSelection,
+                        new String[]{cleanQuery, cleanQuery, cleanQuery},
+                        null, null, null);
+                while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
+                cursor.close();
+
+                if (!valves.isEmpty()) return valves;
+
+                String prefixSelection = "(" + isyClean + " LIKE LOWER(?)"
+                        + " OR " + nameClean + " LIKE LOWER(?)"
+                        + " OR " + powerCabinetClean + " LIKE LOWER(?))";
+                cursor = db.query(
+                        "user_gate_valves", null, prefixSelection,
+                        new String[]{cleanQuery + "%", cleanQuery + "%", cleanQuery + "%"},
+                        null, null, null);
+                while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
+                cursor.close();
+
+                if (!valves.isEmpty()) return valves;
+            }
+        }
+
+        // === ФРАЗОВЫЙ (только full_name) ===
+        List<String> prefixes = buildWordPrefixes(query);
+
+        if (prefixes.isEmpty()) {
+            String selection = "LOWER(full_name) LIKE LOWER(?)";
+            Cursor cursor = db.query(
+                    "user_gate_valves", null, selection,
+                    new String[]{"%" + cleanQuery + "%"},
+                    null, null, null);
+            while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
+            cursor.close();
+            return valves;
+        }
+
+        int n = prefixes.size();
+        String fullNameCond = buildFieldCondition("full_name", n);
+
+        List<String> argList = new ArrayList<>();
+        for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");
 
         Cursor cursor = db.query(
-                "user_gate_valves",
-                null,
-                selection,
-                args,
-                null, null,
-                "name ASC"
-        );
-
-        while (cursor.moveToNext()) {
-            GateValve valve = cursorToUserGateValve(cursor);
-            valves.add(valve);
-            Log.d("SEARCH_USER_VALVE", "  found: " + valve.getName() + " | " + valve.getIsy());
-        }
+                "user_gate_valves", null,
+                fullNameCond,
+                argList.toArray(new String[0]),
+                null, null, null);
+        while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
         cursor.close();
 
-        Log.d("SEARCH_USER_VALVE", "total found = " + valves.size());
         return valves;
     }
 
@@ -954,76 +1321,83 @@ public class RepositoryImpl implements IRepository {
 
     @Override
     public void markGateValveAsDeleted(int originalId) {
-        GateValve existing = getUserGateValveByOriginalId(originalId);
-
-        if (existing != null) {
-            existing.setIsDeleted(1);
-            existing.setEditedAt(getCurrentDateTime());
-            updateUserGateValve(existing);
-        } else {
-            GateValve ref = getGateValveById(originalId);
-            if (ref == null) return;
-
-            GateValve copy = new GateValve();
-            copy.setOriginalId(ref.getId());
-            copy.setIsDeleted(1);
-            copy.setNameEng(ref.getNameEng());
-            copy.setKks(ref.getKks());
-            copy.setName(ref.getName());
-            copy.setIsy(ref.getIsy());
-            copy.setPowerCabinet(ref.getPowerCabinet());
-            copy.setFullName(ref.getFullName());
-            copy.setOnPlace(ref.getOnPlace());
-            copy.setAp50(ref.getAp50());
-            copy.setMark(ref.getMark());
-            copy.setCdaCabinet(ref.getCdaCabinet());
-            copy.setCdaCabinetPosition(ref.getCdaCabinetPosition());
-            copy.setSlot(ref.getSlot());
-            copy.setDescriptionBlockingOpen(ref.getDescriptionBlockingOpen());
-            copy.setDescriptionBlockingClose(ref.getDescriptionBlockingClose());
-            copy.setDescriptionBlockingPerifer(ref.getDescriptionBlockingPerifer());
-            copy.setLocationDescription(ref.getLocationDescription());
-            copy.setIsEdited(1);
-            copy.setEditedAt(getCurrentDateTime());
-            copy.setCreatedAt(getCurrentDateTime());
-
-            insertUserGateValve(copy);
+        if (originalId <= 0) {
+            Log.e(TAG, "markGateValveAsDeleted: invalid originalId=" + originalId);
+            return;
         }
+
+        GateValve anyExisting = getAnyUserGateValveByOriginalId(originalId);
+        if (anyExisting != null) {
+            if (anyExisting.getIsDeleted() == 1) {
+                Log.d(TAG, "markGateValveAsDeleted: already deleted, id=" + anyExisting.getId());
+                return;
+            }
+            anyExisting.setIsDeleted(1);
+            anyExisting.setEditedAtValve(getCurrentDateTime());
+            updateUserGateValve(anyExisting);
+            Log.d(TAG, "markGateValveAsDeleted: marked id=" + anyExisting.getId()
+                    + " (original_id=" + originalId + ") as deleted");
+            return;
+        }
+
+        GateValve ref = getGateValveById(originalId);
+        if (ref == null) {
+            Log.e(TAG, "markGateValveAsDeleted: ref not found, originalId=" + originalId);
+            return;
+        }
+
+        GateValve copy = new GateValve();
+        copy.setId(generateNegativeIdForValve());
+        copy.setOriginalId(ref.getId());
+        copy.setIsDeleted(1);
+        copy.setNameEng(ref.getNameEng());
+        copy.setKks(ref.getKks());
+        copy.setName(ref.getName());
+        copy.setIsy(ref.getIsy());
+        copy.setPowerCabinet(ref.getPowerCabinet());
+        copy.setFullName(ref.getFullName());
+        copy.setOnPlace(ref.getOnPlace());
+        copy.setAp50(ref.getAp50());
+        copy.setMark(ref.getMark());
+        copy.setCdaCabinet(ref.getCdaCabinet());
+        copy.setCdaCabinetPosition(ref.getCdaCabinetPosition());
+        copy.setSlot(ref.getSlot());
+        copy.setDescriptionBlockingOpen(ref.getDescriptionBlockingOpen());
+        copy.setDescriptionBlockingClose(ref.getDescriptionBlockingClose());
+        copy.setDescriptionBlockingPerifer(ref.getDescriptionBlockingPerifer());
+        copy.setLocationDescription(ref.getLocationDescription());
+        copy.setIsEdited(1);
+        copy.setEditedAtValve(getCurrentDateTime());
+        copy.setCreatedAt(getCurrentDateTime());
+
+        long id = insertUserGateValve(copy);
+        Log.d(TAG, "markGateValveAsDeleted: inserted new tombstone id=" + id
+                + " for original_id=" + originalId);
     }
 
     @Override
     public List<GateValve> getAllGateValvesWithUser() {
         List<GateValve> result = new ArrayList<>();
 
-        List<GateValve> refs = getAllGateValves();
-
-        List<GateValve> users = new ArrayList<>();
-        for (GateValve u : getAllUserGateValves()) {
-            if (u.getIsDeleted() != 1) {
-                users.add(u);
+        for (GateValve v : getAllUserGateValves()) {
+            if (v.getIsDeleted() != 1) {
+                result.add(v);
             }
         }
 
-        Map<Integer, GateValve> userMap = new HashMap<>();
-        for (GateValve u : users) {
-            userMap.put(u.getOriginalId(), u);
+        Set<Integer> overriddenIds = new HashSet<>();
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT DISTINCT original_id FROM user_gate_valves WHERE original_id > 0",
+                null);
+        while (c.moveToNext()) {
+            overriddenIds.add(c.getInt(0));
         }
+        c.close();
 
-        for (GateValve ref : refs) {
-            GateValve deleted = getUserGateValveByOriginalId(ref.getId());
-            if (deleted != null && deleted.getIsDeleted() == 1) {
-                continue;
-            }
-
-            if (userMap.containsKey(ref.getId())) {
-                GateValve merged = userMap.get(ref.getId());
-                merged.setNameSpaceViewOpen(ref.getNameSpaceViewOpen());
-                merged.setNamespaceViewClose(ref.getNamespaceViewClose());
-                merged.setNamespaceViewPerifer(ref.getNamespaceViewPerifer());
-                result.add(merged);
-            } else {
-                result.add(ref);
-            }
+        for (GateValve ref : getAllGateValves()) {
+            if (overriddenIds.contains(ref.getId())) continue;
+            result.add(ref);
         }
 
         return result;
@@ -1031,60 +1405,32 @@ public class RepositoryImpl implements IRepository {
 
     @Override
     public List<GateValve> searchGateValvesWithUser(String query) {
-        Log.d("SEARCH_VALVE", "=== searchGateValvesWithUser START ===");
-        Log.d("SEARCH_VALVE", "query = " + query);
-
         List<GateValve> result = new ArrayList<>();
-        Set<Integer> seenIds = new HashSet<>();
 
-        try {
-            // 🔥 1. Ищем в БД2 (пользовательские)
-            List<GateValve> userResults = searchUserGateValves(query);
-            Log.d("SEARCH_VALVE", "userResults size = " + userResults.size());
-
-            for (GateValve valve : userResults) {
-                if (valve.getIsDeleted() != 1) {
-                    // Добавляем блокировки из справочника
-                    GateValve ref = getGateValveById(valve.getOriginalId());
-                    if (ref != null) {
-                        valve.setNameSpaceViewOpen(ref.getNameSpaceViewOpen());
-                        valve.setNamespaceViewClose(ref.getNamespaceViewClose());
-                        valve.setNamespaceViewPerifer(ref.getNamespaceViewPerifer());
-                    }
-                    result.add(valve);
-                    seenIds.add(valve.getOriginalId());
-                    Log.d("SEARCH_VALVE", "  added user: " + valve.getName());
-                }
+        for (GateValve v : searchUserGateValves(query)) {
+            if (v.getIsDeleted() != 1) {
+                result.add(v);
             }
-
-            // 🔥 2. Ищем в БД1 (справочник)
-            List<GateValve> refResults = searchGateValves(query);
-            Log.d("SEARCH_VALVE", "refResults size = " + refResults.size());
-
-            for (GateValve valve : refResults) {
-                // Проверяем, не удалена ли эта задвижка в БД2
-                GateValve deleted = getUserGateValveByOriginalId(valve.getId());
-                if (deleted != null && deleted.getIsDeleted() == 1) {
-                    Log.d("SEARCH_VALVE", "  skipping deleted: " + valve.getName());
-                    continue;
-                }
-
-                if (!seenIds.contains(valve.getId())) {
-                    result.add(valve);
-                    seenIds.add(valve.getId());
-                    Log.d("SEARCH_VALVE", "  added ref: " + valve.getName());
-                }
-            }
-
-            Log.d("SEARCH_VALVE", "result size = " + result.size());
-            Log.d("SEARCH_VALVE", "=== searchGateValvesWithUser END ===");
-            return result;
-
-        } catch (Exception e) {
-            Log.e("SEARCH_VALVE", "Error searching valves with user", e);
-            return new ArrayList<>();
         }
+
+        Set<Integer> overriddenIds = new HashSet<>();
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT DISTINCT original_id FROM user_gate_valves WHERE original_id > 0",
+                null);
+        while (c.moveToNext()) {
+            overriddenIds.add(c.getInt(0));
+        }
+        c.close();
+
+        for (GateValve ref : searchGateValves(query)) {
+            if (overriddenIds.contains(ref.getId())) continue;
+            result.add(ref);
+        }
+
+        return result;
     }
+
 
     // ==========================================
     // 🟢 ХЕЛПЕРЫ - USER GATE VALVES
@@ -1171,6 +1517,58 @@ public class RepositoryImpl implements IRepository {
         return valve;
     }
 
+    private List<GateValve> sortGateValvesByRelevance(List<GateValve> valves, String query) {
+        String cleanQuery = query.replaceAll("[\\s\\-\\.\\u2013\\u2014]", "").toLowerCase();
+        if (cleanQuery.isEmpty()) return valves;
+
+        Collections.sort(valves, (a, b) -> {
+            int scoreA = getValveRelevanceScore(a, cleanQuery);
+            int scoreB = getValveRelevanceScore(b, cleanQuery);
+            if (scoreA != scoreB) return Integer.compare(scoreA, scoreB);
+
+            // Дополнительно: короче isy — выше
+            int lenA = a.getIsy() != null ? a.getIsy().length() : Integer.MAX_VALUE;
+            int lenB = b.getIsy() != null ? b.getIsy().length() : Integer.MAX_VALUE;
+            return Integer.compare(lenA, lenB);
+        });
+
+        return valves;
+    }
+
+    private int getValveRelevanceScore(GateValve valve, String cleanQuery) {
+        String isy = valve.getIsy() != null
+                ? valve.getIsy().toLowerCase().replaceAll("[\\s\\-\\.\\u2013\\u2014]", "")
+                : "";
+        String name = valve.getName() != null
+                ? valve.getName().toLowerCase().replaceAll("[\\s\\-\\.\\u2013\\u2014]", "")
+                : "";
+        String fullName = valve.getFullName() != null ? valve.getFullName().toLowerCase() : "";
+        String powerCabinet = valve.getPowerCabinet() != null ? valve.getPowerCabinet().toLowerCase() : "";
+        String locationDesc = valve.getLocationDescription() != null ? valve.getLocationDescription().toLowerCase() : "";
+        String onPlace = valve.getOnPlace() != null ? valve.getOnPlace().toLowerCase() : "";
+
+        // 1. Точное совпадение isy / name
+        if (isy.equals(cleanQuery)) return 1;
+        if (name.equals(cleanQuery)) return 2;
+
+        // 2. Префикс isy / name
+        if (isy.startsWith(cleanQuery)) return 10;
+        if (name.startsWith(cleanQuery)) return 11;
+
+        // 3. Подстрока isy / name
+        if (isy.contains(cleanQuery)) return 20;
+        if (name.contains(cleanQuery)) return 21;
+
+        // 4. Другие поля
+        if (fullName.contains(cleanQuery)) return 30;
+        if (powerCabinet.contains(cleanQuery)) return 31;
+        if (locationDesc.contains(cleanQuery)) return 32;
+        if (onPlace.contains(cleanQuery)) return 33;
+
+        return 100;
+    }
+
+
     // ==========================================
     // 🟢 ПОЛЬЗОВАТЕЛЬСКАЯ БД - SENSORS
     // ==========================================
@@ -1203,31 +1601,64 @@ public class RepositoryImpl implements IRepository {
         SQLiteDatabase db = userDbHelper.getReadableDatabase();
 
         String cleanQuery = query.replaceAll("[\\s\\-.]", "");
-        Log.d("SEARCH_USER", "cleanQuery = " + cleanQuery);
+        boolean isShortQuery = cleanQuery.length() < 3;
+        boolean isKksQuery = containsLatin(cleanQuery);
+        boolean isMarking = isMarkingQuery(cleanQuery);
 
-        String selection =
-                "REPLACE(REPLACE(REPLACE(LOWER(st_marking), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
-                        "REPLACE(REPLACE(REPLACE(LOWER(full_name), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
-                        "REPLACE(REPLACE(REPLACE(LOWER(installation_location), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
-                        "REPLACE(REPLACE(REPLACE(LOWER(name), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
-                        "REPLACE(REPLACE(REPLACE(LOWER(kks), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
+        String selection;
+        List<String> argList = new ArrayList<>();
 
-        String[] args = new String[]{
-                "%" + cleanQuery + "%",
-                "%" + cleanQuery + "%",
-                "%" + cleanQuery + "%",
-                "%" + cleanQuery + "%",
-                "%" + cleanQuery + "%"
-        };
+        if (isShortQuery) {
+            selection =
+                    "REPLACE(REPLACE(REPLACE(LOWER(st_marking), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                            "REPLACE(REPLACE(REPLACE(LOWER(name), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
 
-        Log.d("SEARCH_USER", "selection = " + selection);
-        Log.d("SEARCH_USER", "args[0] = '" + args[0] + "'");
+            argList.add("%" + cleanQuery + "%");
+            argList.add("%" + cleanQuery + "%");
+
+        } else if (isKksQuery) {
+            String kksQuery = buildKksQuery(cleanQuery);
+
+            selection =
+                    "REPLACE(REPLACE(REPLACE(LOWER(kks), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                            "REPLACE(REPLACE(REPLACE(LOWER(kks), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
+
+            argList.add("%" + cleanQuery + "%");
+            argList.add("%" + kksQuery + "%");
+
+        } else if (isMarking) {
+            selection =
+                    "REPLACE(REPLACE(REPLACE(LOWER(st_marking), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
+
+            argList.add("%" + cleanQuery + "%");
+
+        } else {
+            List<String> prefixes = buildWordPrefixes(query);
+            if (prefixes.isEmpty()) {
+                return sensors;
+            }
+
+            int n = prefixes.size();
+
+            String stMarkingCond =
+                    "REPLACE(REPLACE(REPLACE(LOWER(st_marking), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
+            String nameCond = buildFieldCondition("name", n);
+            String fullNameCond = buildFieldCondition("full_name", n);
+            String locationCond = buildFieldCondition("installation_location", n);
+
+            selection = "(" + stMarkingCond + " OR " + nameCond + " OR " + fullNameCond + " OR " + locationCond + ")";
+
+            argList.add("%" + cleanQuery + "%");   // st_marking
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // name
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // full_name
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // location
+        }
 
         Cursor cursor = db.query(
                 "user_sensors",
                 null,
                 selection,
-                args,
+                argList.toArray(new String[0]),
                 null, null,
                 "st_marking ASC"
         );
@@ -1237,18 +1668,15 @@ public class RepositoryImpl implements IRepository {
         while (cursor.moveToNext()) {
             Sensor sensor = cursorToUserSensor(cursor);
             sensors.add(sensor);
-            Log.d("SEARCH_USER", "  found: id=" + sensor.getId() +
-                    ", stMarking=" + sensor.getStMarkir() +
-                    ", kks=" + sensor.getKks() +
-                    ", originalId=" + sensor.getOriginalId() +
-                    ", isDeleted=" + sensor.getIsDeleted());
         }
         cursor.close();
 
-        Log.d("SEARCH_USER", "total found = " + sensors.size());
-        Log.d("SEARCH_USER", "=== searchUserSensors END ===");
         return sensors;
     }
+
+
+
+
     @Override
     public long insertUserSensor(Sensor sensor) {
         Log.d("SENSOR_DEBUG", "=== insertUserSensor ===");
@@ -1292,119 +1720,64 @@ public class RepositoryImpl implements IRepository {
 
 
     @Override
-    public List<Sensor> getAllSensorsWithUser() {
+    public List<Sensor> searchSensorsWithUser(String query) {
         List<Sensor> result = new ArrayList<>();
-        Set<Integer> seenIds = new HashSet<>();  // ← ИСПОЛЬЗУЕМ ID
 
-        List<Sensor> refs = getAllSensors();
-
-        List<Sensor> users = new ArrayList<>();
-        for (Sensor u : getAllUserSensors()) {
-            if (u.getIsDeleted() != 1) {
-                users.add(u);
+        // 1. Живые дочки по запросу
+        for (Sensor s : searchUserSensors(query)) {
+            if (s.getIsDeleted() != 1) {
+                result.add(s);
             }
         }
 
-        // 🔥 1. Добавляем пользовательские
-        for (Sensor u : users) {
-            result.add(u);
-            int key = u.getOriginalId() > 0 ? u.getOriginalId() : u.getId();
-            seenIds.add(key);
-            Log.d("SENSOR_USER", "added user: " + u.getStMarkir() + " (id=" + u.getId() + ")");
+        // 2. Множество original_id из ВСЕХ дочек (включая удалённые)
+        Set<Integer> overriddenIds = new HashSet<>();
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT DISTINCT original_id FROM user_sensors WHERE original_id > 0",
+                null);
+        while (c.moveToNext()) {
+            overriddenIds.add(c.getInt(0));
         }
+        c.close();
 
-        // 🔥 2. Добавляем справочные, которых нет в пользовательских
-        for (Sensor ref : refs) {
-            Sensor deleted = getUserSensorByOriginalId(ref.getId());
-            if (deleted != null && deleted.getIsDeleted() == 1) {
-                Log.d("SENSOR_USER", "skipping deleted: " + ref.getStMarkir());
-                continue;
-            }
-
-            if (!seenIds.contains(ref.getId())) {
-                result.add(ref);
-                seenIds.add(ref.getId());
-                Log.d("SENSOR_USER", "added ref: " + ref.getStMarkir());
-            }
+        // 3. Справочные по запросу, минус перекрытые
+        for (Sensor ref : searchSensors(query)) {
+            if (overriddenIds.contains(ref.getId())) continue;
+            result.add(ref);
         }
 
         return result;
     }
-
     @Override
-    public List<Sensor> searchSensorsWithUser(String query) {
-        Log.d("SEARCH_SENSOR", "=== searchSensorsWithUser START ===");
-        Log.d("SEARCH_SENSOR", "query = " + query);
-
+    public List<Sensor> getAllSensorsWithUser() {
         List<Sensor> result = new ArrayList<>();
-        Set<Integer> seenIds = new HashSet<>();
 
-        try {
-            // 🔥 1. Ищем в БД2 (пользовательские)
-            Log.d("SEARCH_SENSOR", "Step 1: Searching in USER DB...");
-            List<Sensor> userResults = searchUserSensors(query);
-            Log.d("SEARCH_SENSOR", "userResults size = " + userResults.size());
-
-            if (userResults.isEmpty()) {
-                Log.d("SEARCH_SENSOR", "No results in USER DB");
-            } else {
-                for (Sensor sensor : userResults) {
-                    Log.d("SEARCH_SENSOR", "  USER result: id=" + sensor.getId() +
-                            ", stMarking=" + sensor.getStMarkir() +
-                            ", kks=" + sensor.getKks() +
-                            ", originalId=" + sensor.getOriginalId() +
-                            ", isDeleted=" + sensor.getIsDeleted());
-                    if (sensor.getIsDeleted() != 1) {
-                        result.add(sensor);
-                        int key = sensor.getOriginalId() > 0 ? sensor.getOriginalId() : sensor.getId();
-                        seenIds.add(key);
-                        Log.d("SEARCH_SENSOR", "  ✅ added user: " + sensor.getStMarkir());
-                    } else {
-                        Log.d("SEARCH_SENSOR", "  ⏭️ skipping deleted: " + sensor.getStMarkir());
-                    }
-                }
+        // 1. Все живые дочки
+        for (Sensor s : getAllUserSensors()) {
+            if (s.getIsDeleted() != 1) {
+                result.add(s);
             }
-
-            // 🔥 2. Ищем в БД1 (справочник)
-            Log.d("SEARCH_SENSOR", "Step 2: Searching in REF DB...");
-            List<Sensor> refResults = searchSensors(query);
-            Log.d("SEARCH_SENSOR", "refResults size = " + refResults.size());
-
-            if (refResults.isEmpty()) {
-                Log.d("SEARCH_SENSOR", "No results in REF DB");
-            } else {
-                for (Sensor sensor : refResults) {
-                    Log.d("SEARCH_SENSOR", "  REF result: id=" + sensor.getId() +
-                            ", stMarking=" + sensor.getStMarkir() +
-                            ", kks=" + sensor.getKks());
-
-                    // Проверяем, не удалён ли этот датчик в БД2
-                    Sensor deleted = getUserSensorByOriginalId(sensor.getId());
-                    if (deleted != null && deleted.getIsDeleted() == 1) {
-                        Log.d("SEARCH_SENSOR", "  ⏭️ skipping deleted ref: " + sensor.getStMarkir());
-                        continue;
-                    }
-
-                    // Проверяем, нет ли уже пользовательской версии
-                    if (!seenIds.contains(sensor.getId())) {
-                        result.add(sensor);
-                        seenIds.add(sensor.getId());
-                        Log.d("SEARCH_SENSOR", "  ✅ added ref: " + sensor.getStMarkir());
-                    } else {
-                        Log.d("SEARCH_SENSOR", "  ⏭️ skipping duplicate ref: " + sensor.getStMarkir());
-                    }
-                }
-            }
-
-            Log.d("SEARCH_SENSOR", "FINAL result size = " + result.size());
-            Log.d("SEARCH_SENSOR", "=== searchSensorsWithUser END ===");
-            return result;
-
-        } catch (Exception e) {
-            Log.e("SEARCH_SENSOR", "Error in searchSensorsWithUser", e);
-            e.printStackTrace();
-            return new ArrayList<>();
         }
+
+        // 2. Множество original_id из всех дочек
+        Set<Integer> overriddenIds = new HashSet<>();
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT DISTINCT original_id FROM user_sensors WHERE original_id > 0",
+                null);
+        while (c.moveToNext()) {
+            overriddenIds.add(c.getInt(0));
+        }
+        c.close();
+
+        // 3. Все справочные, минус перекрытые
+        for (Sensor ref : getAllSensors()) {
+            if (overriddenIds.contains(ref.getId())) continue;
+            result.add(ref);
+        }
+
+        return result;
     }
     @Override
     public Sensor getUserSensorByOriginalId(int originalId) {
@@ -1469,47 +1842,109 @@ public class RepositoryImpl implements IRepository {
         List<Setpoint> setpoints = new ArrayList<>();
         SQLiteDatabase db = userDbHelper.getReadableDatabase();
 
+        String trimmed = query.trim();
+
+        // #все
+        if (trimmed.equalsIgnoreCase("#все")) {
+            Cursor c = db.query(
+                    "user_setpoints",
+                    null, null, null, null, null,
+                    "equipment_group ASC, position_name ASC"
+            );
+            while (c.moveToNext()) {
+                setpoints.add(cursorToUserSetpoint(c));
+            }
+            c.close();
+            return setpoints;
+        }
+
+        // #группа
+        if (trimmed.startsWith("#")) {
+            String groupQuery = trimmed.toLowerCase();
+            if (groupQuery.length() <= 1) {
+                return setpoints;
+            }
+            Cursor c = db.query(
+                    "user_setpoints",
+                    null,
+                    "LOWER(equipment_group) LIKE LOWER(?)",
+                    new String[]{"%" + groupQuery + "%"},
+                    null, null,
+                    "position_name ASC"
+            );
+            while (c.moveToNext()) {
+                setpoints.add(cursorToUserSetpoint(c));
+            }
+            c.close();
+            return setpoints;
+        }
+
+        // Обычный поиск
         String cleanQuery = query.replaceAll("[\\s\\-.]", "");
+        boolean isShortQuery = cleanQuery.length() < 3;
+        boolean isMarking = isMarkingQuery(cleanQuery);
 
-        // 🔥 ТАКОЙ ЖЕ ПОИСК, КАК В БД1
-        String selection =
-                "REPLACE(REPLACE(REPLACE(LOWER(position_name), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
-                        "LOWER(name) LIKE LOWER(?) OR " +
-                        "LOWER(setpoint_value) LIKE LOWER(?) OR " +
-                        "LOWER(operation) LIKE LOWER(?) OR " +
-                        "LOWER(location) LIKE LOWER(?)";
+        String selection;
+        List<String> argList = new ArrayList<>();
 
-        String[] args = new String[]{
-                "%" + cleanQuery + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%",
-                "%" + query + "%"
-        };
+        if (isShortQuery) {
+            selection =
+                    "REPLACE(REPLACE(REPLACE(LOWER(position_name), ' ', ''), '-', ''), '.', '') LIKE LOWER(?) OR " +
+                            "REPLACE(REPLACE(REPLACE(LOWER(name), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
 
-        Log.d("SEARCH_USER_SETPOINT", "=== searchUserSetpoints ===");
-        Log.d("SEARCH_USER_SETPOINT", "query = " + query);
-        Log.d("SEARCH_USER_SETPOINT", "cleanQuery = " + cleanQuery);
+            argList.add("%" + cleanQuery + "%");
+            argList.add("%" + cleanQuery + "%");
+
+        } else if (isMarking) {
+            selection =
+                    "REPLACE(REPLACE(REPLACE(LOWER(position_name), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
+
+            argList.add("%" + cleanQuery + "%");
+
+        } else {
+            List<String> prefixes = buildWordPrefixes(query);
+            if (prefixes.isEmpty()) {
+                return setpoints;
+            }
+
+            int n = prefixes.size();
+
+            String posNameCond =
+                    "REPLACE(REPLACE(REPLACE(LOWER(position_name), ' ', ''), '-', ''), '.', '') LIKE LOWER(?)";
+            String nameCond = buildFieldCondition("name", n);
+            String operationCond = buildFieldCondition("operation", n);
+            String notesCond = buildFieldCondition("notes", n);
+            String locationCond = buildFieldCondition("location", n);
+
+            selection = "(" + posNameCond + " OR " + nameCond + " OR " + operationCond
+                    + " OR " + notesCond + " OR " + locationCond + ")";
+
+            argList.add("%" + cleanQuery + "%");   // position_name
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // name
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // operation
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // notes
+            for (int i = 0; i < n; i++) argList.add("%" + prefixes.get(i) + "%");  // location
+        }
 
         Cursor cursor = db.query(
                 "user_setpoints",
                 null,
                 selection,
-                args,
+                argList.toArray(new String[0]),
                 null, null,
-                "position_name ASC"
+                null
         );
 
         while (cursor.moveToNext()) {
-            Setpoint setpoint = cursorToUserSetpoint(cursor);
-            setpoints.add(setpoint);
-            Log.d("SEARCH_USER_SETPOINT", "  found: " + setpoint.getPositionName());
+            setpoints.add(cursorToUserSetpoint(cursor));
         }
         cursor.close();
 
-        Log.d("SEARCH_USER_SETPOINT", "total found = " + setpoints.size());
-        return setpoints;
+        return sortSetpointsByRelevance(setpoints, query);
     }
+
+
+
     @Override
     public long insertUserSetpoint(Setpoint setpoint) {
         Log.d("REPO_INSERT", "=== insertUserSetpoint START ===");
@@ -1591,64 +2026,83 @@ public class RepositoryImpl implements IRepository {
 
     @Override
     public void markSetpointAsDeleted(int originalId) {
-        Setpoint existing = getUserSetpointByOriginalId(originalId);
-
-        if (existing != null) {
-            existing.setIsDeleted(1);
-            existing.setEditedAt(getCurrentDateTime());
-            updateUserSetpoint(existing);
-        } else {
-            Setpoint ref = getSetpointById(originalId);
-            if (ref == null) return;
-
-            Setpoint copy = new Setpoint();
-            copy.setOriginalId(ref.getId());
-            copy.setIsDeleted(1);
-            copy.setName(ref.getName());
-            copy.setPositionName(ref.getPositionName());
-            copy.setLocation(ref.getLocation());
-            copy.setSetpointValue(ref.getSetpointValue());
-            copy.setDelayTime(ref.getDelayTime());
-            copy.setOperation(ref.getOperation());
-            copy.setNotes(ref.getNotes());
-            copy.setEquipmentGroup(ref.getEquipmentGroup());
-            copy.setIsEdited(1);
-            copy.setEditedAt(getCurrentDateTime());
-            copy.setCreatedAt(getCurrentDateTime());
-
-            insertUserSetpoint(copy);
+        if (originalId <= 0) {
+            Log.e(TAG, "markSetpointAsDeleted: invalid originalId=" + originalId);
+            return;
         }
+
+        // 1. Проверяем ЛЮБУЮ дочку (включая удалённую) — чтобы не плодить дубли
+        Setpoint anyExisting = getAnyUserSetpointByOriginalId(originalId);
+        if (anyExisting != null) {
+            if (anyExisting.getIsDeleted() == 1) {
+                // Уже удалена — ничего не делаем, чтобы не затирать edited_at
+                Log.d(TAG, "markSetpointAsDeleted: already deleted, id=" + anyExisting.getId());
+                return;
+            }
+            // Живая дочка — помечаем удалённой
+            anyExisting.setIsDeleted(1);
+            anyExisting.setEditedAt(getCurrentDateTime());
+            updateUserSetpoint(anyExisting);
+            Log.d(TAG, "markSetpointAsDeleted: marked id=" + anyExisting.getId()
+                    + " (original_id=" + originalId + ") as deleted");
+            return;
+        }
+
+        // 2. Дочки нет — берём мать из БД1
+        Setpoint ref = getSetpointById(originalId);
+        if (ref == null) {
+            Log.e(TAG, "markSetpointAsDeleted: ref not found, originalId=" + originalId);
+            return;
+        }
+
+        // 3. Создаём дочку с is_deleted = 1
+        Setpoint copy = new Setpoint();
+        copy.setId(generateNegativeIdForSetpoint());   // 🔥 обязательно отрицательный id
+        copy.setOriginalId(ref.getId());
+        copy.setIsDeleted(1);
+        copy.setName(ref.getName());
+        copy.setPositionName(ref.getPositionName());
+        copy.setLocation(ref.getLocation());
+        copy.setSetpointValue(ref.getSetpointValue());
+        copy.setDelayTime(ref.getDelayTime());
+        copy.setOperation(ref.getOperation());
+        copy.setNotes(ref.getNotes());
+        copy.setEquipmentGroup(ref.getEquipmentGroup());
+        copy.setIsEdited(1);
+        copy.setEditedAt(getCurrentDateTime());
+        copy.setCreatedAt(getCurrentDateTime());
+
+        long id = insertUserSetpoint(copy);
+        Log.d(TAG, "markSetpointAsDeleted: inserted new tombstone id=" + id
+                + " for original_id=" + originalId);
     }
 
     @Override
     public List<Setpoint> getAllSetpointsWithUser() {
         List<Setpoint> result = new ArrayList<>();
 
-        List<Setpoint> refs = getAllSetpoints();
-
-        List<Setpoint> users = new ArrayList<>();
-        for (Setpoint u : getAllUserSetpoints()) {
-            if (u.getIsDeleted() != 1) {
-                users.add(u);
+        // 1. Все живые дочки
+        for (Setpoint sp : getAllUserSetpoints()) {
+            if (sp.getIsDeleted() != 1) {
+                result.add(sp);
             }
         }
 
-        Map<Integer, Setpoint> userMap = new HashMap<>();
-        for (Setpoint u : users) {
-            userMap.put(u.getOriginalId(), u);
+        // 2. Множество original_id из всех дочек
+        Set<Integer> overriddenIds = new HashSet<>();
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT DISTINCT original_id FROM user_setpoints WHERE original_id > 0",
+                null);
+        while (c.moveToNext()) {
+            overriddenIds.add(c.getInt(0));
         }
+        c.close();
 
-        for (Setpoint ref : refs) {
-            Setpoint deleted = getUserSetpointByOriginalId(ref.getId());
-            if (deleted != null && deleted.getIsDeleted() == 1) {
-                continue;
-            }
-
-            if (userMap.containsKey(ref.getId())) {
-                result.add(userMap.get(ref.getId()));
-            } else {
-                result.add(ref);
-            }
+        // 3. Все справочные, минус перекрытые
+        for (Setpoint ref : getAllSetpoints()) {
+            if (overriddenIds.contains(ref.getId())) continue;
+            result.add(ref);
         }
 
         return result;
@@ -1656,54 +2110,33 @@ public class RepositoryImpl implements IRepository {
 
     @Override
     public List<Setpoint> searchSetpointsWithUser(String query) {
-        Log.d("SEARCH_SETPOINT", "=== searchSetpointsWithUser START ===");
-        Log.d("SEARCH_SETPOINT", "query = " + query);
-
         List<Setpoint> result = new ArrayList<>();
-        Set<Integer> seenIds = new HashSet<>();
 
-        try {
-            // 🔥 1. Ищем в БД2 (пользовательские)
-            List<Setpoint> userResults = searchUserSetpoints(query);
-            Log.d("SEARCH_SETPOINT", "userResults size = " + userResults.size());
-
-            for (Setpoint setpoint : userResults) {
-                if (setpoint.getIsDeleted() != 1) {
-                    result.add(setpoint);
-                    int key = setpoint.getOriginalId() > 0 ? setpoint.getOriginalId() : setpoint.getId();
-                    seenIds.add(key);
-                    Log.d("SEARCH_SETPOINT", "  added user: " + setpoint.getPositionName());
-                }
+        // Шаг 1. Дочек по запросу — показать (живых)
+        for (Setpoint sp : searchUserSetpoints(query)) {
+            if (sp.getIsDeleted() != 1) {
+                result.add(sp);
             }
-
-            // 🔥 2. Ищем в БД1 (справочник)
-            List<Setpoint> refResults = searchSetpoints(query);
-            Log.d("SEARCH_SETPOINT", "refResults size = " + refResults.size());
-
-            for (Setpoint setpoint : refResults) {
-                // Проверяем, не удалена ли эта уставка в БД2
-                Setpoint deleted = getUserSetpointByOriginalId(setpoint.getId());
-                if (deleted != null && deleted.getIsDeleted() == 1) {
-                    Log.d("SEARCH_SETPOINT", "  skipping deleted: " + setpoint.getPositionName());
-                    continue;
-                }
-
-                // Проверяем, нет ли уже пользовательской версии
-                if (!seenIds.contains(setpoint.getId())) {
-                    result.add(setpoint);
-                    seenIds.add(setpoint.getId());
-                    Log.d("SEARCH_SETPOINT", "  added ref: " + setpoint.getPositionName());
-                }
-            }
-
-            Log.d("SEARCH_SETPOINT", "result size = " + result.size());
-            Log.d("SEARCH_SETPOINT", "=== searchSetpointsWithUser END ===");
-            return result;
-
-        } catch (Exception e) {
-            Log.e("SEARCH_SETPOINT", "Error searching setpoints with user", e);
-            return new ArrayList<>();
         }
+
+        // Шаг 2. Множество original_id из ВСЕХ дочек (и удалённых тоже)
+        Set<Integer> overriddenIds = new HashSet<>();
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT DISTINCT original_id FROM user_setpoints WHERE original_id > 0",
+                null);
+        while (c.moveToNext()) {
+            overriddenIds.add(c.getInt(0));
+        }
+        c.close();
+
+        // Шаг 3. Справочные по запросу, минус те, у кого есть дочка
+        for (Setpoint ref : searchSetpoints(query)) {
+            if (overriddenIds.contains(ref.getId())) continue;
+            result.add(ref);
+        }
+
+        return result;
     }
 
     // ==========================================
@@ -1833,64 +2266,108 @@ public class RepositoryImpl implements IRepository {
 
     @Override
     public void markSensorAsDeleted(int originalId) {
-        Sensor existing = getUserSensorByOriginalId(originalId);
-
-        if (existing != null) {
-            existing.setIsDeleted(1);
-            existing.setEditedAt(getCurrentDateTime());
-            updateUserSensor(existing);
-        } else {
-            Sensor ref = getSensorById(originalId);
-            if (ref == null) return;
-
-            // Создаём копию с пометкой is_deleted = 1
-            int newId = generateNegativeIdForSensor();
-
-            Sensor copy = new Sensor();
-            copy.setId(newId);
-            copy.setOriginalId(ref.getId());
-            copy.setIsDeleted(1);
-            copy.setKeynum(ref.getKeynum());
-            copy.setFa(ref.getFa());
-            copy.setKks(ref.getKks());
-            copy.setStMarkir(ref.getStMarkir());
-            copy.setFullName(ref.getFullName());
-            copy.setName(ref.getName());
-            copy.setMedia(ref.getMedia());
-            copy.setUnits(ref.getUnits());
-            copy.setNominal(ref.getNominal());
-            copy.setVolMin(ref.getVolMin());
-            copy.setVolMax(ref.getVolMax());
-            copy.setSpeed(ref.getSpeed());
-            copy.setFaultPar(ref.getFaultPar());
-            copy.setInsteadF(ref.getInsteadF());
-            copy.setFilter(ref.getFilter());
-            copy.setModelSensor(ref.getModelSensor());
-            copy.setModSensor(ref.getModSensor());
-            copy.setAdditionalInfo(ref.getAdditionalInfo());
-            copy.setMinVal(ref.getMinVal());
-            copy.setMaxVal(ref.getMaxVal());
-            copy.setMeasureUnit(ref.getMeasureUnit());
-            copy.setLocation(ref.getLocation());
-            copy.setCva(ref.getCva());
-            copy.setDampingTime(ref.getDampingTime());
-            copy.setIsEdited(1);
-            copy.setCreatedAt(getCurrentDateTime());
-            copy.setEditedAt(getCurrentDateTime());
-
-            insertUserSensor(copy);
+        if (originalId <= 0) {
+            Log.e(TAG, "markSensorAsDeleted: invalid originalId=" + originalId);
+            return;
         }
+
+        Sensor anyExisting = getAnyUserSensorByOriginalId(originalId);
+        if (anyExisting != null) {
+            if (anyExisting.getIsDeleted() == 1) {
+                Log.d(TAG, "markSensorAsDeleted: already deleted, id=" + anyExisting.getId());
+                return;
+            }
+            anyExisting.setIsDeleted(1);
+            anyExisting.setEditedAt(getCurrentDateTime());
+            updateUserSensor(anyExisting);
+            Log.d(TAG, "markSensorAsDeleted: marked id=" + anyExisting.getId()
+                    + " (original_id=" + originalId + ") as deleted");
+            return;
+        }
+
+        Sensor ref = getSensorById(originalId);
+        if (ref == null) {
+            Log.e(TAG, "markSensorAsDeleted: ref not found, originalId=" + originalId);
+            return;
+        }
+
+        Sensor copy = new Sensor();
+        copy.setId(generateNegativeIdForSensor());
+        copy.setOriginalId(ref.getId());
+        copy.setIsDeleted(1);
+        copy.setKeynum(ref.getKeynum());
+        copy.setFa(ref.getFa());
+        copy.setKks(ref.getKks());
+        copy.setStMarkir(ref.getStMarkir());
+        copy.setFullName(ref.getFullName());
+        copy.setName(ref.getName());
+        copy.setMedia(ref.getMedia());
+        copy.setUnits(ref.getUnits());
+        copy.setNominal(ref.getNominal());
+        copy.setVolMin(ref.getVolMin());
+        copy.setVolMax(ref.getVolMax());
+        copy.setSpeed(ref.getSpeed());
+        copy.setFaultPar(ref.getFaultPar());
+        copy.setInsteadF(ref.getInsteadF());
+        copy.setFilter(ref.getFilter());
+        copy.setModelSensor(ref.getModelSensor());
+        copy.setModSensor(ref.getModSensor());
+        copy.setAdditionalInfo(ref.getAdditionalInfo());
+        copy.setMinVal(ref.getMinVal());
+        copy.setMaxVal(ref.getMaxVal());
+        copy.setMeasureUnit(ref.getMeasureUnit());
+        copy.setLocation(ref.getLocation());
+        copy.setCva(ref.getCva());
+        copy.setDampingTime(ref.getDampingTime());
+        copy.setIsEdited(1);
+        copy.setCreatedAt(getCurrentDateTime());
+        copy.setEditedAt(getCurrentDateTime());
+
+        long id = insertUserSensor(copy);
+        Log.d(TAG, "markSensorAsDeleted: inserted new tombstone id=" + id
+                + " for original_id=" + originalId);
     }
 
     private int generateNegativeIdForSensor() {
         int minId = 0;
-        List<Sensor> sensors = getAllUserSensors();
-        for (Sensor s : sensors) {
-            if (s.getId() < minId) minId = s.getId();
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery("SELECT MIN(id) FROM user_sensors", null);
+        if (c.moveToFirst() && !c.isNull(0)) {
+            minId = c.getInt(0);
         }
-        return minId - 1;
+        c.close();
+        int newId = minId - 1;
+        if (newId == 0) newId = -1;
+        return newId;
     }
 
+    private List<Sensor> sortSensorsByRelevance(List<Sensor> sensors, String query) {
+        String lowerQuery = query.toLowerCase();
+        String kksQuery = buildKksQuery(lowerQuery);
+
+        Collections.sort(sensors, (a, b) -> {
+            int scoreA = getSensorRelevanceScore(a, lowerQuery, kksQuery);
+            int scoreB = getSensorRelevanceScore(b, lowerQuery, kksQuery);
+            return Integer.compare(scoreA, scoreB);
+        });
+
+        return sensors;
+    }
+    /**
+     * Проверяет, является ли запрос "маркировкой":
+     * начинается с кириллических букв, за которыми идут цифры,
+     * и общая длина >= 4. Пример: КИ505а, Мп291, ПТНп13.
+     */
+    /**
+     * Проверяет, является ли запрос "маркировкой":
+     * начинается с кириллических букв, за которыми идут цифры,
+     * и общая длина >= 3. Пример: КИ5, КИ505а, Мп291, ПТНп13.
+     */
+    private boolean isMarkingQuery(String cleanQuery) {
+        if (cleanQuery == null) return false;
+        if (cleanQuery.length() < 3) return false;
+        return cleanQuery.matches("^[А-Яа-яЁё]+[0-9].*");
+    }
     // ==========================================
     // 🟢 ХЕЛПЕРЫ - USER SETPOINTS
     // ==========================================
@@ -2492,5 +2969,36 @@ public class RepositoryImpl implements IRepository {
         Log.d("SEARCH_USER_SETPOINT", "total found = " + setpoints.size());
         return setpoints;
     }
-
+    @Override
+    public Setpoint getAnyUserSetpointByOriginalId(int originalId) {
+        if (originalId <= 0) return null;
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor cursor = db.query(
+                "user_setpoints",
+                null,
+                "original_id = ?",
+                new String[]{String.valueOf(originalId)},
+                null, null,
+                "is_deleted ASC, edited_at DESC, id DESC LIMIT 1"
+        );
+        Setpoint setpoint = null;
+        if (cursor.moveToFirst()) {
+            setpoint = cursorToUserSetpoint(cursor);
+        }
+        cursor.close();
+        return setpoint;
+    }
+    private int generateNegativeIdForSetpoint() {
+        int minId = 0;
+        SQLiteDatabase db = userDbHelper.getReadableDatabase();
+        Cursor c = db.rawQuery("SELECT MIN(id) FROM user_setpoints", null);
+        if (c.moveToFirst() && !c.isNull(0)) {
+            minId = c.getInt(0);
+        }
+        c.close();
+        int newId = minId - 1;
+        if (newId == 0) newId = -1;
+        return newId;
+    }
 }
+

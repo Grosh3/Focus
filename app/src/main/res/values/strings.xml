@@ -62,10 +62,25 @@
     <string name="status_disassemble">РАЗОБРАТЬ</string>
     <string name="status_assembled">✅ СОБРАНА</string>
     <string name="status_disassembled">✅ РАЗОБРАНА</string>
-    <string name="status_motor_connected">ДВ.подкл.</string>
-    <string name="status_motor_disconnected">отключен эл.двигатель</string>
-    <string name="status_box_installed">установлена ККВ</string>
-    <string name="status_box_removed">снята ККВ</string>
+
+    <!-- 🔥 СТАТУСЫ ДВИГАТЕЛЯ И ККВ -->
+    <string name="status_motor_off">Дв отключен</string>
+    <string name="status_motor_on">Дв подключен</string>
+    <string name="status_motor_connected">Дв подключен</string>
+    <string name="status_motor_disconnected">Дв отключен</string>
+    <string name="status_box_installed">ККВ установлена</string>
+    <string name="status_box_removed">ККВ снята</string>
+    <!-- Статусы двигателя и ККВ для режима "СОБРАТЬ" -->
+    <string name="motor_connect">Подключить Дв</string>
+    <string name="motor_disconnect">Отключить Дв</string>
+    <string name="box_install">Установить ККВ</string>
+    <string name="box_remove">Снять ККВ</string>
+    <!-- Статусы для режима "СОБРАНА" (чекбокс отмечен) -->
+    <string name="status_motor_connected_full">Дв подключен</string>
+    <string name="status_motor_disconnected_full">Дв отключен</string>
+    <string name="status_box_installed_full">ККВ установлена</string>
+    <string name="status_box_removed_full">ККВ снята</string>
+
     <string name="dialog_save_title">Сохранить список</string>
     <string name="dialog_save_hint">Введите название списка</string>
     <string name="dialog_save_positive">Сохранить</string>
@@ -165,5 +180,17 @@
     <string name="title_sensors">Датчики</string>
     <string name="title_setpoints">Уставки</string>
     <string name="title_search">Поиск</string>
+
+    <!-- Список ключевых слов для подсветки в уставках -->
+    <string-array name="critical_operations">
+        <item>Отключение блока</item>
+        <item>Отключение котла</item>
+        <item>Отключение турбины</item>
+        <item>Отключение ПТН</item>
+        <item>Отключение ПЭН</item>
+        <item>Отключение ЦЭН</item>
+    </string-array>
+    <!-- Detail activity -->
+    <string name="delete_entity">Удалить запись</string>
 
 </resources>

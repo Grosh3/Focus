@@ -1,6 +1,7 @@
 package com.mikesuvade.focus.ui.main.managers;
 
 import android.content.Intent;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import android.os.Handler;
 
 public class SessionManager {
 
@@ -45,6 +47,7 @@ public class SessionManager {
 
     public interface SessionListener {
         void syncAdapterSelection();
+        void syncAdapterSelectionWithIds(List<Integer> currentIds); // 🔥 НОВЫЙ МЕТОД
         void updateButtonState();
         void refreshData();
         void launchListDetailActivity(Intent intent);
@@ -75,20 +78,25 @@ public class SessionManager {
                     Log.d(TAG, "items size = " + items.size());
 
                     List<GateValve> loadedValves = new ArrayList<>();
+                    List<Integer> loadedIds = new ArrayList<>(); // 🔥 ДЛЯ СИНХРОНИЗАЦИИ
+
                     for (ValveItem item : items) {
                         GateValve valve = repository.getGateValveById(item.getGateValveId());
                         if (valve != null) {
                             loadedValves.add(valve);
+                            loadedIds.add(valve.getId());
                         }
                     }
 
-                    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                    new Handler(Looper.getMainLooper()).post(() -> {
                         viewModelCallback.clearCurrentList();
                         for (GateValve valve : loadedValves) {
                             viewModelCallback.addToCurrentList(valve);
                         }
                         viewModelCallback.updateCurrentListSize(items.size());
-                        listener.syncAdapterSelection();
+
+                        // 🔥 ВЫЗЫВАЕМ СИНХРОНИЗАЦИЮ ПОСЛЕ ЗАГРУЗКИ
+                        listener.syncAdapterSelectionWithIds(loadedIds);
                         listener.updateButtonState();
                     });
                 } catch (Exception e) {
@@ -169,6 +177,7 @@ public class SessionManager {
 
     public void closeCurrentList() {
         AppState.getInstance().clearSession();
+        AppState.getInstance().clearUnsavedListIds(); // 🔥 ДОБАВИТЬ
         viewModelCallback.clearCurrentList();
         viewModelCallback.setRecording(false);
         listener.updateButtonState();
@@ -221,5 +230,25 @@ public class SessionManager {
     private String getCurrentDateTime() {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
     }
+    public void syncAdapterSelection() {
+        Log.d(TAG, "=== syncAdapterSelection ===");
+
+        // Получаем текущий список из ViewModel
+        List<GateValve> currentList = viewModelCallback.getCurrentList();
+        if (currentList == null) {
+            currentList = new ArrayList<>();
+        }
+
+        List<Integer> currentIds = new ArrayList<>();
+        for (GateValve v : currentList) {
+            currentIds.add(v.getId());
+        }
+
+        Log.d(TAG, "currentIds = " + currentIds);
+
+        // Передаем в listener
+        listener.syncAdapterSelectionWithIds(currentIds);
+    }
+
 
 }

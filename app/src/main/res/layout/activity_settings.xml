@@ -145,6 +145,15 @@
                         android:drawablePadding="8dp"/>
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAdminCreateSetpoint"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Добавить уставку"
+                        android:drawableStart="@android:drawable/ic_input_add"
+                        android:drawablePadding="8dp"/>
+
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnAdminCreateSensor"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="match_parent"
@@ -154,14 +163,7 @@
                         android:drawableStart="@android:drawable/ic_input_add"
                         android:drawablePadding="8dp"/>
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnAdminCreateSetpoint"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Добавить уставку"
-                        android:drawableStart="@android:drawable/ic_input_add"
-                        android:drawablePadding="8dp"/>
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

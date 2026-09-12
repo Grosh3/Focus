@@ -30,6 +30,7 @@ public class ListDetailViewModel extends ViewModel {
     private final MutableLiveData<List<ValveItem>> rightList = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<String> listName = new MutableLiveData<>("Новый список");
     private final MutableLiveData<String> sessionIdLive = new MutableLiveData<>();
+    private String currentSessionName = null;
 
     public ListDetailViewModel(IRepository repository) {
         this.repository = repository;
@@ -77,7 +78,9 @@ public class ListDetailViewModel extends ViewModel {
     // ==========================================
 
     public void setListName(String name) {
-        listName.setValue(name);
+        if (name != null && !name.isEmpty()) {
+            listName.setValue(name);
+        }
     }
 
     public void loadFromGateValves(List<GateValve> valves) {
@@ -90,24 +93,59 @@ public class ListDetailViewModel extends ViewModel {
             return;
         }
 
+        listName.setValue("Новый список");
+
         List<ValveItem> items = new ArrayList<>();
         for (GateValve valve : valves) {
             ValveItem item = new ValveItem();
             item.setGateValveId(valve.getId());
+
+            // 🔥 СОХРАНЯЕМ ВСЕ ДАННЫЕ В ValveItem
+            String name = valve.getName();
+            String isy = valve.getIsy();
+
+            Log.d("DELETE_DEBUG", "LOADING valve: id=" + valve.getId() + ", name=" + name + ", isy=" + isy);
+
+            item.setGateValveName(name != null ? name : "");
+            item.setGateValveIsy(isy != null ? isy : "");
+            item.setGateValveKks(valve.getKks() != null ? valve.getKks() : "");
+            item.setGateValvePowerCabinet(valve.getPowerCabinet() != null ? valve.getPowerCabinet() : "");
+            item.setGateValveLocationDescription(valve.getLocationDescription() != null ? valve.getLocationDescription() : "");
+            item.setGateValveOnPlace(valve.getOnPlace() != null ? valve.getOnPlace() : "");
+            item.setGateValveFullName(valve.getFullName() != null ? valve.getFullName() : "");
+
+            Log.d("DELETE_DEBUG", "CREATED item: id=" + item.getGateValveId() +
+                    ", name=" + item.getGateValveName() +
+                    ", isy=" + item.getGateValveIsy());
+
             item.setIsAssembled(1);
             item.setMotorDisabled(0);
             item.setBoxRemoved(0);
             item.setIsChecked(0);
             items.add(item);
-            Log.d("SESSY", "  added gateValveId=" + valve.getId() + ", name=" + valve.getName());
         }
 
-        // 🔥 СОРТИРУЕМ
-        items = sortItems(items);
+        // 🔥 ПРОВЕРЯЕМ ПЕРЕД СОРТИРОВКОЙ
+        for (ValveItem item : items) {
+            Log.d("DELETE_DEBUG", "BEFORE SORT: id=" + item.getGateValveId() +
+                    ", name=" + item.getGateValveName() +
+                    ", isy=" + item.getGateValveIsy());
+        }
 
-        sessionIdLive.setValue(null);
+        items = sortItems(items);
         leftList.setValue(items);
         rightList.setValue(new ArrayList<>());
+
+        // 🔥 ПРОВЕРЯЕМ ПОСЛЕ УСТАНОВКИ В LiveData
+        List<ValveItem> checkItems = leftList.getValue();
+        if (checkItems != null) {
+            for (ValveItem item : checkItems) {
+                Log.d("DELETE_DEBUG", "AFTER SET: id=" + item.getGateValveId() +
+                        ", name=" + item.getGateValveName() +
+                        ", isy=" + item.getGateValveIsy());
+            }
+        }
+
         Log.d("SESSY", "=== loadFromGateValves END ===");
     }
 
@@ -125,10 +163,20 @@ public class ListDetailViewModel extends ViewModel {
 
         new Thread(() -> {
             try {
+                // 🔥 ПОЛУЧАЕМ СЕССИЮ ПО ID
+                ValveWorkSession session = repository.getUserWorkSessionById(sessionId);
+                if (session != null) {
+                    String name = session.getEquipmentDescription();
+                    if (name != null && !name.isEmpty()) {
+                        currentSessionName = name;
+                        listName.postValue(name); // 🔥 УСТАНАВЛИВАЕМ ИМЯ
+                        Log.d("SESSY", "Session name: " + name);
+                    }
+                }
+
                 List<ValveItem> items;
                 if (useUserDb) {
                     Log.d("SESSY", "Loading from USER DB");
-                    // 🔥 ИСПРАВЛЕНО: getUserSessionItemsBySession
                     items = repository.getUserSessionItemsBySession(sessionId);
                 } else {
                     Log.d("SESSY", "Loading from MAIN DB");
@@ -317,6 +365,7 @@ public class ListDetailViewModel extends ViewModel {
         Log.d("LIST_DEBUG", "toggleMotor: gateValveId=" + item.getGateValveId());
         ValveItem foundItem = findItemInLists(item.getGateValveId());
         if (foundItem != null) {
+            // 🔥 ПЕРЕКЛЮЧАЕМ СОСТОЯНИЕ
             foundItem.setMotorDisabled(foundItem.getMotorDisabled() == 1 ? 0 : 1);
             refreshListsWithSort();
         }
@@ -326,8 +375,9 @@ public class ListDetailViewModel extends ViewModel {
         Log.d("LIST_DEBUG", "toggleBox: gateValveId=" + item.getGateValveId());
         ValveItem foundItem = findItemInLists(item.getGateValveId());
         if (foundItem != null) {
+            // 🔥 ПЕРЕКЛЮЧАЕМ СОСТОЯНИЕ
             foundItem.setBoxRemoved(foundItem.getBoxRemoved() == 1 ? 0 : 1);
-            refreshListsWithSort();  // ← ИСПРАВЛЕНО: refreshListsWithSort вместо refreshLists
+            refreshListsWithSort();
         }
     }
 
@@ -583,13 +633,22 @@ public class ListDetailViewModel extends ViewModel {
      * Получить ИСУ для элемента из объединенного источника
      */
     private String getIsyForItemMerged(ValveItem item) {
+        // 🔥 1. СНАЧАЛА БЕРЕМ ИЗ ValveItem (это данные, сохраненные в БД2)
+        if (item.getGateValveIsy() != null && !item.getGateValveIsy().isEmpty()) {
+            Log.d("LIST_DEBUG", "getIsyForItemMerged: using from ValveItem: " + item.getGateValveIsy());
+            return item.getGateValveIsy();
+        }
+
+        // 🔥 2. Если в ValveItem нет - пробуем из GateValve (объединенный источник)
         GateValve valve = getGateValveMerged(item.getGateValveId());
         if (valve != null && valve.getIsy() != null && !valve.getIsy().isEmpty()) {
+            Log.d("LIST_DEBUG", "getIsyForItemMerged: using from GateValve: " + valve.getIsy());
             return valve.getIsy();
         }
+
+        Log.d("LIST_DEBUG", "getIsyForItemMerged: no ISY found, returning ZZZZ");
         return "ZZZZ";
     }
-
     /**
      * Получить ИСУ для элемента
      */
@@ -645,5 +704,6 @@ public class ListDetailViewModel extends ViewModel {
         // 🔥 3. Если не нашли в БД2, ищем в БД1
         return repository.getGateValveById(gateValveId);
     }
+
 
 }
