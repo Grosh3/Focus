@@ -16,7 +16,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Описание (жирный, крупный) -->
+        <!-- 1️⃣ НАЗВАНИЕ -->
         <TextView
             android:id="@+id/tvDescription"
             android:layout_width="match_parent"
@@ -26,17 +26,39 @@
             android:textStyle="bold"
             android:textColor="?android:attr/textColorPrimary" />
 
-        <!-- Информация о замере -->
+        <!-- 2️⃣ ТЕМПЕРАТУРА (крупная) -->
+        <TextView
+            android:id="@+id/tvTemperature"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="21.0 °C"
+            android:textSize="25sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorPrimary" />
+
+        <!-- 3️⃣ РАСЧЁТЫ -->
         <TextView
             android:id="@+id/tvInfo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Pt100   108.20 Ом → 21.0 °C"
-            android:textSize="14sp"
+            android:text="(108.20 + 0.15) Ом"
+            android:textSize="13sp"
             android:textColor="?android:attr/textColorSecondary" />
 
-        <!-- Дата сохранения -->
+        <!-- 4️⃣ ТИП ДАТЧИКА -->
+        <TextView
+            android:id="@+id/tvSensorType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="ТСП50П"
+            android:textSize="13sp"
+            android:textStyle="italic"
+            android:textColor="?attr/colorPrimary" />
+
+        <!-- 5️⃣ ДАТА -->
         <TextView
             android:id="@+id/tvDate"
             android:layout_width="match_parent"

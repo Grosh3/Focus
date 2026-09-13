@@ -111,7 +111,7 @@ public class RepositoryImpl implements IRepository {
                     null, null, null);
             while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
             cursor.close();
-            return valves;
+            return sortGateValvesByRelevance(valves, query);
         }
 
         // === КОРОТКИЙ ===
@@ -125,13 +125,12 @@ public class RepositoryImpl implements IRepository {
                     null, null, null);
             while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
             cursor.close();
-            return valves;
+            return sortGateValvesByRelevance(valves, query);
         }
 
         // === КОДОВЫЙ (<=6) ===
         if (cleanQuery.length() <= 6) {
             if (hasDigit) {
-                // Есть цифры — префикс
                 String selection = "(" + isyClean + " LIKE LOWER(?)"
                         + " OR " + nameClean + " LIKE LOWER(?)"
                         + " OR " + powerCabinetClean + " LIKE LOWER(?))";
@@ -142,10 +141,9 @@ public class RepositoryImpl implements IRepository {
                 while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
                 cursor.close();
 
-                if (!valves.isEmpty()) return valves;
+                if (!valves.isEmpty()) return sortGateValvesByRelevance(valves, query);
 
             } else {
-                // Без цифр — сначала точное, потом префикс
                 String exactSelection = "(" + isyClean + " = LOWER(?)"
                         + " OR " + nameClean + " = LOWER(?)"
                         + " OR " + powerCabinetClean + " = LOWER(?))";
@@ -156,7 +154,7 @@ public class RepositoryImpl implements IRepository {
                 while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
                 cursor.close();
 
-                if (!valves.isEmpty()) return valves;
+                if (!valves.isEmpty()) return sortGateValvesByRelevance(valves, query);
 
                 String prefixSelection = "(" + isyClean + " LIKE LOWER(?)"
                         + " OR " + nameClean + " LIKE LOWER(?)"
@@ -168,9 +166,8 @@ public class RepositoryImpl implements IRepository {
                 while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
                 cursor.close();
 
-                if (!valves.isEmpty()) return valves;
+                if (!valves.isEmpty()) return sortGateValvesByRelevance(valves, query);
             }
-            // Если пусто — фразовый fallback
         }
 
         // === ФРАЗОВЫЙ (только full_name) ===
@@ -184,7 +181,7 @@ public class RepositoryImpl implements IRepository {
                     null, null, null);
             while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
             cursor.close();
-            return valves;
+            return sortGateValvesByRelevance(valves, query);
         }
 
         int n = prefixes.size();
@@ -201,7 +198,7 @@ public class RepositoryImpl implements IRepository {
         while (cursor.moveToNext()) valves.add(cursorToGateValve(cursor));
         cursor.close();
 
-        return valves;
+        return sortGateValvesByRelevance(valves, query);
     }
     @Override
     public long insertGateValve(GateValve valve) {
@@ -618,12 +615,22 @@ public class RepositoryImpl implements IRepository {
         Collections.sort(setpoints, (a, b) -> {
             int scoreA = getSetpointRelevanceScore(a, lowerQuery);
             int scoreB = getSetpointRelevanceScore(b, lowerQuery);
-            return Integer.compare(scoreA, scoreB);
+            if (scoreA != scoreB) return Integer.compare(scoreA, scoreB);
+
+            // Внутри одного приоритета — натуральная сортировка по position_name
+            String posA = a.getPositionName() != null ? a.getPositionName() : "";
+            String posB = b.getPositionName() != null ? b.getPositionName() : "";
+            int cmp = naturalCompare(posA, posB);
+            if (cmp != 0) return cmp;
+
+            // Потом по name
+            String nameA = a.getName() != null ? a.getName() : "";
+            String nameB = b.getName() != null ? b.getName() : "";
+            return naturalCompare(nameA, nameB);
         });
 
         return setpoints;
     }
-
     /**
      * Вычисляет оценку релевантности уставки
      * Чем меньше число — тем выше релевантность
@@ -1149,7 +1156,7 @@ public class RepositoryImpl implements IRepository {
                     null, null, null);
             while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
             cursor.close();
-            return valves;
+            return sortGateValvesByRelevance(valves, query);
         }
 
         // === КОРОТКИЙ ===
@@ -1163,7 +1170,7 @@ public class RepositoryImpl implements IRepository {
                     null, null, null);
             while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
             cursor.close();
-            return valves;
+            return sortGateValvesByRelevance(valves, query);
         }
 
         // === КОДОВЫЙ (<=6) ===
@@ -1179,7 +1186,7 @@ public class RepositoryImpl implements IRepository {
                 while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
                 cursor.close();
 
-                if (!valves.isEmpty()) return valves;
+                if (!valves.isEmpty()) return sortGateValvesByRelevance(valves, query);
 
             } else {
                 String exactSelection = "(" + isyClean + " = LOWER(?)"
@@ -1192,7 +1199,7 @@ public class RepositoryImpl implements IRepository {
                 while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
                 cursor.close();
 
-                if (!valves.isEmpty()) return valves;
+                if (!valves.isEmpty()) return sortGateValvesByRelevance(valves, query);
 
                 String prefixSelection = "(" + isyClean + " LIKE LOWER(?)"
                         + " OR " + nameClean + " LIKE LOWER(?)"
@@ -1204,7 +1211,7 @@ public class RepositoryImpl implements IRepository {
                 while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
                 cursor.close();
 
-                if (!valves.isEmpty()) return valves;
+                if (!valves.isEmpty()) return sortGateValvesByRelevance(valves, query);
             }
         }
 
@@ -1219,7 +1226,7 @@ public class RepositoryImpl implements IRepository {
                     null, null, null);
             while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
             cursor.close();
-            return valves;
+            return sortGateValvesByRelevance(valves, query);
         }
 
         int n = prefixes.size();
@@ -1236,7 +1243,7 @@ public class RepositoryImpl implements IRepository {
         while (cursor.moveToNext()) valves.add(cursorToUserGateValve(cursor));
         cursor.close();
 
-        return valves;
+        return sortGateValvesByRelevance(valves, query);
     }
 
     @Override
@@ -1519,20 +1526,49 @@ public class RepositoryImpl implements IRepository {
 
     private List<GateValve> sortGateValvesByRelevance(List<GateValve> valves, String query) {
         String cleanQuery = query.replaceAll("[\\s\\-\\.\\u2013\\u2014]", "").toLowerCase();
-        if (cleanQuery.isEmpty()) return valves;
 
         Collections.sort(valves, (a, b) -> {
-            int scoreA = getValveRelevanceScore(a, cleanQuery);
-            int scoreB = getValveRelevanceScore(b, cleanQuery);
+            int scoreA = getGateValveRelevanceScore(a, cleanQuery);
+            int scoreB = getGateValveRelevanceScore(b, cleanQuery);
             if (scoreA != scoreB) return Integer.compare(scoreA, scoreB);
 
-            // Дополнительно: короче isy — выше
-            int lenA = a.getIsy() != null ? a.getIsy().length() : Integer.MAX_VALUE;
-            int lenB = b.getIsy() != null ? b.getIsy().length() : Integer.MAX_VALUE;
-            return Integer.compare(lenA, lenB);
+            // Внутри одного приоритета — натуральная сортировка по isy
+            String isyA = a.getIsy() != null ? a.getIsy() : "";
+            String isyB = b.getIsy() != null ? b.getIsy() : "";
+            int cmp = naturalCompare(isyA, isyB);
+            if (cmp != 0) return cmp;
+
+            // Потом по name
+            String nameA = a.getName() != null ? a.getName() : "";
+            String nameB = b.getName() != null ? b.getName() : "";
+            return naturalCompare(nameA, nameB);
         });
 
         return valves;
+    }
+    private int getGateValveRelevanceScore(GateValve valve, String cleanQuery) {
+        String isy = valve.getIsy() != null
+                ? valve.getIsy().toLowerCase().replaceAll("[\\s\\-\\.\\u2013\\u2014]", "")
+                : "";
+        String name = valve.getName() != null
+                ? valve.getName().toLowerCase().replaceAll("[\\s\\-\\.\\u2013\\u2014]", "")
+                : "";
+        String fullName = valve.getFullName() != null ? valve.getFullName().toLowerCase() : "";
+        String powerCabinet = valve.getPowerCabinet() != null ? valve.getPowerCabinet().toLowerCase() : "";
+
+        if (isy.equals(cleanQuery)) return 1;
+        if (name.equals(cleanQuery)) return 2;
+
+        if (isy.startsWith(cleanQuery)) return 10;
+        if (name.startsWith(cleanQuery)) return 11;
+
+        if (isy.contains(cleanQuery)) return 20;
+        if (name.contains(cleanQuery)) return 21;
+
+        if (fullName.contains(cleanQuery)) return 30;
+        if (powerCabinet.contains(cleanQuery)) return 31;
+
+        return 100;
     }
 
     private int getValveRelevanceScore(GateValve valve, String cleanQuery) {
@@ -1566,6 +1602,47 @@ public class RepositoryImpl implements IRepository {
         if (onPlace.contains(cleanQuery)) return 33;
 
         return 100;
+    }
+
+
+    private static int naturalCompare(String a, String b) {
+        if (a == null && b == null) return 0;
+        if (a == null) return 1;
+        if (b == null) return -1;
+
+        int i = 0, j = 0;
+        int lenA = a.length(), lenB = b.length();
+
+        while (i < lenA && j < lenB) {
+            char ca = a.charAt(i);
+            char cb = b.charAt(j);
+
+            if (Character.isDigit(ca) && Character.isDigit(cb)) {
+                // Читаем всю числовую последовательность
+                int startI = i;
+                int startJ = j;
+                while (i < lenA && Character.isDigit(a.charAt(i))) i++;
+                while (j < lenB && Character.isDigit(b.charAt(j))) j++;
+
+                String numA = a.substring(startI, i);
+                String numB = b.substring(startJ, j);
+
+                // Сравниваем как числа (ведущие нули игнорируем)
+                java.math.BigInteger bigA = new java.math.BigInteger(numA);
+                java.math.BigInteger bigB = new java.math.BigInteger(numB);
+                int cmp = bigA.compareTo(bigB);
+                if (cmp != 0) return cmp;
+            } else {
+                // Сравниваем символы
+                char lowerA = Character.toLowerCase(ca);
+                char lowerB = Character.toLowerCase(cb);
+                if (lowerA != lowerB) return Character.compare(lowerA, lowerB);
+                i++;
+                j++;
+            }
+        }
+
+        return Integer.compare(lenA - i, lenB - j);
     }
 
 
@@ -2348,7 +2425,18 @@ public class RepositoryImpl implements IRepository {
         Collections.sort(sensors, (a, b) -> {
             int scoreA = getSensorRelevanceScore(a, lowerQuery, kksQuery);
             int scoreB = getSensorRelevanceScore(b, lowerQuery, kksQuery);
-            return Integer.compare(scoreA, scoreB);
+            if (scoreA != scoreB) return Integer.compare(scoreA, scoreB);
+
+            // Внутри одинакового приоритета — натуральная сортировка по st_marking
+            String smA = a.getStMarkir() != null ? a.getStMarkir() : "";
+            String smB = b.getStMarkir() != null ? b.getStMarkir() : "";
+            int cmp = naturalCompare(smA, smB);
+            if (cmp != 0) return cmp;
+
+            // Если st_marking совпадает — по name
+            String nameA = a.getName() != null ? a.getName() : "";
+            String nameB = b.getName() != null ? b.getName() : "";
+            return naturalCompare(nameA, nameB);
         });
 
         return sensors;
@@ -2675,7 +2763,7 @@ public class RepositoryImpl implements IRepository {
         Cursor cursor = db.query(
                 "user_measurements",
                 null, null, null, null, null,
-                "measurement_date DESC"
+                "created_at DESC, id DESC"   // 🔥 новые вверху
         );
 
         while (cursor.moveToNext()) {
@@ -2684,7 +2772,6 @@ public class RepositoryImpl implements IRepository {
         cursor.close();
         return measurements;
     }
-
     @Override
     public List<Measurement> getUserMeasurementsByDate(String date) {
         List<Measurement> measurements = new ArrayList<>();

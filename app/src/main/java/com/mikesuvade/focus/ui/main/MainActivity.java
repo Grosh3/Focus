@@ -190,6 +190,8 @@ public class MainActivity extends AppCompatActivity implements
         updateButtonState();
         checkRefDb();
         updateTitleForMode();
+        Log.d("MAIN_ACTIVITY", "onCreate START");
+        Log.d("MAIN_ACTIVITY", "hasActiveSession=" + AppState.getInstance().hasActiveSession());
     }
 
     @Override
@@ -200,22 +202,31 @@ public class MainActivity extends AppCompatActivity implements
         AppState appState = AppState.getInstance();
         Log.d("MAIN_ACTIVITY", "hasActiveSession = " + appState.hasActiveSession());
         Log.d("MAIN_ACTIVITY", "lastOpenedSessionId = " + appState.getLastOpenedSessionId());
+        Log.d("MAIN_ACTIVITY", "hasUnsavedList = " + appState.hasUnsavedList());
+        Log.d("MAIN_ACTIVITY", "unsavedListIds = " + appState.getUnsavedListIds());
+        Log.d("MAIN_ACTIVITY", "isMainMode = " + (modeManager != null && modeManager.isMainMode()));
+        Log.d("MAIN_ACTIVITY", "isSearchActive = " + isSearchActive);
 
         if (modeManager != null && modeManager.isMainMode()) {
-            if (!appState.hasActiveSession()) {
-                viewModel.clearCurrentList();
-                Log.d("MAIN_ACTIVITY", "No active session, cleared current list");
-            } else {
+            if (appState.hasActiveSession()) {
+                Log.d("MAIN_ACTIVITY", "branch: restoreLastSession");
                 sessionManager.restoreLastSession();
-                Log.d("MAIN_ACTIVITY", "Restoring session");
+            } else if (appState.hasUnsavedList()) {
+                Log.d("MAIN_ACTIVITY", "branch: restoreUnsavedList");
+                sessionManager.restoreUnsavedList();
+            } else {
+                Log.d("MAIN_ACTIVITY", "branch: clearCurrentList");
+                viewModel.clearCurrentList();
             }
 
-            // 🔥 ДОБАВЛЯЕМ ЗАДЕРЖКУ ДЛЯ СИНХРОНИЗАЦИИ
             rvGateValves.postDelayed(() -> {
                 sessionManager.syncAdapterSelection();
                 updateButtonState();
             }, 100);
+        } else {
+            Log.d("MAIN_ACTIVITY", "branch: not main mode, skipping restore");
         }
+
         Log.d("MAIN_ACTIVITY", "=== onResume END ===");
     }
 
@@ -369,17 +380,23 @@ public class MainActivity extends AppCompatActivity implements
                         adapterManager.getValveAdapter().updateData(new ArrayList<>(), new ArrayList<>());
                         rvGateValves.setVisibility(View.VISIBLE);
                         tvEmptySearch.setVisibility(View.GONE);
-                    } else if (query.length() >= 2) {
-                        searchManager.searchValves(query);
                     } else if (query.equalsIgnoreCase("#все")) {
                         searchManager.loadAllValves();
+                    } else if (query.length() >= 2) {
+                        searchManager.searchValves(query);
                     } else {
                         adapterManager.getValveAdapter().updateData(new ArrayList<>(), new ArrayList<>());
                         rvGateValves.setVisibility(View.VISIBLE);
                         tvEmptySearch.setVisibility(View.GONE);
                     }
                 } else if (modeManager.isSensorsMode()) {
-                    if (query.length() >= 2 || query.equalsIgnoreCase("#все")) {
+                    if (query.isEmpty()) {
+                        adapterManager.getSensorAdapter().updateData(new ArrayList<>());
+                        rvGateValves.setVisibility(View.VISIBLE);
+                        tvEmptySearch.setVisibility(View.GONE);
+                    } else if (query.equalsIgnoreCase("#все")) {
+                        searchManager.loadAllSensors();
+                    } else if (query.length() >= 2) {
                         searchManager.searchSensors(query);
                     } else {
                         adapterManager.getSensorAdapter().updateData(new ArrayList<>());
@@ -387,7 +404,13 @@ public class MainActivity extends AppCompatActivity implements
                         tvEmptySearch.setVisibility(View.GONE);
                     }
                 } else if (modeManager.isSetpointsMode()) {
-                    if (query.length() >= 2 || query.equalsIgnoreCase("#все")) {
+                    if (query.isEmpty()) {
+                        adapterManager.getSetpointAdapter().updateData(new ArrayList<>());
+                        rvGateValves.setVisibility(View.VISIBLE);
+                        tvEmptySearch.setVisibility(View.GONE);
+                    } else if (query.equalsIgnoreCase("#все")) {
+                        searchManager.loadAllSetpoints();
+                    } else if (query.length() >= 2) {
                         searchManager.searchSetpoints(query);
                     } else {
                         adapterManager.getSetpointAdapter().updateData(new ArrayList<>());
@@ -515,14 +538,14 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void updateButtonState() {
-        sessionManager.updateButtonState();
+        if (modeManager != null && modeManager.isMainMode()) {
+            sessionManager.updateButtonState();
+        } else {
+            btnNewValve.setVisibility(View.GONE);
+            updateTitle(true);
+        }
     }
 
-    @Override
-    public void loadAllGateValvesWithUser() {
-        searchManager.loadAllValves();
-        updateTitleForMode();
-    }
 
     @Override
     public void clearSearch() {
@@ -564,29 +587,30 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void refreshData() {
+        // Ничего не грузим автоматически.
+        // Обновляем список только если пользователь в активном поиске.
+        if (!isSearchActive) {
+            return;
+        }
+
         String query = etSearch.getText().toString().trim();
 
         if (modeManager.isMainMode()) {
             if (query.length() >= 2) {
                 searchManager.searchValves(query);
-            } else {
-                searchManager.loadAllValves();
             }
+            // Пустой запрос — не трогаем адаптер.
+            // Пользователь либо уже вышел из поиска, либо ещё ничего не ввёл.
         } else if (modeManager.isSensorsMode()) {
             if (query.length() >= 2) {
                 searchManager.searchSensors(query);
-            } else {
-                searchManager.loadAllSensors();
             }
         } else if (modeManager.isSetpointsMode()) {
             if (query.length() >= 2) {
                 searchManager.searchSetpoints(query);
-            } else {
-                searchManager.loadAllSetpoints();
             }
         }
     }
-
     @Override
     public void launchListDetailActivity(Intent intent) {
         listDetailResultLauncher.launch(intent);
@@ -736,7 +760,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void clearCurrentList() {
         viewModel.clearCurrentList();
-        AppState.getInstance().clearUnsavedListIds(); // 🔥 ДОБАВИТЬ
+      // 🔥 ДОБАВИТЬ
     }
 
     @Override
@@ -786,25 +810,27 @@ public class MainActivity extends AppCompatActivity implements
     private void showMeasurementTypeDialog() {
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_measurement_type, null);
 
-        TextView tvMv = dialogView.findViewById(R.id.tvMv);
+        TextView tvMv  = dialogView.findViewById(R.id.tvMv);
         TextView tvOhm = dialogView.findViewById(R.id.tvOhm);
 
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setCancelable(true)
+                .create();
+
         tvMv.setOnClickListener(v -> {
+            dialog.dismiss();                            // 🔥 ЗАКРЫВАЕМ ДИАЛОГ
             Intent intent = new Intent(MainActivity.this, TemperatureActivity.class);
             intent.putExtra("MODE", "MV");
             startActivity(intent);
         });
 
         tvOhm.setOnClickListener(v -> {
+            dialog.dismiss();                            // 🔥 ЗАКРЫВАЕМ ДИАЛОГ
             Intent intent = new Intent(MainActivity.this, TemperatureActivity.class);
             intent.putExtra("MODE", "OHM");
             startActivity(intent);
         });
-
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setView(dialogView)
-                .setCancelable(true)
-                .create();
 
         dialog.show();
     }

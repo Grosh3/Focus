@@ -12,24 +12,14 @@
         android:layout_height="wrap_content"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="12dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
         android:background="?android:attr/windowBackground"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageButton
-            android:id="@+id/btnBack"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_close"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/btn_back_description"
-            app:tint="?android:attr/textColorPrimary"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
+        <!-- Крестик убран -->
 
         <TextView
             android:id="@+id/tvTitle"
@@ -42,10 +32,12 @@
             android:maxLines="1"
             android:ellipsize="end"
             android:textColor="?android:attr/textColorPrimary"
-            app:layout_constraintStart_toEndOf="@id/btnBack"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
+
+
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

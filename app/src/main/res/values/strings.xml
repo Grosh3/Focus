@@ -60,24 +60,24 @@
     <string name="btn_back_description">Закрыть</string>
     <string name="status_assemble">СОБРАТЬ</string>
     <string name="status_disassemble">РАЗОБРАТЬ</string>
-    <string name="status_assembled">✅ СОБРАНА</string>
-    <string name="status_disassembled">✅ РАЗОБРАНА</string>
+    <string name="status_assembled"> СОБРАНА</string>
+    <string name="status_disassembled"> РАЗОБРАНА</string>
 
     <!-- 🔥 СТАТУСЫ ДВИГАТЕЛЯ И ККВ -->
-    <string name="status_motor_off">Дв отключен</string>
-    <string name="status_motor_on">Дв подключен</string>
-    <string name="status_motor_connected">Дв подключен</string>
-    <string name="status_motor_disconnected">Дв отключен</string>
+    <string name="status_motor_off">ДВ отключен</string>
+    <string name="status_motor_on">ДВ подключен</string>
+    <string name="status_motor_connected">ДВ подключен</string>
+    <string name="status_motor_disconnected">ДВ отключен</string>
     <string name="status_box_installed">ККВ установлена</string>
     <string name="status_box_removed">ККВ снята</string>
     <!-- Статусы двигателя и ККВ для режима "СОБРАТЬ" -->
-    <string name="motor_connect">Подключить Дв</string>
-    <string name="motor_disconnect">Отключить Дв</string>
+    <string name="motor_connect">Подключить ДВ</string>
+    <string name="motor_disconnect">Отключить ДВ</string>
     <string name="box_install">Установить ККВ</string>
     <string name="box_remove">Снять ККВ</string>
     <!-- Статусы для режима "СОБРАНА" (чекбокс отмечен) -->
-    <string name="status_motor_connected_full">Дв подключен</string>
-    <string name="status_motor_disconnected_full">Дв отключен</string>
+    <string name="status_motor_connected_full">ДВ подключен</string>
+    <string name="status_motor_disconnected_full">ДВ отключен</string>
     <string name="status_box_installed_full">ККВ установлена</string>
     <string name="status_box_removed_full">ККВ снята</string>
 
@@ -114,7 +114,7 @@
     <string name="toast_open_list">Открыть список (%d шт.)</string>
     <string name="toast_added">Добавлено: %s</string>
     <string name="toast_removed">Удалено: %s</string>
-    <string name="toast_blocking">Блокировка: %s для %s</string>
+    <string name="toast_blocking">Блокировка: %1$s для %2$s</string>
 
     <string name="saved_lists_title">Сохранённые списки</string>
     <string name="saved_lists_empty">📭 Нет сохранённых списков</string>

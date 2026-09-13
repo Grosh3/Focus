@@ -21,6 +21,10 @@ import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.ValveWorkSession;
 import com.mikesuvade.focus.ui.list.ListDetailActivity;
 import com.mikesuvade.focus.utils.AppState;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+import android.view.Window;
 
 public class SavedListsActivity extends AppCompatActivity {
 
@@ -32,8 +36,11 @@ public class SavedListsActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        androidx.activity.EdgeToEdge.enable(this);
         setContentView(R.layout.activity_saved_lists);
-
+        setStatusBarIconsDark(true);              // 🔥 ДОБАВИТЬ
+        fixTopPanelPadding();                     // 🔥 ДОБАВИТЬ
+        fixRecyclerViewBottomPadding();
         viewModel = new ViewModelProvider(
                 this,
                 new ViewModelProvider.Factory() {
@@ -58,7 +65,7 @@ public class SavedListsActivity extends AppCompatActivity {
     private void initViews() {
         rvSavedLists = findViewById(R.id.rvSavedLists);
         tvEmpty = findViewById(R.id.tvEmpty);
-        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+
     }
 
     private void setupRecyclerView() {
@@ -160,5 +167,53 @@ public class SavedListsActivity extends AppCompatActivity {
                 viewModel.loadSessions();
             }
         }, 300);
+    }
+    private void setStatusBarIconsDark(boolean dark) {
+        Window window = getWindow();
+        if (window != null) {
+            WindowInsetsControllerCompat controller =
+                    new WindowInsetsControllerCompat(window, window.getDecorView());
+            controller.setAppearanceLightStatusBars(dark);
+        }
+    }
+
+    private void fixTopPanelPadding() {
+        View topPanel = findViewById(R.id.topPanel);
+        if (topPanel == null) return;
+
+        ViewCompat.setOnApplyWindowInsetsListener(topPanel, (view, windowInsets) -> {
+            int statusBarHeight = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+
+            view.setPadding(
+                    view.getPaddingLeft(),
+                    statusBarHeight + view.getPaddingTop(),
+                    view.getPaddingRight(),
+                    view.getPaddingBottom()
+            );
+
+            ViewCompat.setOnApplyWindowInsetsListener(view, null);
+            return windowInsets;
+        });
+    }
+
+    private void fixRecyclerViewBottomPadding() {
+        RecyclerView rv = findViewById(R.id.rvSavedLists);
+        if (rv == null) return;
+
+        rv.setClipToPadding(false);
+
+        ViewCompat.setOnApplyWindowInsetsListener(rv, (v, insets) -> {
+            int navBarHeight = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            int extraPadding = (int) (16 * getResources().getDisplayMetrics().density);
+
+            rv.setPadding(
+                    rv.getPaddingLeft(),
+                    rv.getPaddingTop(),
+                    rv.getPaddingRight(),
+                    navBarHeight + extraPadding
+            );
+
+            return insets;
+        });
     }
 }

@@ -14,6 +14,7 @@ import com.mikesuvade.focus.domain.models.ValveWorkSession;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -72,7 +73,8 @@ public class SavedListAdapter extends RecyclerView.Adapter<SavedListAdapter.View
 
             String saveDate = session.getSaveDate();
             if (saveDate != null && !saveDate.isEmpty()) {
-                tvListDate.setText("📅 " + saveDate);
+                tvListDate.setVisibility(View.VISIBLE);
+                tvListDate.setText("📅 " + formatDate(saveDate));
             } else {
                 tvListDate.setVisibility(View.GONE);
             }
@@ -89,6 +91,18 @@ public class SavedListAdapter extends RecyclerView.Adapter<SavedListAdapter.View
                 }
                 return true;
             });
+
+        }
+        private static String formatDate(String raw) {
+            if (raw == null || raw.isEmpty()) return "";
+            try {
+                SimpleDateFormat in = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+                SimpleDateFormat out = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
+                Date d = in.parse(raw);
+                return d != null ? out.format(d) : raw;
+            } catch (Exception e) {
+                return raw;
+            }
         }
     }
 }

@@ -16,15 +16,25 @@ public class TemperatureViewModel extends ViewModel {
 
     private static final String TAG = "TEMP_DEBUG";
     private final IRepository repository;
-    private final MutableLiveData<List<TemperatureResult>> results = new MutableLiveData<>(new ArrayList<>());
+    private final MutableLiveData<List<TemperatureResult>> results =
+            new MutableLiveData<>(new ArrayList<>());
 
     // ✅ ТЕРМОСОПРОТИВЛЕНИЯ (Ом)
     private final String[] ohmTables = {"tcp50p", "tsm50m", "gr21", "gr23"};
-    private final String[] ohmNames = {"ТСП50П", "ТСМ50М", "Гр21 (46П)", "Гр23 (53М)"};
+    private final String[] ohmNames  = {"ТСП50П", "ТСМ50М", "Гр21 (46П)", "Гр23 (53М)"};
 
     // ✅ ТЕРМОПАРЫ (мВ)
     private final String[] mvTables = {"ha", "hk"};
-    private final String[] mvNames = {"ХА", "ХК"};
+    private final String[] mvNames  = {"ХА", "ХК"};
+
+    // 🔥 ГРАНИЦЫ ТЕМПЕРАТУР (°C) — порядок совпадает с массивами выше
+    // [0]=tcp50p, [1]=tsm50m, [2]=gr21, [3]=gr23
+    private final double[] ohmMinTemp = {-50, -50, -30, -20};
+    private final double[] ohmMaxTemp = {409, 209, 409, 179};
+
+    // [0]=ha(ХА), [1]=hk(ХК)
+    private final double[] mvMinTemp = {-270, -200};
+    private final double[] mvMaxTemp = {1372,  800};
 
     public TemperatureViewModel(IRepository repository) {
         this.repository = repository;
@@ -59,6 +69,12 @@ public class TemperatureViewModel extends ViewModel {
                         result.setCorrectedValue(correctedValue);
                         result.setTemperature(temperature);
                         result.setTableName(ohmTables[i]);
+
+                        // 🔥 ПРОВЕРКА ДИАПАЗОНА (граница = ошибка)
+                        if (temperature <= ohmMinTemp[i] || temperature >= ohmMaxTemp[i]) {
+                            result.setOutOfRange(true);
+                        }
+
                         resultList.add(result);
                     }
                 } else {
@@ -104,6 +120,12 @@ public class TemperatureViewModel extends ViewModel {
                         result.setTotalMv(totalMv);
                         result.setTemperature(temperature);
                         result.setTableName(mvTables[i]);
+
+                        // 🔥 ПРОВЕРКА ДИАПАЗОНА (граница = ошибка)
+                        if (temperature <= mvMinTemp[i] || temperature >= mvMaxTemp[i]) {
+                            result.setOutOfRange(true);
+                        }
+
                         resultList.add(result);
                     }
                 }
@@ -117,6 +139,7 @@ public class TemperatureViewModel extends ViewModel {
             }
         }).start();
     }
+
     public void clearResults() {
         results.setValue(new ArrayList<>());
     }

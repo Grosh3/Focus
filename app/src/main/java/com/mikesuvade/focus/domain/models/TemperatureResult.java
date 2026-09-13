@@ -13,7 +13,8 @@ public class TemperatureResult {
     // Для термопар (мВ)
     private double coldJunctionTemp; // температура холодного спая
     private double coldJunctionMv;   // напряжение холодного спая
-    private double totalMv;          // суммарное напряжение
+    private double totalMv;// суммарное напряжение
+    private boolean outOfRange;
 
     // ==========================================
     // ГЕТТЕРЫ И СЕТТЕРЫ
@@ -47,4 +48,9 @@ public class TemperatureResult {
 
     public double getTotalMv() { return totalMv; }
     public void setTotalMv(double totalMv) { this.totalMv = totalMv; }
+
+
+    public boolean isOutOfRange() { return outOfRange; }
+    public void setOutOfRange(boolean outOfRange) { this.outOfRange = outOfRange; }
+
 }

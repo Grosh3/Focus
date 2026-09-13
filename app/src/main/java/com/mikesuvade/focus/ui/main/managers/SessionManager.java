@@ -68,46 +68,82 @@ public class SessionManager {
         Log.d(TAG, "=== restoreLastSession START ===");
         AppState appState = AppState.getInstance();
 
-        if (appState.hasActiveSession()) {
-            String sessionId = appState.getLastOpenedSessionId();
-            Log.d(TAG, "sessionId = " + sessionId);
+        if (!appState.hasActiveSession()) {
+            Log.d(TAG, "No active session");
+            listener.syncAdapterSelection();
+            listener.updateButtonState();
+            return;
+        }
 
-            new Thread(() -> {
-                try {
+        String sessionId = appState.getLastOpenedSessionId();
+        Log.d(TAG, "sessionId = " + sessionId);
+
+        new Thread(() -> {
+            try {
+                // 🔥 1. Проверяем, есть ли сессия в БД
+                ValveWorkSession dbSession = repository.getUserWorkSessionById(sessionId);
+                boolean sessionExistsInDb = dbSession != null;
+                Log.d(TAG, "sessionExistsInDb = " + sessionExistsInDb);
+
+                List<GateValve> loadedValves = new ArrayList<>();
+                List<Integer> loadedIds = new ArrayList<>();
+
+                if (sessionExistsInDb) {
+                    // Сессия в БД есть — грузим items
                     List<ValveItem> items = repository.getUserSessionItemsBySession(sessionId);
                     Log.d(TAG, "items size = " + items.size());
 
-                    List<GateValve> loadedValves = new ArrayList<>();
-                    List<Integer> loadedIds = new ArrayList<>(); // 🔥 ДЛЯ СИНХРОНИЗАЦИИ
-
                     for (ValveItem item : items) {
-                        GateValve valve = repository.getGateValveById(item.getGateValveId());
-                        if (valve != null) {
+                        GateValve valve = item.getGateValveId() < 0
+                                ? repository.getUserGateValveById(item.getGateValveId())
+                                : repository.getGateValveById(item.getGateValveId());
+                        if (valve == null) {
+                            valve = repository.getUserGateValveById(item.getGateValveId());
+                        }
+                        if (valve != null && valve.getIsDeleted() != 1) {
                             loadedValves.add(valve);
                             loadedIds.add(valve.getId());
                         }
                     }
-
-                    new Handler(Looper.getMainLooper()).post(() -> {
-                        viewModelCallback.clearCurrentList();
-                        for (GateValve valve : loadedValves) {
-                            viewModelCallback.addToCurrentList(valve);
-                        }
-                        viewModelCallback.updateCurrentListSize(items.size());
-
-                        // 🔥 ВЫЗЫВАЕМ СИНХРОНИЗАЦИЮ ПОСЛЕ ЗАГРУЗКИ
-                        listener.syncAdapterSelectionWithIds(loadedIds);
-                        listener.updateButtonState();
-                    });
-                } catch (Exception e) {
-                    Log.e(TAG, "Error restoring session", e);
                 }
-            }).start();
-        } else {
-            Log.d(TAG, "No active session");
-            listener.syncAdapterSelection();
-            listener.updateButtonState();
-        }
+
+                // 🔥 2. Если в БД пусто — fallback на unsavedListIds
+                if (loadedValves.isEmpty() && appState.hasUnsavedList()) {
+                    Log.d(TAG, "falling back to unsavedListIds");
+                    for (Integer id : appState.getUnsavedListIds()) {
+                        GateValve valve = id < 0
+                                ? repository.getUserGateValveById(id)
+                                : repository.getGateValveById(id);
+                        if (valve != null && valve.getIsDeleted() != 1) {
+                            loadedValves.add(valve);
+                            loadedIds.add(id);
+                        }
+                    }
+                }
+
+                // 🔥 3. Если совсем пусто и сессии в БД нет — сбрасываем AppState
+                if (loadedValves.isEmpty() && !sessionExistsInDb && !appState.hasUnsavedList()) {
+                    Log.d(TAG, "no session in DB, no unsaved ids — clearing");
+                    AppState.getInstance().clearSession();
+                }
+
+                List<GateValve> finalValves = loadedValves;
+                List<Integer> finalIds = loadedIds;
+
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    viewModelCallback.clearCurrentList();
+                    for (GateValve valve : finalValves) {
+                        viewModelCallback.addToCurrentList(valve);
+                    }
+                    viewModelCallback.updateCurrentListSize(finalValves.size());
+
+                    listener.syncAdapterSelectionWithIds(finalIds);
+                    listener.updateButtonState();
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error restoring session", e);
+            }
+        }).start();
     }
 
     public void openSession() {
@@ -221,6 +257,7 @@ public class SessionManager {
 
     public void clearSelection() {
         viewModelCallback.clearCurrentList();
+        AppState.getInstance().clearUnsavedListIds();
         viewModelCallback.setRecording(false);
         listener.updateButtonState();
         listener.syncAdapterSelection();
@@ -248,6 +285,52 @@ public class SessionManager {
 
         // Передаем в listener
         listener.syncAdapterSelectionWithIds(currentIds);
+    }
+    public void restoreUnsavedList() {
+        Log.d(TAG, "=== restoreUnsavedList START ===");
+        AppState appState = AppState.getInstance();
+
+        List<Integer> ids = new ArrayList<>(appState.getUnsavedListIds());
+        Log.d(TAG, "unsavedListIds = " + ids);
+
+        if (ids.isEmpty()) {
+            Log.d(TAG, "empty, nothing to restore");
+            listener.syncAdapterSelection();
+            listener.updateButtonState();
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                List<GateValve> loadedValves = new ArrayList<>();
+                List<Integer> loadedIds = new ArrayList<>();
+
+                for (Integer id : ids) {
+                    GateValve valve = id < 0
+                            ? repository.getUserGateValveById(id)
+                            : repository.getGateValveById(id);
+                    if (valve != null && valve.getIsDeleted() != 1) {
+                        loadedValves.add(valve);
+                        loadedIds.add(id);
+                    }
+                }
+
+                Log.d(TAG, "loaded valves = " + loadedValves.size());
+
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    viewModelCallback.clearCurrentList();
+                    for (GateValve valve : loadedValves) {
+                        viewModelCallback.addToCurrentList(valve);
+                    }
+                    viewModelCallback.updateCurrentListSize(loadedValves.size());
+
+                    listener.syncAdapterSelectionWithIds(loadedIds);
+                    listener.updateButtonState();
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error restoring unsaved list", e);
+            }
+        }).start();
     }
 
 

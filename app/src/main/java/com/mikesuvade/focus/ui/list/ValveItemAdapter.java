@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import android.widget.LinearLayout;
 
 public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.ViewHolder> {
 
@@ -109,7 +108,6 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
             String isy = item.getGateValveIsy();
             String name = item.getGateValveName();
 
-            // Если в ValveItem нет данных - пробуем получить из GateValve
             if ((isy == null || isy.isEmpty()) || (name == null || name.isEmpty())) {
                 GateValve valve = getGateValveMerged(item.getGateValveId(), context);
                 if (valve != null) {
@@ -118,7 +116,6 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 }
             }
 
-            // Отображаем ISY
             if (isy != null && !isy.isEmpty()) {
                 tvIsy.setVisibility(View.VISIBLE);
                 tvIsy.setText(isy);
@@ -126,7 +123,6 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 tvIsy.setVisibility(View.GONE);
             }
 
-            // Отображаем NAME
             if (name == null || name.isEmpty()) {
                 name = context.getString(R.string.no_name);
             }
@@ -135,35 +131,25 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
             // ==========================================
             // СТАТУСЫ
             // ==========================================
-
-            // 1. Статус сборки + время в одной строке
             tvAssembleStatus.setVisibility(View.VISIBLE);
             tvCheckedAt.setVisibility(View.GONE);
 
             if (item.getIsChecked() == 0) {
-                // 🔥 НЕ ВЫПОЛНЕНО
-
-                // Определяем текст для статуса сборки в зависимости от isAssembled
                 if (item.getIsAssembled() == 1) {
-                    // Режим "СОБРАТЬ"
                     tvAssembleStatus.setText(context.getString(R.string.status_assemble));
                     tvAssembleStatus.setTextColor(ContextCompat.getColor(context, R.color.status_success));
                 } else {
-                    // Режим "РАЗОБРАТЬ"
                     tvAssembleStatus.setText(context.getString(R.string.status_disassemble));
                     tvAssembleStatus.setTextColor(ContextCompat.getColor(context, R.color.status_error));
                 }
                 tvCheckedAt.setVisibility(View.GONE);
 
-                // 🔥 ДВИГАТЕЛЬ - показываем только если нажата кнопка
                 if (item.getMotorDisabled() == 1) {
                     tvMotorStatus.setVisibility(View.VISIBLE);
                     if (item.getIsAssembled() == 1) {
-                        // Режим "СОБРАТЬ"
                         tvMotorStatus.setText(context.getString(R.string.motor_connect));
                         tvMotorStatus.setTextColor(ContextCompat.getColor(context, R.color.status_error));
                     } else {
-                        // Режим "РАЗОБРАТЬ"
                         tvMotorStatus.setText(context.getString(R.string.motor_disconnect));
                         tvMotorStatus.setTextColor(ContextCompat.getColor(context, R.color.status_error));
                     }
@@ -171,15 +157,12 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                     tvMotorStatus.setVisibility(View.GONE);
                 }
 
-                // 🔥 ККВ - показываем только если нажата кнопка
                 if (item.getBoxRemoved() == 1) {
                     tvBoxStatus.setVisibility(View.VISIBLE);
                     if (item.getIsAssembled() == 1) {
-                        // Режим "СОБРАТЬ"
                         tvBoxStatus.setText(context.getString(R.string.box_install));
                         tvBoxStatus.setTextColor(ContextCompat.getColor(context, R.color.status_warning));
                     } else {
-                        // Режим "РАЗОБРАТЬ"
                         tvBoxStatus.setText(context.getString(R.string.box_remove));
                         tvBoxStatus.setTextColor(ContextCompat.getColor(context, R.color.status_warning));
                     }
@@ -188,20 +171,14 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 }
 
             } else {
-                // ✅ ВЫПОЛНЕНО (чекбокс отмечен)
-
-                // Статус сборки
                 if (item.getIsAssembled() == 1) {
-                    // Режим "СОБРАНА"
                     tvAssembleStatus.setText(context.getString(R.string.status_assembled));
                     tvAssembleStatus.setTextColor(ContextCompat.getColor(context, R.color.status_success));
                 } else {
-                    // 🔥 Режим "РАЗОБРАНО"
                     tvAssembleStatus.setText(context.getString(R.string.status_disassembled));
                     tvAssembleStatus.setTextColor(ContextCompat.getColor(context, R.color.status_error));
                 }
 
-                // Показываем время
                 if (!TextUtils.isEmpty(item.getCheckedAt())) {
                     try {
                         SimpleDateFormat fullFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
@@ -220,15 +197,12 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                     }
                 }
 
-                // 🔥 ДВИГАТЕЛЬ - показываем только если нажата кнопка
                 if (item.getMotorDisabled() == 1) {
                     tvMotorStatus.setVisibility(View.VISIBLE);
                     if (item.getIsAssembled() == 1) {
-                        // Режим "СОБРАНА"
                         tvMotorStatus.setText(context.getString(R.string.status_motor_connected_full));
                         tvMotorStatus.setTextColor(ContextCompat.getColor(context, R.color.status_success));
                     } else {
-                        // 🔥 Режим "РАЗОБРАНО"
                         tvMotorStatus.setText(context.getString(R.string.status_motor_disconnected_full));
                         tvMotorStatus.setTextColor(ContextCompat.getColor(context, R.color.status_error));
                     }
@@ -236,15 +210,12 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                     tvMotorStatus.setVisibility(View.GONE);
                 }
 
-                // 🔥 ККВ - показываем только если нажата кнопка
                 if (item.getBoxRemoved() == 1) {
                     tvBoxStatus.setVisibility(View.VISIBLE);
                     if (item.getIsAssembled() == 1) {
-                        // Режим "СОБРАНА"
                         tvBoxStatus.setText(context.getString(R.string.status_box_installed_full));
                         tvBoxStatus.setTextColor(ContextCompat.getColor(context, R.color.status_success));
                     } else {
-                        // 🔥 Режим "РАЗОБРАНО"
                         tvBoxStatus.setText(context.getString(R.string.status_box_removed_full));
                         tvBoxStatus.setTextColor(ContextCompat.getColor(context, R.color.status_warning));
                     }
@@ -290,10 +261,12 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
 
             LinearLayout buttonContainer = (LinearLayout) btnMotor.getParent();
 
-            // Устанавливаем высоту контейнера
+            // 🔥 Квадратные кнопки фиксированного размера
+            int size = (int) (48 * context.getResources().getDisplayMetrics().density);
+
             buttonContainer.setLayoutParams(new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    (int) (48 * context.getResources().getDisplayMetrics().density)
+                    size
             ));
 
             // Сохраняем item в тег
@@ -305,11 +278,9 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
             btnMotor.setColorFilter(null);
 
             if (item.getIsChecked() == 1) {
-                // ✅ РЕЖИМ "СОБРАНА" - ВСЕГДА СЕРЫЙ
                 btnMotor.setColorFilter(ContextCompat.getColor(context, R.color.btn_default));
                 btnMotor.setContentDescription(context.getString(R.string.content_description_motor_off));
             } else {
-                // 🔄 РЕЖИМ "СОБРАТЬ" или "РАЗОБРАТЬ"
                 if (item.getMotorDisabled() == 1) {
                     btnMotor.setColorFilter(ContextCompat.getColor(context, R.color.btn_motor_off));
                     btnMotor.setContentDescription(context.getString(R.string.content_description_motor_on));
@@ -329,11 +300,9 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
             btnBox.setColorFilter(null);
 
             if (item.getIsChecked() == 1) {
-                // ✅ РЕЖИМ "СОБРАНА" - ВСЕГДА СЕРЫЙ
                 btnBox.setColorFilter(ContextCompat.getColor(context, R.color.btn_default));
                 btnBox.setContentDescription(context.getString(R.string.content_description_box_off));
             } else {
-                // 🔄 РЕЖИМ "СОБРАТЬ" или "РАЗОБРАТЬ"
                 if (item.getBoxRemoved() == 1) {
                     btnBox.setColorFilter(ContextCompat.getColor(context, R.color.btn_box_removed));
                     btnBox.setContentDescription(context.getString(R.string.content_description_box_on));
@@ -350,10 +319,10 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
             });
 
             // 🔥 СТРЕЛКА - ВСЕГДА СЕРАЯ
-            btnMove.setColorFilter(ContextCompat.getColor(context, R.color.btn_default));
+            // 🔥 СТРЕЛКА - ВСЕГДА СИНЯЯ
+            btnMove.setColorFilter(ContextCompat.getColor(context, R.color.btn_move_blue));
 
             if (item.getIsAssembled() == 1) {
-                // === ЛЕВЫЙ СПИСОК (СОБРАНО) ===
                 btnMove.setImageResource(R.drawable.ic_move_right);
                 btnMove.setContentDescription("Переместить на разбор");
                 btnMove.setOnClickListener(v -> {
@@ -369,7 +338,6 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 buttonContainer.addView(btnMove);
 
             } else {
-                // === ПРАВЫЙ СПИСОК (РАЗОБРАНО) ===
                 btnMove.setImageResource(R.drawable.ic_move_left);
                 btnMove.setContentDescription("Переместить на сборку");
                 btnMove.setOnClickListener(v -> {
@@ -385,14 +353,14 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 buttonContainer.addView(btnBox);
             }
 
-            // Устанавливаем параметры для каждой кнопки
+            // 🔥 Устанавливаем квадратные размеры ПОСЛЕ добавления во ViewGroup
             for (int i = 0; i < buttonContainer.getChildCount(); i++) {
                 View child = buttonContainer.getChildAt(i);
-                child.setLayoutParams(new LinearLayout.LayoutParams(
-                        0,
-                        (int) (48 * context.getResources().getDisplayMetrics().density),
-                        1
-                ));
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
+                if (i < buttonContainer.getChildCount() - 1) {
+                    params.setMarginEnd((int) (8 * context.getResources().getDisplayMetrics().density));
+                }
+                child.setLayoutParams(params);
             }
 
             // ==========================================
@@ -431,19 +399,15 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 itemView.setBackgroundColor(0x00000000);
             }
         }
-        /**
-         * Получает задвижку из объединенного источника (БД1 + БД2)
-         */
+
         private GateValve getGateValveMerged(int gateValveId, Context context) {
             IRepository repository = ((MyApp) context.getApplicationContext()).getRepository();
 
-            // 🔥 1. Сначала пробуем найти в БД2 (пользовательские) по ID
             GateValve userValve = repository.getUserGateValveById(gateValveId);
             if (userValve != null && userValve.getIsDeleted() != 1) {
                 return userValve;
             }
 
-            // 🔥 2. Если не нашли по ID, пробуем найти по original_id
             List<GateValve> allUserValves = repository.getAllUserGateValves();
             for (GateValve uv : allUserValves) {
                 if (uv.getOriginalId() == gateValveId && uv.getIsDeleted() != 1) {
@@ -451,7 +415,6 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                 }
             }
 
-            // 🔥 3. Если не нашли в БД2, ищем в БД1 (справочник)
             return repository.getGateValveById(gateValveId);
         }
     }

@@ -1,23 +1,32 @@
 package com.mikesuvade.focus.ui.saved;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.Measurement;
 
+import java.text.DecimalFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class SavedMeasurementsAdapter extends RecyclerView.Adapter<SavedMeasurementsAdapter.ViewHolder> {
 
     private List<Measurement> items = new ArrayList<>();
     private OnItemClickListener listener;
+    private final DecimalFormat df = new DecimalFormat("#0.00");
+    private final DecimalFormat dfTemp = new DecimalFormat("#0.0");
 
     public interface OnItemClickListener {
         void onItemClick(Measurement measurement);
@@ -44,7 +53,7 @@ public class SavedMeasurementsAdapter extends RecyclerView.Adapter<SavedMeasurem
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Measurement item = items.get(position);
-        holder.bind(item, listener);  // ← ПЕРЕДАЁМ listener В КАЧЕСТВЕ ПАРАМЕТРА
+        holder.bind(item, listener, df, dfTemp);
     }
 
     @Override
@@ -54,18 +63,24 @@ public class SavedMeasurementsAdapter extends RecyclerView.Adapter<SavedMeasurem
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         private final TextView tvDescription;
+        private final TextView tvSensorType;
         private final TextView tvInfo;
+        private final TextView tvTemperature;
         private final TextView tvDate;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             tvDescription = itemView.findViewById(R.id.tvDescription);
-            tvInfo = itemView.findViewById(R.id.tvInfo);
-            tvDate = itemView.findViewById(R.id.tvDate);
+            tvSensorType  = itemView.findViewById(R.id.tvSensorType);
+            tvInfo        = itemView.findViewById(R.id.tvInfo);
+            tvTemperature = itemView.findViewById(R.id.tvTemperature);
+            tvDate        = itemView.findViewById(R.id.tvDate);
         }
 
-        void bind(Measurement measurement, OnItemClickListener listener) {  // ← ПРИНИМАЕМ listener
-            // Описание
+        void bind(Measurement measurement, OnItemClickListener listener,
+                  DecimalFormat df, DecimalFormat dfTemp) {
+
+            // ===== ОПИСАНИЕ =====
             String description = measurement.getDescription();
             if (description != null && !description.isEmpty()) {
                 tvDescription.setVisibility(View.VISIBLE);
@@ -74,34 +89,44 @@ public class SavedMeasurementsAdapter extends RecyclerView.Adapter<SavedMeasurem
                 tvDescription.setVisibility(View.GONE);
             }
 
-            // Информация о замере
-            String info;
+            // ===== ТИП ДАТЧИКА =====
+            String sensorType = measurement.getSensorType();
+            if (sensorType != null && !sensorType.isEmpty()) {
+                tvSensorType.setVisibility(View.VISIBLE);
+                tvSensorType.setText(sensorType);
+            } else {
+                tvSensorType.setVisibility(View.GONE);
+            }
+
+            // ===== ЗНАЧЕНИЕ (мелкое) =====
+            String valueInfo;
             if ("мВ".equals(measurement.getUnit())) {
-                info = "(" + measurement.getInputValue() + " + " +
-                        String.format("%.2f", measurement.getColdJunctionMv()) + ") мВ → " +
-                        String.format("%.2f", measurement.getTemperature()) + " °C";
+                valueInfo = "(" + df.format(measurement.getInputValue()) + " + " +
+                        df.format(measurement.getColdJunctionMv()) + ") мВ";
             } else {
                 if (measurement.getLineResistance() > 0.001) {
-                    info = "(" + measurement.getInputValue() + " + " +
-                            String.format("%.2f", measurement.getLineResistance()) + ") Ом → " +
-                            String.format("%.2f", measurement.getTemperature()) + " °C";
+                    valueInfo = "(" + df.format(measurement.getInputValue()) + " + " +
+                            df.format(measurement.getLineResistance()) + ") Ом";
                 } else {
-                    info = measurement.getInputValue() + " Ом → " +
-                            String.format("%.2f", measurement.getTemperature()) + " °C";
+                    valueInfo = df.format(measurement.getInputValue()) + " Ом";
                 }
             }
-            tvInfo.setText(info);
+            tvInfo.setText(valueInfo);
 
-            // Дата
+            // ===== ТЕМПЕРАТУРА (крупно, цвет по порогу) =====
+            tvTemperature.setTextColor(getTempColor(itemView.getContext(), measurement));
+            tvTemperature.setText(dfTemp.format(measurement.getTemperature()) + " °C");
+
+            // ===== ДАТА =====
             String date = measurement.getCreatedAt();
             if (date != null && !date.isEmpty()) {
                 tvDate.setVisibility(View.VISIBLE);
-                tvDate.setText("📅 " + date);
+                tvDate.setText("📅 " + formatDate(date));
             } else {
                 tvDate.setVisibility(View.GONE);
             }
 
-            // ✅ КЛИКИ — используем переданный listener
+            // ===== КЛИКИ =====
             itemView.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onItemClick(measurement);
@@ -114,6 +139,42 @@ public class SavedMeasurementsAdapter extends RecyclerView.Adapter<SavedMeasurem
                 }
                 return true;
             });
+        }
+
+        /**
+         * Цвет температуры для сохранённого замера:
+         * - зелёный, если в норме
+         * - красный, если температура выше порога для своего датчика
+         *   (Ом: >80, ХА: >550, ХК: >80)
+         */
+        private int getTempColor(Context context, Measurement measurement) {
+            double t = measurement.getTemperature();
+            String sensor = measurement.getSensorType() != null ? measurement.getSensorType() : "";
+
+            boolean alarm;
+            if (sensor.equals("ХА")) {
+                alarm = t > context.getResources().getInteger(R.integer.temp_threshold_ha);
+            } else if (sensor.equals("ХК")) {
+                alarm = t > context.getResources().getInteger(R.integer.temp_threshold_hk);
+            } else {
+                alarm = t > context.getResources().getInteger(R.integer.temp_threshold_ohm);
+            }
+
+            return ContextCompat.getColor(context,
+                    alarm ? R.color.temp_color_alarm : R.color.temp_color_normal);
+        }
+
+        private String formatDate(String rawDate) {
+            // "2026-09-12 21:03:45" → "12.09.2026 21:03"
+            try {
+                SimpleDateFormat inFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+                SimpleDateFormat outFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
+                Date d = inFormat.parse(rawDate);
+                if (d != null) return outFormat.format(d);
+            } catch (ParseException e) {
+                // формат не совпал — вернём как есть
+            }
+            return rawDate;
         }
     }
 }

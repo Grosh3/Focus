@@ -3,6 +3,7 @@ package com.mikesuvade.focus.ui.saved;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.View;
+import android.view.Window;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -10,6 +11,9 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -29,6 +33,10 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_saved_measurements);
+
+        // 🔥 Системные бары + отступ от статус-бара
+        setStatusBarAndNavigationIconsDark(true);
+        fixTopPanelPadding();
 
         viewModel = new ViewModelProvider(
                 this,
@@ -54,11 +62,6 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
     private void initViews() {
         rvMeasurements = findViewById(R.id.rvSavedMeasurements);
         tvEmpty = findViewById(R.id.tvEmpty);
-
-        View btnBack = findViewById(R.id.btnBack);
-        if (btnBack != null) {
-            btnBack.setOnClickListener(v -> finish());
-        }
     }
 
     private void setupRecyclerView() {
@@ -162,6 +165,35 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("Нет", (dialog, which) -> dialog.dismiss())
                 .show();
+    }
+
+    private void fixTopPanelPadding() {
+        View topPanel = findViewById(R.id.topPanel);
+        if (topPanel == null) return;
+
+        ViewCompat.setOnApplyWindowInsetsListener(topPanel, (view, windowInsets) -> {
+            int statusBarHeight = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+
+            view.setPadding(
+                    view.getPaddingLeft(),
+                    statusBarHeight + view.getPaddingTop(),
+                    view.getPaddingRight(),
+                    view.getPaddingBottom()
+            );
+
+            ViewCompat.setOnApplyWindowInsetsListener(view, null);
+            return windowInsets;
+        });
+    }
+
+    private void setStatusBarAndNavigationIconsDark(boolean dark) {
+        Window window = getWindow();
+        if (window != null) {
+            WindowInsetsControllerCompat controller =
+                    new WindowInsetsControllerCompat(window, window.getDecorView());
+            controller.setAppearanceLightStatusBars(dark);
+            controller.setAppearanceLightNavigationBars(dark);
+        }
     }
 
     @Override

@@ -15,7 +15,6 @@ public class AppState {
     private String lastOpenedSessionName = null;
     private String lastOpenedSessionId = null;
 
-    // 🔥 НОВОЕ: для хранения ID несохраненного списка
     private List<Integer> unsavedListIds = new ArrayList<>();
 
     private AppState() {}
@@ -26,6 +25,10 @@ public class AppState {
         }
         return instance;
     }
+
+    // ==========================================
+    // SESSION
+    // ==========================================
 
     public ValveWorkSession getActiveSession() {
         return activeSession;
@@ -42,8 +45,9 @@ public class AppState {
         if (session != null) {
             this.lastOpenedSessionName = session.getEquipmentDescription();
             this.lastOpenedSessionId = session.getSessionId();
-            Log.d("APPSTATE", "lastOpenedSessionId = " + lastOpenedSessionId);
-            Log.d("APPSTATE", "lastOpenedSessionName = " + lastOpenedSessionName);
+        } else {
+            this.lastOpenedSessionName = null;
+            this.lastOpenedSessionId = null;
         }
     }
 
@@ -68,7 +72,7 @@ public class AppState {
         hasUnsavedChanges = false;
         lastOpenedSessionName = null;
         lastOpenedSessionId = null;
-        clearUnsavedListIds(); // 🔥 ОЧИЩАЕМ И НЕСОХРАНЕННЫЙ СПИСОК
+        clearUnsavedListIds();
     }
 
     public boolean hasActiveSession() {
@@ -76,7 +80,7 @@ public class AppState {
     }
 
     // ==========================================
-    // 🔥 НОВЫЕ МЕТОДЫ ДЛЯ НЕСОХРАНЕННОГО СПИСКА
+    // UNSAVED LIST (черновик)
     // ==========================================
 
     public List<Integer> getUnsavedListIds() {

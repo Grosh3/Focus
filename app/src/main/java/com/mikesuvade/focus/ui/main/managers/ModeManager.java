@@ -42,7 +42,7 @@ public class ModeManager {
         void showKeyboard();
         void updateSearchHint();
         void updateButtonState();
-        void loadAllGateValvesWithUser();
+
         void clearSearch();
         void setRvVisibility(boolean visible);
     }

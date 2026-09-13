@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="?android:attr/windowBackground">
 
-    <!-- ШАПКА -->
+    <!-- ШАПКА (без крестика) -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/topPanel"
         android:layout_width="match_parent"
@@ -19,33 +19,21 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <ImageButton
-            android:id="@+id/btnBack"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_close"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/btn_back_description"
-            app:tint="?android:attr/textColorPrimary"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
-
         <TextView
             android:id="@+id/tvTitle"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/saved_lists_title"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:gravity="center"
             android:maxLines="1"
             android:ellipsize="end"
             android:textColor="?android:attr/textColorPrimary"
-            app:layout_constraintStart_toEndOf="@id/btnBack"
-            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

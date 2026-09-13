@@ -21,4 +21,8 @@
     <color name="error">#EF5350</color>
     <color name="success">#66BB6A</color>
     <color name="warning">#FFA726</color>
+    <!-- Рабочий список -->
+    <color name="card_checked_background">#11082A</color>  <!-- Мягкий бежевый для отмеченных карточек -->
+    <color name="status_success">#22FB62</color>   <!-- Зеленый - подключен/установлена -->
+    <color name="status_error">#22FB62</color>     <!-- Красный - отключен/снята -->
 </resources>

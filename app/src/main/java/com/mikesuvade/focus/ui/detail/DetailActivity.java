@@ -241,6 +241,13 @@ public class DetailActivity extends AppCompatActivity {
         etEquipmentGroup.setFocusable(false);
         etEquipmentGroup.setClickable(true);
         etEquipmentGroup.setOnClickListener(v -> showGroupsOverlay());
+        Button btnClear = findViewById(R.id.btnClearGroupSelection);
+        if (btnClear != null) {
+            btnClear.setOnClickListener(v -> {
+                etEquipmentGroup.setText("");  // пустая строка = «нет группы»
+                hideGroupsOverlay();
+            });
+        }
     }
 
     private void showFieldsForType() {
@@ -271,6 +278,7 @@ public class DetailActivity extends AppCompatActivity {
             case TYPE_SETPOINT:
                 currentSetpoint = new Setpoint();
                 originalSetpoint = new Setpoint();
+                currentSetpoint.setEquipmentGroup("");
                 break;
         }
     }
@@ -545,7 +553,7 @@ public class DetailActivity extends AppCompatActivity {
             // 🔥 ПРИВОДИМ К ВЕРХНЕМУ РЕГИСТРУ ПРИ ЗАГРУЗКЕ
             etEquipmentGroup.setText(group.toUpperCase());
         } else {
-            etEquipmentGroup.setText("");
+            etEquipmentGroup.setText("НЕТ ГРУППЫ");
         }
     }
 
@@ -1065,7 +1073,11 @@ public class DetailActivity extends AppCompatActivity {
         String notes = etNotes.getText().toString().trim();
         String equipmentGroup = etEquipmentGroup.getText().toString().trim().toUpperCase(); // 🔥 ВЕРХНИЙ РЕГИСТР
         String location = etSetpointLocation.getText().toString().trim();
-
+        if (equipmentGroup.equals("НЕТ ГРУППЫ")
+                || equipmentGroup.equals("#НЕТ ГРУППЫ")
+                || equipmentGroup.equals("🚫 НЕТ ГРУППЫ")) {
+            equipmentGroup = "";
+        }
         if (!equipmentGroup.isEmpty() && !equipmentGroup.startsWith("#")) {
             equipmentGroup = "#" + equipmentGroup;
         }
@@ -1596,6 +1608,12 @@ public class DetailActivity extends AppCompatActivity {
 
     private boolean hasSetpointChanges() {
         if (currentSetpoint == null || originalSetpoint == null) return false;
+        String currentGroup = etEquipmentGroup.getText().toString().trim().toUpperCase();
+        if (currentGroup.equals("НЕТ ГРУППЫ") || currentGroup.equals("#НЕТ ГРУППЫ")) currentGroup = "";
+
+        String originalGroup = originalSetpoint.getEquipmentGroup() != null
+                ? originalSetpoint.getEquipmentGroup() : "";
+
         return !TextUtils.equals(etPositionName.getText().toString().trim(), originalSetpoint.getPositionName()) ||
                 !TextUtils.equals(etSetpointName.getText().toString().trim(), originalSetpoint.getName()) ||
                 !TextUtils.equals(etSetpointValue.getText().toString().trim(), originalSetpoint.getSetpointValue()) ||

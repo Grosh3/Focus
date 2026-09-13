@@ -50,25 +50,27 @@
     <!-- ========================================== -->
     <!-- 4️⃣ ЦВЕТА СТАТУСОВ -->
     <!-- ========================================== -->
-    <color name="status_success">#4CAF50</color>   <!-- Зеленый - подключен/установлена -->
-    <color name="status_error">#F44336</color>     <!-- Красный - отключен/снята -->
-    <color name="status_warning">#FF9800</color>   <!-- Оранжевый - ККВ снята -->
+    <color name="btn_move_blue">#1976D2</color> <!-- стрелки синий-->
+    <color name="status_success">#2E7D32</color>   <!-- Зеленый - подключен/установлена -->
+    <color name="status_error">#2E7D32</color>     <!-- Красный - отключен/снята -->
+    <color name="status_warning">#2E7D32</color>   <!-- Оранжевый - ККВ снята -->
 
     <!-- Двигатель -->
-    <color name="status_motor_on">#4CAF50</color>  <!-- Дв подключен -->
+    <!-- Material Green 800 -->
+    <color name="status_motor_on">#2E7D32</color><!-- Дв подключен -->
     <color name="status_motor_off">#F44336</color> <!-- Дв отключен -->
 
     <!-- ККВ -->
     <color name="status_box_installed">#4CAF50</color>  <!-- ККВ установлена -->
-    <color name="status_box_removed">#FF9800</color>    <!-- ККВ снята -->
+    <color name="status_box_removed">#2E7D32</color>    <!-- ККВ снята -->
 
     <!-- ========================================== -->
     <!-- 5️⃣ ЦВЕТА КНОПОК -->
     <!-- ========================================== -->
     <color name="btn_default">#888888</color>          <!-- Кнопка по умолчанию (серая) -->
-    <color name="btn_motor_on">#4CAF50</color>         <!-- Двигатель включен -->
+    <color name="btn_motor_on">#2E7D32</color>         <!-- Двигатель включен -->
     <color name="btn_motor_off">#F44336</color>        <!-- Двигатель выключен -->
-    <color name="btn_box_installed">#4CAF50</color>    <!-- ККВ установлена -->
+    <color name="btn_box_installed">#2E7D32</color>    <!-- ККВ установлена -->
     <color name="btn_box_removed">#FF9800</color>      <!-- ККВ снята -->
 
     <!-- ========================================== -->
@@ -94,5 +96,13 @@
     <color name="warning_dark">#FFA726</color>
 
     <color name="kks_green_dark">#2E7D32</color>
+    <!-- ========================================== -->
+    <!-- 9️⃣ ПОРОГИ ЦВЕТА ТЕМПЕРАТУРЫ -->
+    <!-- ========================================== -->
+
+    <color name="temp_color_normal">#2E7D32</color>   <!-- зелёный -->
+    <color name="temp_color_alarm">#2E7D32</color>    <!-- красный -->
+
+
 
 </resources>

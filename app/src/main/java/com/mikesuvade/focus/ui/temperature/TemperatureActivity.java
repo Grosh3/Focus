@@ -277,10 +277,10 @@ public class TemperatureActivity extends AppCompatActivity {
         double value = parseDouble(valueStr);
         Log.d("TEMP_DEBUG", "parsed value = " + value);
 
-        if (valueStr.length() > 0 && value == 0 && !valueStr.matches("0(\\.0*)?")) {
-            Log.d("TEMP_DEBUG", "parsing error, invalid number format");
+        // 🔥 Промежуточный ввод ("-", ".", "-.", "+", "+.") или реальный мусор
+        if (Double.isNaN(value)) {
+            Log.d("TEMP_DEBUG", "intermediate or invalid input, clearing results silently");
             viewModel.clearResults();
-            Toast.makeText(this, "Некорректный ввод", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -291,8 +291,13 @@ public class TemperatureActivity extends AppCompatActivity {
             String coldStr = etColdJunction.getText().toString().trim();
             Log.d("TEMP_DEBUG", "coldStr = '" + coldStr + "'");
             if (!coldStr.isEmpty()) {
-                coldJunctionTemp = parseDouble(coldStr);
-                Log.d("TEMP_DEBUG", "parsed coldJunctionTemp = " + coldJunctionTemp);
+                double parsedCold = parseDouble(coldStr);
+                if (!Double.isNaN(parsedCold)) {
+                    coldJunctionTemp = parsedCold;
+                    Log.d("TEMP_DEBUG", "parsed coldJunctionTemp = " + coldJunctionTemp);
+                } else {
+                    Log.d("TEMP_DEBUG", "coldStr is intermediate/invalid, using flag -999");
+                }
             } else {
                 Log.d("TEMP_DEBUG", "coldStr is empty, using flag -999");
             }
@@ -302,8 +307,15 @@ public class TemperatureActivity extends AppCompatActivity {
             String lineStr = etLineResistance.getText().toString().trim();
             Log.d("TEMP_DEBUG", "lineStr = '" + lineStr + "'");
             if (!lineStr.isEmpty()) {
-                lineResistance = parseDouble(lineStr);
-                Log.d("TEMP_DEBUG", "parsed lineResistance = " + lineResistance);
+                double parsedLine = parseDouble(lineStr);
+                if (!Double.isNaN(parsedLine) && parsedLine >= 0) {
+                    lineResistance = parsedLine;
+                    Log.d("TEMP_DEBUG", "parsed lineResistance = " + lineResistance);
+                } else {
+                    // 🔥 Отрицательное или мусор → игнорируем, линия не учитывается
+                    Log.d("TEMP_DEBUG", "lineResistance invalid (negative or NaN), using 0");
+                    lineResistance = 0;
+                }
             }
         }
 
@@ -316,12 +328,12 @@ public class TemperatureActivity extends AppCompatActivity {
     }
 
     private double parseDouble(String value) {
-        if (value == null || value.isEmpty()) return 0;
-        value = value.replace(',', '.');
+        if (value == null || value.isEmpty()) return Double.NaN;
+        value = value.replace(',', '.').trim();
         try {
             return Double.parseDouble(value);
         } catch (NumberFormatException e) {
-            return 0;
+            return Double.NaN;
         }
     }
 

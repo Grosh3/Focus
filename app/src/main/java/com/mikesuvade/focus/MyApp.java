@@ -31,6 +31,7 @@ public class MyApp extends Application {
         try {
             instance = this;
             applySavedTheme();
+          //  com.mikesuvade.focus.utils.AppState.getInstance().init(this);
 
             Log.d(TAG, "About to init DatabaseHelper");
             DatabaseHelper dbHelper = DatabaseHelper.getInstance(this);
