@@ -8,12 +8,14 @@ import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,6 +28,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.button.MaterialButton;
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.Measurement;
@@ -54,6 +57,14 @@ public class TemperatureActivity extends AppCompatActivity {
     private TextView tvColdJunctionUnit;
     private View rootLayout;
 
+    private com.google.android.material.textfield.TextInputLayout tilValue;
+
+    // 🔥 ИНВЕРСИЯ
+    private boolean isInverseMode = false;
+    private MaterialButton btnInverse;
+    private View tilLineResistance;
+    private ScrollView mainScrollView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,20 +72,17 @@ public class TemperatureActivity extends AppCompatActivity {
         try {
             setContentView(R.layout.activity_temperature);
             fixTopPanelPadding();
-            // 🔥 УСТАНАВЛИВАЕМ ЦВЕТ СТАТУС-БАРА (как в MainActivity)
             setStatusBarIconsDark(true);
             setStatusBarAndNavigationIconsDark(true);
+
             mode = getIntent().getStringExtra("MODE");
             if (mode == null) {
                 mode = "OHM";
             }
 
-            // 🔥 ЛОГ ДЛЯ ПРОВЕРКИ
             Log.d("TEMP_DEBUG", "1. setContentView done, mode=" + mode);
 
             TextView tvTitle = findViewById(R.id.tvTitle);
-            Log.d("TEMP_DEBUG", "2. tvTitle found: " + (tvTitle != null));
-
             if (tvTitle != null) {
                 if ("MV".equals(mode)) {
                     tvTitle.setText("Термопары");
@@ -82,10 +90,8 @@ public class TemperatureActivity extends AppCompatActivity {
                     tvTitle.setText("Термометры");
                 }
             }
-            Log.d("TEMP_DEBUG", "3. Title set");
 
             IRepository repository = ((MyApp) getApplication()).getRepository();
-            Log.d("TEMP_DEBUG", "4. Repository obtained");
 
             viewModel = new ViewModelProvider(
                     this,
@@ -98,22 +104,11 @@ public class TemperatureActivity extends AppCompatActivity {
                         }
                     }
             ).get(TemperatureViewModel.class);
-            Log.d("TEMP_DEBUG", "5. ViewModel created");
 
             initViews();
-            Log.d("TEMP_DEBUG", "6. initViews done");
-
             setupRecyclerView();
-            Log.d("TEMP_DEBUG", "7. setupRecyclerView done");
-
             setupListeners();
-            Log.d("TEMP_DEBUG", "8. setupListeners done");
-
             setupObservers();
-            Log.d("TEMP_DEBUG", "9. setupObservers done");
-
-            setupHideKeyboardOnTouch();
-            Log.d("TEMP_DEBUG", "10. setupHideKeyboardOnTouch done");
 
             Log.d("TEMP_DEBUG", "✅ onCreate COMPLETED SUCCESSFULLY");
 
@@ -134,33 +129,33 @@ public class TemperatureActivity extends AppCompatActivity {
         tilColdJunction = findViewById(R.id.tilColdJunction);
         tvColdJunctionUnit = findViewById(R.id.tvColdJunctionUnit);
         rootLayout = findViewById(R.id.rootLayout);
+        mainScrollView = findViewById(R.id.mainScrollView);
+        tilValue = findViewById(R.id.tilValue);
 
-        Log.d("TEMP_DEBUG", "etColdJunction found: " + (etColdJunction != null));
+        // 🔥 ИНВЕРСИЯ
+        btnInverse = findViewById(R.id.btnInverse);
+        tilLineResistance = findViewById(R.id.tilLineResistance);
 
         if ("MV".equals(mode)) {
             tvUnit.setText("мВ");
-         //   etValue.setHint("Введите значение");
             cbLineResistance.setVisibility(View.GONE);
             etLineResistance.setVisibility(View.GONE);
+            if (tilLineResistance != null) tilLineResistance.setVisibility(View.GONE);
 
-            // 🔥 ПОКАЗЫВАЕМ ХОЛОДНЫЙ СПАЙ
             tilColdJunction.setVisibility(View.VISIBLE);
             tvColdJunctionUnit.setVisibility(View.VISIBLE);
-          //  etColdJunction.setHint("t холодного спая");
             etColdJunction.setText("");
         } else {
             tvUnit.setText("Ом");
-          //  etValue.setHint("Введите значение");
             cbLineResistance.setVisibility(View.VISIBLE);
             etLineResistance.setVisibility(View.VISIBLE);
+            if (tilLineResistance != null) tilLineResistance.setVisibility(View.VISIBLE);
 
-            // 🔥 СКРЫВАЕМ ХОЛОДНЫЙ СПАЙ
             tilColdJunction.setVisibility(View.GONE);
             tvColdJunctionUnit.setVisibility(View.GONE);
             cbLineResistance.setChecked(true);
             etLineResistance.setEnabled(true);
             etLineResistance.setText("");
-          //  etLineResistance.setHint("Напр. 0.15");
         }
 
         findViewById(R.id.btnHelp).setOnClickListener(v -> {
@@ -171,24 +166,88 @@ public class TemperatureActivity extends AppCompatActivity {
             Intent intent = new Intent(this, SavedMeasurementsActivity.class);
             startActivity(intent);
         });
-    }
-    private void setupHideKeyboardOnTouch() {
-        if (rootLayout != null) {
-            rootLayout.setOnTouchListener((v, event) -> {
+
+        // 🔥 Скрываем клавиатуру при скролле основного контента
+        mainScrollView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+            if (scrollY != oldScrollY) {
                 hideKeyboard();
-                return false;
-            });
+            }
+        });
+
+        // 🔥 ИНВЕРСИЯ — слушатель
+        btnInverse.setOnClickListener(v -> toggleInverseMode());
+    }
+
+    // 🔥 ИНВЕРСИЯ — переключение режима
+    private void toggleInverseMode() {
+        isInverseMode = !isInverseMode;
+
+        if (isInverseMode) {
+            // Вход в инверсию
+            tvUnit.setText("°C");
+            tilValue.setHint(R.string.hint_inverse);
+            etValue.setText("");
+
+            tilColdJunction.setVisibility(View.GONE);
+            tvColdJunctionUnit.setVisibility(View.GONE);
+            cbLineResistance.setVisibility(View.GONE);
+            etLineResistance.setVisibility(View.GONE);
+            if (tilLineResistance != null) tilLineResistance.setVisibility(View.GONE);
+
+            viewModel.clearResults();
+        } else {
+            // Выход из инверсии
+            tvUnit.setText("мВ".equals(mode) ? "мВ" : "Ом");
+            tilValue.setHint(R.string.hint_value_input);
+            etValue.setText("");
+
+            if ("MV".equals(mode)) {
+                tilColdJunction.setVisibility(View.VISIBLE);
+                tvColdJunctionUnit.setVisibility(View.VISIBLE);
+            } else {
+                cbLineResistance.setVisibility(View.VISIBLE);
+                etLineResistance.setVisibility(View.VISIBLE);
+                if (tilLineResistance != null) tilLineResistance.setVisibility(View.VISIBLE);
+            }
+
+            viewModel.clearResults();
         }
     }
 
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (ev.getAction() == MotionEvent.ACTION_UP) {
+            View focused = getCurrentFocus();
+            Log.d("TEMP_KB", "ACTION_UP, focused=" + focused +
+                    ", rawX=" + ev.getRawX() + ", rawY=" + ev.getRawY());
+            if (focused instanceof EditText) {
+                android.graphics.Rect outRect = new android.graphics.Rect();
+                focused.getGlobalVisibleRect(outRect);
+                Log.d("TEMP_KB", "outRect=" + outRect);
+                if (!outRect.contains((int) ev.getRawX(), (int) ev.getRawY())) {
+                    Log.d("TEMP_KB", "outside → hide");
+                    focused.clearFocus();
+                    hideKeyboard();
+                } else {
+                    Log.d("TEMP_KB", "inside → skip");
+                }
+            } else {
+                Log.d("TEMP_KB", "focused not EditText → hide");
+                hideKeyboard();
+            }
+        }
+        return super.dispatchTouchEvent(ev);
+    }
     private void hideKeyboard() {
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm == null) return;
+
         View view = getCurrentFocus();
         if (view != null) {
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null) {
-                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-                view.clearFocus();
-            }
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        } else {
+            imm.hideSoftInputFromWindow(
+                    getWindow().getDecorView().getWindowToken(), 0);
         }
     }
 
@@ -201,6 +260,17 @@ public class TemperatureActivity extends AppCompatActivity {
                 if (newState == RecyclerView.SCROLL_STATE_DRAGGING) {
                     hideKeyboard();
                 }
+            }
+        });
+
+        // 🔥 Скрываем клавиатуру при тапе по карточке результата
+        rvResults.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
+            @Override
+            public boolean onInterceptTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent e) {
+                if (e.getAction() == MotionEvent.ACTION_DOWN) {
+                    hideKeyboard();
+                }
+                return false;
             }
         });
 
@@ -247,7 +317,6 @@ public class TemperatureActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                Log.d("TEMP_DEBUG", "etColdJunction text changed: '" + s.toString() + "'");
                 calculate();
             }
 
@@ -264,23 +333,22 @@ public class TemperatureActivity extends AppCompatActivity {
 
     private void calculate() {
         String valueStr = etValue.getText().toString().trim();
-        Log.d("TEMP_DEBUG", "=== calculate() START ===");
-        Log.d("TEMP_DEBUG", "valueStr = '" + valueStr + "'");
-        Log.d("TEMP_DEBUG", "mode = " + mode);
 
         if (valueStr.isEmpty()) {
-            Log.d("TEMP_DEBUG", "valueStr is empty, clearing results");
             viewModel.clearResults();
             return;
         }
 
         double value = parseDouble(valueStr);
-        Log.d("TEMP_DEBUG", "parsed value = " + value);
 
-        // 🔥 Промежуточный ввод ("-", ".", "-.", "+", "+.") или реальный мусор
         if (Double.isNaN(value)) {
-            Log.d("TEMP_DEBUG", "intermediate or invalid input, clearing results silently");
             viewModel.clearResults();
+            return;
+        }
+
+        // 🔥 ИНВЕРСИЯ — обратный расчёт
+        if (isInverseMode) {
+            viewModel.calculateInverse(value, mode);
             return;
         }
 
@@ -289,42 +357,27 @@ public class TemperatureActivity extends AppCompatActivity {
 
         if ("MV".equals(mode)) {
             String coldStr = etColdJunction.getText().toString().trim();
-            Log.d("TEMP_DEBUG", "coldStr = '" + coldStr + "'");
             if (!coldStr.isEmpty()) {
                 double parsedCold = parseDouble(coldStr);
                 if (!Double.isNaN(parsedCold)) {
                     coldJunctionTemp = parsedCold;
-                    Log.d("TEMP_DEBUG", "parsed coldJunctionTemp = " + coldJunctionTemp);
-                } else {
-                    Log.d("TEMP_DEBUG", "coldStr is intermediate/invalid, using flag -999");
                 }
-            } else {
-                Log.d("TEMP_DEBUG", "coldStr is empty, using flag -999");
             }
         }
 
         if ("OHM".equals(mode) && cbLineResistance.isChecked()) {
             String lineStr = etLineResistance.getText().toString().trim();
-            Log.d("TEMP_DEBUG", "lineStr = '" + lineStr + "'");
             if (!lineStr.isEmpty()) {
                 double parsedLine = parseDouble(lineStr);
                 if (!Double.isNaN(parsedLine) && parsedLine >= 0) {
                     lineResistance = parsedLine;
-                    Log.d("TEMP_DEBUG", "parsed lineResistance = " + lineResistance);
                 } else {
-                    // 🔥 Отрицательное или мусор → игнорируем, линия не учитывается
-                    Log.d("TEMP_DEBUG", "lineResistance invalid (negative or NaN), using 0");
                     lineResistance = 0;
                 }
             }
         }
 
-        Log.d("TEMP_DEBUG", "FINAL: value=" + value + ", mode=" + mode +
-                ", coldJunctionTemp=" + coldJunctionTemp +
-                ", lineResistance=" + lineResistance);
-
         viewModel.calculate(value, mode, coldJunctionTemp, lineResistance);
-        Log.d("TEMP_DEBUG", "=== calculate() END ===");
     }
 
     private double parseDouble(String value) {
@@ -403,7 +456,6 @@ public class TemperatureActivity extends AppCompatActivity {
         measurement.setMeasurementDate(currentDate);
         measurement.setCreatedAt(currentDateTime);
 
-        // 🔥 СОХРАНЯЕМ В ПОЛЬЗОВАТЕЛЬСКУЮ БД
         new Thread(() -> {
             try {
                 long id = ((MyApp) getApplication()).getRepository().insertUserMeasurement(measurement);
@@ -441,6 +493,7 @@ public class TemperatureActivity extends AppCompatActivity {
             return windowInsets;
         });
     }
+
     private void setStatusBarIconsDark(boolean dark) {
         Window window = getWindow();
         if (window != null) {
@@ -449,16 +502,13 @@ public class TemperatureActivity extends AppCompatActivity {
             controller.setAppearanceLightStatusBars(dark);
         }
     }
+
     private void setStatusBarAndNavigationIconsDark(boolean dark) {
         Window window = getWindow();
         if (window != null) {
             WindowInsetsControllerCompat controller =
                     new WindowInsetsControllerCompat(window, window.getDecorView());
-
-            // Статус-бар
             controller.setAppearanceLightStatusBars(dark);
-
-            // Навигационные кнопки (системные)
             controller.setAppearanceLightNavigationBars(dark);
         }
     }

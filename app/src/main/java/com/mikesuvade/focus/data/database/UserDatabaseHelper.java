@@ -174,12 +174,14 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         Log.d(TAG, "Upgrading user database from " + oldVersion + " to " + newVersion);
-        db.execSQL("DROP TABLE IF EXISTS user_gate_valves");
-        db.execSQL("DROP TABLE IF EXISTS user_sensors");
-        db.execSQL("DROP TABLE IF EXISTS user_setpoints");
-        db.execSQL("DROP TABLE IF EXISTS user_work_sessions");
-        db.execSQL("DROP TABLE IF EXISTS user_session_items");
-        db.execSQL("DROP TABLE IF EXISTS user_measurements");
-        onCreate(db);
+
+        // 🔥 МИГРАЦИИ — добавляются здесь, по одной на версию.
+        // Пример:
+        // if (oldVersion < 2) {
+        //     db.execSQL("ALTER TABLE user_gate_valves ADD COLUMN photo BLOB");
+        // }
+        // if (oldVersion < 3) {
+        //     db.execSQL("CREATE TABLE IF NOT EXISTS user_bearings (...)");
+        // }
     }
 }

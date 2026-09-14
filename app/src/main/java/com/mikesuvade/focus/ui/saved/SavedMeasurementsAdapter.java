@@ -113,8 +113,8 @@ public class SavedMeasurementsAdapter extends RecyclerView.Adapter<SavedMeasurem
             }
             tvInfo.setText(valueInfo);
 
-            // ===== ТЕМПЕРАТУРА (крупно, цвет по порогу) =====
-            tvTemperature.setTextColor(getTempColor(itemView.getContext(), measurement));
+            // ===== ТЕМПЕРАТУРА (крупно, всегда зелёная) =====
+            tvTemperature.setTextColor(0xFF2E7D32);
             tvTemperature.setText(dfTemp.format(measurement.getTemperature()) + " °C");
 
             // ===== ДАТА =====
@@ -147,22 +147,8 @@ public class SavedMeasurementsAdapter extends RecyclerView.Adapter<SavedMeasurem
          * - красный, если температура выше порога для своего датчика
          *   (Ом: >80, ХА: >550, ХК: >80)
          */
-        private int getTempColor(Context context, Measurement measurement) {
-            double t = measurement.getTemperature();
-            String sensor = measurement.getSensorType() != null ? measurement.getSensorType() : "";
 
-            boolean alarm;
-            if (sensor.equals("ХА")) {
-                alarm = t > context.getResources().getInteger(R.integer.temp_threshold_ha);
-            } else if (sensor.equals("ХК")) {
-                alarm = t > context.getResources().getInteger(R.integer.temp_threshold_hk);
-            } else {
-                alarm = t > context.getResources().getInteger(R.integer.temp_threshold_ohm);
-            }
 
-            return ContextCompat.getColor(context,
-                    alarm ? R.color.temp_color_alarm : R.color.temp_color_normal);
-        }
 
         private String formatDate(String rawDate) {
             // "2026-09-12 21:03:45" → "12.09.2026 21:03"

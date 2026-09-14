@@ -15,7 +15,7 @@ public class TemperatureResult {
     private double coldJunctionMv;   // напряжение холодного спая
     private double totalMv;// суммарное напряжение
     private boolean outOfRange;
-
+    private boolean inverse;
     // ==========================================
     // ГЕТТЕРЫ И СЕТТЕРЫ
     // ==========================================
@@ -52,5 +52,7 @@ public class TemperatureResult {
 
     public boolean isOutOfRange() { return outOfRange; }
     public void setOutOfRange(boolean outOfRange) { this.outOfRange = outOfRange; }
+    public boolean isInverse() { return inverse; }
+    public void setInverse(boolean inverse) { this.inverse = inverse; }
 
 }

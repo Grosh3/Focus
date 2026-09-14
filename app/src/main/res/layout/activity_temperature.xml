@@ -37,24 +37,30 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
 
+        <!-- СПРАВКА -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHelp"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="48dp"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="❓"
-            android:textSize="20sp"
+            android:contentDescription="@string/content_desc_help"
+            app:icon="@drawable/questchen"
+            app:iconTint="@color/icon_top_panel_color"
+            app:iconSize="24dp"
             app:layout_constraintEnd_toStartOf="@id/btnSavedMeasurements"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
 
+        <!-- СОХРАНЁННЫЕ ЗАМЕРЫ -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSavedMeasurements"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="48dp"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="📋"
-            android:textSize="20sp"
+            android:contentDescription="@string/content_desc_saved_measurements"
+            app:icon="@drawable/ic_lists_temp"
+            app:iconTint="@color/icon_top_panel_color"
+            app:iconSize="30dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
@@ -65,6 +71,7 @@
     <!-- 2️⃣ ОСНОВНОЙ КОНТЕНТ -->
     <!-- ========================================== -->
     <ScrollView
+        android:id="@+id/mainScrollView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:fillViewport="true"
@@ -93,7 +100,7 @@
                     style="@style/RoundedOutlinedBox"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:hint="Введите значение"
+                    android:hint="@string/hint_value_input"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/tvUnit"
                     app:layout_constraintTop_toTopOf="parent"
@@ -190,6 +197,7 @@
                 android:textSize="14sp" />
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilLineResistance"
                 style="@style/RoundedOutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -204,6 +212,22 @@
                     android:maxLines="1" />
 
             </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- ========================================== -->
+            <!-- 🔄 КНОПКА ИНВЕРСИИ -->
+            <!-- ========================================== -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnInverse"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
+                app:iconTint="@color/inverse_icon_color"
+                android:contentDescription="@string/btn_inverse"
+                app:icon="@drawable/ic_inversion"
+                app:iconSize="24dp"
+                app:iconGravity="textStart" />
 
             <!-- ========================================== -->
             <!-- РАЗДЕЛИТЕЛЬ И РЕЗУЛЬТАТЫ -->

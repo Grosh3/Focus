@@ -1,5 +1,6 @@
 package com.mikesuvade.focus.ui.main;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -836,14 +837,17 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void hideKeyboard() {
-        if (etSearch != null && etSearch.getWindowToken() != null) {
-            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-            if (imm != null) {
-                imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
-            }
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm == null) return;
+
+        View view = getCurrentFocus();
+        if (view != null) {
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        } else {
+            imm.hideSoftInputFromWindow(
+                    getWindow().getDecorView().getWindowToken(), 0);
         }
     }
-
     private void restoreLastSession() {
         sessionManager.restoreLastSession();
     }

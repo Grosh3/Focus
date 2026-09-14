@@ -60,15 +60,13 @@
         <!-- 2️⃣ СПРАВКА -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHelp"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:padding="8dp"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="Справка"
             app:icon="@drawable/questchen"
-            app:iconTint="@null"
-            app:iconGravity="textStart"
+            app:iconTint="@color/icon_top_panel_color"
             app:iconSize="24dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
             app:layout_constraintEnd_toStartOf="@id/btnLists"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
@@ -76,10 +74,13 @@
         <!-- 3️⃣ СПИСКИ -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLists"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="48dp"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🗂️"
+            android:contentDescription="Рабочие списки"
+            app:icon="@drawable/ic_lists_val"
+            app:iconTint="@color/icon_top_panel_color"
+            app:iconSize="30dp"
             app:layout_constraintEnd_toStartOf="@id/btnSettings"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
@@ -87,14 +88,16 @@
         <!-- 4️⃣ НАСТРОЙКИ -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSettings"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="48dp"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="⚙️"
+            android:contentDescription="Настройки"
+            app:icon="@drawable/ic_settings"
+            app:iconTint="@color/icon_top_panel_color"
+            app:iconSize="30dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- ========================================== -->

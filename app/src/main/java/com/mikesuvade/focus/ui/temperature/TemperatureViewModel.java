@@ -143,4 +143,57 @@ public class TemperatureViewModel extends ViewModel {
     public void clearResults() {
         results.setValue(new ArrayList<>());
     }
+    /**
+     * Обратный расчёт: по введённой температуре находим сигнал (Ом или мВ) для каждой таблицы.
+     * Холодный спай и сопротивление линии НЕ учитываются.
+     */
+    public void calculateInverse(double temperature, String mode) {
+        new Thread(() -> {
+            try {
+                List<TemperatureResult> resultList = new ArrayList<>();
+
+                if ("OHM".equals(mode)) {
+                    for (int i = 0; i < ohmTables.length; i++) {
+                        double signal = repository.getSignalFromTemperature(ohmTables[i], temperature);
+
+                        TemperatureResult result = new TemperatureResult();
+                        result.setSensorName(ohmNames[i]);
+                        result.setUnit("Ом");
+                        result.setTemperature(temperature);       // введённая T
+                        result.setCorrectedValue(signal);          // рассчитанный сигнал
+                        result.setTableName(ohmTables[i]);
+                        result.setInverse(true);
+
+                        if (temperature <= ohmMinTemp[i] || temperature >= ohmMaxTemp[i]) {
+                            result.setOutOfRange(true);
+                        }
+
+                        resultList.add(result);
+                    }
+                } else {
+                    for (int i = 0; i < mvTables.length; i++) {
+                        double signal = repository.getSignalFromTemperature(mvTables[i], temperature);
+
+                        TemperatureResult result = new TemperatureResult();
+                        result.setSensorName(mvNames[i]);
+                        result.setUnit("мВ");
+                        result.setTemperature(temperature);
+                        result.setCorrectedValue(signal);
+                        result.setTableName(mvTables[i]);
+                        result.setInverse(true);
+
+                        if (temperature <= mvMinTemp[i] || temperature >= mvMaxTemp[i]) {
+                            result.setOutOfRange(true);
+                        }
+
+                        resultList.add(result);
+                    }
+                }
+
+                results.postValue(resultList);
+            } catch (Exception e) {
+                Log.e(TAG, "Error in calculateInverse", e);
+            }
+        }).start();
+    }
 }

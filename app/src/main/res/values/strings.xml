@@ -5,6 +5,7 @@
     <string name="new_valve">НОВ. ЗАДВИЖКА</string>
     <string name="to_list">К СПИСКУ (%d)</string>
 
+
     <!-- Поиск -->
     <string name="search_hint">Поиск арматуры</string>
     <string name="search_hint_sensors">Поиск датчиков</string>
@@ -192,5 +193,14 @@
     </string-array>
     <!-- Detail activity -->
     <string name="delete_entity">Удалить запись</string>
-
+    <!-- Temperature activity -->
+    <string name="btn_inverse">🔄 Инверсия</string>
+    <string name="btn_inverse_active">🔄 Обычный режим</string>
+    <string name="hint_temperature_input">Введите температуру, °C</string>
+    <string name="hint_value_input">Введите значение</string>
+    <string name="hint_inverse">Инверсия</string>
+    <string name="content_desc_help">Справка</string>
+    <string name="content_desc_lists">Рабочие списки</string>
+    <string name="content_desc_settings">Настройки</string>
+    <string name="content_desc_saved_measurements">Сохранённые замеры</string>
 </resources>

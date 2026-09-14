@@ -261,7 +261,14 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
 
             LinearLayout buttonContainer = (LinearLayout) btnMotor.getParent();
 
-            // 🔥 Квадратные кнопки фиксированного размера
+// 🔥 ЕСЛИ КАРТОЧКА ОТМЕЧЕНА — ПРЯЧЕМ КНОПКИ
+            if (item.getIsChecked() == 1) {
+                buttonContainer.setVisibility(View.GONE);
+            } else {
+                buttonContainer.setVisibility(View.VISIBLE);
+            }
+
+// 🔥 Квадратные кнопки фиксированного размера
             int size = (int) (48 * context.getResources().getDisplayMetrics().density);
 
             buttonContainer.setLayoutParams(new LinearLayout.LayoutParams(

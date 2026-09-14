@@ -1,6 +1,5 @@
 package com.mikesuvade.focus.ui.temperature;
 
-import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,7 +7,6 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mikesuvade.focus.R;
@@ -77,23 +75,37 @@ public class TemperatureResultAdapter extends RecyclerView.Adapter<TemperatureRe
             tvSensorName.setText(item.getSensorName());
 
             if (item.isOutOfRange()) {
-                // 🔥 ВНЕ ДИАПАЗОНА — "за пределом!"
+                // 🔥 ЗА ПРЕДЕЛОМ
                 tvValue.setText("за пределом!");
-                tvValue.setTextColor(ContextCompat.getColor(
-                        itemView.getContext(), R.color.temp_color_alarm));
+                tvValue.setTextColor(0xFFD32F2F);
 
                 tvTemperature.setText("");
-                tvTemperature.setTextColor(ContextCompat.getColor(
-                        itemView.getContext(), R.color.temp_color_alarm));
+                tvTemperature.setTextColor(0xFFD32F2F);
+
+                btnSave.setEnabled(false);
+                btnSave.setAlpha(0.4f);
+                btnSave.setOnClickListener(null);
+                return;
+            }
+
+            if (item.isInverse()) {
+                // 🔄 РЕЖИМ ИНВЕРСИИ: T °C → сигнал
+                tvValue.setTextColor(0xFF5F6368);
+                tvTemperature.setTextColor(0xFF1565C0);   // синий для инверсии
+
+                // Слева — введённая температура
+                tvValue.setText(dfTemp.format(item.getTemperature()) + " °C");
+
+                // Справа — рассчитанный сигнал
+                tvTemperature.setText(df.format(item.getCorrectedValue()) + " " + item.getUnit());
 
                 btnSave.setEnabled(false);
                 btnSave.setAlpha(0.4f);
                 btnSave.setOnClickListener(null);
             } else {
                 // 🔥 НОРМА
-                tvValue.setTextColor(ContextCompat.getColor(
-                        itemView.getContext(), R.color.on_surface_secondary));
-                tvTemperature.setTextColor(getTempColor(itemView.getContext(), item));
+                tvValue.setTextColor(0xFF5F6368);
+                tvTemperature.setTextColor(0xFF2E7D32);
 
                 if ("Ом".equals(item.getUnit())) {
                     tvValue.setText(df.format(item.getCorrectedValue()) + " Ом");
@@ -115,32 +127,6 @@ public class TemperatureResultAdapter extends RecyclerView.Adapter<TemperatureRe
                     }
                 });
             }
-        }
-
-        /**
-         * Цвет температуры:
-         * - зелёный, если в норме
-         * - красный, если температура выше порога для своего датчика:
-         *     Ом-датчики → > 80
-         *     ХА         → > 550
-         *     ХК         → > 80
-         */
-        private int getTempColor(Context context, TemperatureResult item) {
-            double t = item.getTemperature();
-            String sensor = item.getSensorName() != null ? item.getSensorName() : "";
-
-            boolean alarm;
-            if (sensor.equals("ХА")) {
-                alarm = t > context.getResources().getInteger(R.integer.temp_threshold_ha);
-            } else if (sensor.equals("ХК")) {
-                alarm = t > context.getResources().getInteger(R.integer.temp_threshold_hk);
-            } else {
-                // все Ом-датчики: ТСП50П, ТСМ50М, Гр21 (46П), Гр23 (53М)
-                alarm = t > context.getResources().getInteger(R.integer.temp_threshold_ohm);
-            }
-
-            return ContextCompat.getColor(context,
-                    alarm ? R.color.temp_color_alarm : R.color.temp_color_normal);
         }
     }
 }

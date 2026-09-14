@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <integer name="temp_threshold_ohm">80</integer>
-    <integer name="temp_threshold_ha">550</integer>
-    <integer name="temp_threshold_hk">80</integer>
-</resources>
