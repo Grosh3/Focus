@@ -21,6 +21,9 @@
 
         <!-- Navigation Bar -->
         <item name="android:navigationBarColor">@color/surface</item>
+
+        <!-- 🔥 ЗАПРЕЩАЕМ MIUI ПРИНУДИТЕЛЬНО ТЕМНИТЬ ПРИЛОЖЕНИЕ -->
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
     </style>
 
     <style name="RoundedOutlinedBox" parent="Widget.Material3.TextInputLayout.OutlinedBox">

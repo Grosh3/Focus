@@ -225,13 +225,30 @@ public class SearchManager {
     }
 
     /**
-     * Очищает запрос от начальных цифр для подсветки KKS
-     * Например: "50CVA22CT001" → "CVA22CT001"
+     * Очищает запрос от приставки для подсветки KKS.
+     * Примеры:
+     *   "50CVA22CT001"  → "CVA22CT001"
+     *   "d80CVA22CT001" → "CVA22CT001"
+     *   "CVA22CT001"    → "CVA22CT001"
      */
     private String cleanQueryForHighlight(String query) {
         if (query == null || query.isEmpty()) return "";
-        String cleaned = query.trim().replaceFirst("^[0-9]+", "");
-        return cleaned.isEmpty() ? query.trim() : cleaned;
+        String clean = query.trim().replaceAll("[\\s\\-.]", "");
+
+        // 🔥 Отрезаем "^[A-Za-z][0-9]+" — например d80, D80, KKS123
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("^[A-Za-z][0-9]+")
+                .matcher(clean);
+        if (m.find()) {
+            String rest = clean.substring(m.end());
+            if (rest.length() >= 3) return rest;
+            return clean;
+        }
+
+        // Отрезаем "^[0-9]+" — например 50, 80
+        String rest = clean.replaceFirst("^[0-9]+", "");
+        if (!rest.isEmpty() && rest.length() >= 3) return rest;
+        return clean;
     }
 
 }
