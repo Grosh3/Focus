@@ -5,26 +5,29 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
 public class UserDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "UserDatabaseHelper";
     private static final String DATABASE_NAME = "focus_user.db";
     private static final int DATABASE_VERSION = 1;
+    private static final String ASSETS_PATH = DATABASE_NAME;
 
     private static UserDatabaseHelper instance;
+    private final Context context;
 
     // ==========================================
     // ТАБЛИЦЫ ПОЛЬЗОВАТЕЛЬСКИХ ДАННЫХ
     // ==========================================
 
-    // 1. Пользовательские задвижки
-    // 1. Пользовательские задвижки
-    // ==========================================
-// 1. Пользовательские задвижки — БЕЗ AUTOINCREMENT
-// ==========================================
     private static final String CREATE_USER_GATE_VALVES =
             "CREATE TABLE IF NOT EXISTS user_gate_valves (" +
-                    "id INTEGER PRIMARY KEY," +  // ← убрали AUTOINCREMENT
+                    "id INTEGER PRIMARY KEY," +
                     "original_id INTEGER," +
                     "is_deleted INTEGER DEFAULT 0," +
                     "name_eng TEXT," +
@@ -48,13 +51,10 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "created_at TEXT" +
                     ")";
 
-    // ==========================================
-// 2. Пользовательские датчики — ОСТАВЛЯЕМ AUTOINCREMENT
-// ==========================================
     private static final String CREATE_USER_SENSORS =
             "CREATE TABLE IF NOT EXISTS user_sensors (" +
-                    "id INTEGER PRIMARY KEY," +           // ← БЕЗ AUTOINCREMENT
-                    "original_id INTEGER," +               // ← ДОБАВИЛИ
+                    "id INTEGER PRIMARY KEY," +
+                    "original_id INTEGER," +
                     "is_deleted INTEGER DEFAULT 0," +
                     "keynum INTEGER," +
                     "fa INTEGER," +
@@ -85,12 +85,9 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "created_at TEXT" +
                     ")";
 
-    // ==========================================
-// 3. Пользовательские уставки — БЕЗ AUTOINCREMENT
-// ==========================================
     private static final String CREATE_USER_SETPOINTS =
             "CREATE TABLE IF NOT EXISTS user_setpoints (" +
-                    "id INTEGER PRIMARY KEY," +  // ← убрали AUTOINCREMENT
+                    "id INTEGER PRIMARY KEY," +
                     "original_id INTEGER," +
                     "is_deleted INTEGER DEFAULT 0," +
                     "name TEXT," +
@@ -105,7 +102,7 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "edited_at TEXT," +
                     "created_at TEXT" +
                     ")";
-    // 4. Рабочие сессии (списки задвижек)
+
     private static final String CREATE_USER_WORK_SESSIONS =
             "CREATE TABLE IF NOT EXISTS user_work_sessions (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
@@ -116,7 +113,6 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "created_at TEXT" +
                     ")";
 
-    // 5. Элементы сессий
     private static final String CREATE_USER_SESSION_ITEMS =
             "CREATE TABLE IF NOT EXISTS user_session_items (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
@@ -131,7 +127,6 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "FOREIGN KEY (session_id) REFERENCES user_work_sessions(session_id)" +
                     ")";
 
-    // 6. Сохраненные замеры температуры
     private static final String CREATE_USER_MEASUREMENTS =
             "CREATE TABLE IF NOT EXISTS user_measurements (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
@@ -148,32 +143,97 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
                     "created_at TEXT" +
                     ")";
 
+    // ==========================================
+    // КОНСТРУКТОР И SINGLETON
+    // ==========================================
+
     private UserDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        this.context = context.getApplicationContext();
     }
 
     public static synchronized UserDatabaseHelper getInstance(Context context) {
         if (instance == null) {
             instance = new UserDatabaseHelper(context.getApplicationContext());
+            // ВАЖНО: сразу проверяем и копируем, ДО любых getWritableDatabase()
+            instance.ensureDatabaseReady();
         }
         return instance;
     }
 
+    // ==========================================
+    // КОПИРОВАНИЕ ИЗ ASSETS
+    // ==========================================
+
+    public boolean isDatabaseReady() {
+        File dbFile = context.getDatabasePath(DATABASE_NAME);
+        return dbFile.exists() && dbFile.length() > 0;
+    }
+
+    public void ensureDatabaseReady() {
+        Log.d(TAG, "=== ensureDatabaseReady START ===");
+        if (isDatabaseReady()) {
+            Log.d(TAG, "✅ User DB already exists and has size > 0");
+            return;
+        }
+
+        Log.d(TAG, "📂 Copying user DB from assets...");
+        try {
+            copyDatabaseFromAssets();
+            if (!isDatabaseReady()) {
+                throw new IOException("Copied user DB file is empty or missing");
+            }
+            Log.d(TAG, "✅ User DB copied successfully, size: "
+                    + context.getDatabasePath(DATABASE_NAME).length());
+        } catch (IOException e) {
+            // 🔥 НЕ падаем: если в assets нет файла — onCreate создаст пустые таблицы.
+            // Это позволяет собирать проект без заранее подготовленной focus_user.db.
+            Log.w(TAG, "⚠️ Failed to copy user DB from assets, falling back to onCreate()", e);
+        }
+        Log.d(TAG, "=== ensureDatabaseReady END ===");
+    }
+
+    private void copyDatabaseFromAssets() throws IOException {
+        InputStream inputStream = context.getAssets().open(ASSETS_PATH);
+        File outFile = context.getDatabasePath(DATABASE_NAME);
+        File parent = outFile.getParentFile();
+        if (parent != null) parent.mkdirs();
+
+        OutputStream outputStream = new FileOutputStream(outFile);
+
+        byte[] buffer = new byte[4096];
+        int length;
+        while ((length = inputStream.read(buffer)) > 0) {
+            outputStream.write(buffer, 0, length);
+        }
+
+        outputStream.flush();
+        outputStream.close();
+        inputStream.close();
+    }
+
+    // ==========================================
+    // LIFECYCLE
+    // ==========================================
+
     @Override
     public void onCreate(SQLiteDatabase db) {
-        Log.d(TAG, "Creating user database tables...");
+        // Срабатывает ТОЛЬКО если в assets не оказалось focus_user.db.
+        // Если assets-файл есть — SQLiteOpenHelper.onCreate не вызовется,
+        // потому что файл уже создан копированием.
+        Log.d(TAG, "onCreate: creating empty user DB tables (fallback)");
         db.execSQL(CREATE_USER_GATE_VALVES);
         db.execSQL(CREATE_USER_SENSORS);
         db.execSQL(CREATE_USER_SETPOINTS);
         db.execSQL(CREATE_USER_WORK_SESSIONS);
         db.execSQL(CREATE_USER_SESSION_ITEMS);
         db.execSQL(CREATE_USER_MEASUREMENTS);
-        Log.d(TAG, "User database tables created successfully");
+        Log.d(TAG, "User DB tables created successfully (fallback)");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        Log.d(TAG, "Upgrading user database from " + oldVersion + " to " + newVersion);
+        Log.d(TAG, "Upgrading user DB from " + oldVersion + " to " + newVersion);
 
         // 🔥 МИГРАЦИИ — добавляются здесь, по одной на версию.
         // Пример:
@@ -183,5 +243,24 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
         // if (oldVersion < 3) {
         //     db.execSQL("CREATE TABLE IF NOT EXISTS user_bearings (...)");
         // }
+    }
+
+    // ==========================================
+    // ПУБЛИЧНЫЙ ХЕЛПЕР (если нужно пересоздать БД вручную)
+    // ==========================================
+
+    /**
+     * Принудительно копирует focus_user.db из assets заново,
+     * затирая текущую пользовательскую БД.
+     *
+     * Используйте осторожно — пользовательские данные будут потеряны.
+     * Может пригодиться в экране «Сбросить к заводским настройкам».
+     */
+    public void forceRestoreFromAssets() throws IOException {
+        File dbFile = context.getDatabasePath(DATABASE_NAME);
+        if (dbFile.exists()) {
+            dbFile.delete();
+        }
+        copyDatabaseFromAssets();
     }
 }

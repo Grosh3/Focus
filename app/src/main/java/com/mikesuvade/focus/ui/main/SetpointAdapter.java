@@ -161,35 +161,42 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
                 tvSetpointValue.setVisibility(View.GONE);
             }
 
-            // Операция + Notes в скобках
+            // Операция + Notes — показываем независимо друг от друга
             String operation = setpoint.getOperation();
             String notes = setpoint.getNotes();
-            if (operation != null && !operation.isEmpty()) {
-                tvOperation.setVisibility(View.VISIBLE);
-                String operationText = "Операция: " + operation;
-                if (notes != null && !notes.isEmpty() && !notes.equals("-") && !notes.equals("—")) {
-                    operationText += " (" + notes + ")";
-                }
-                tvOperation.setText(operationText);
 
-                if (isCriticalOperation(operation)) {
-                    tvOperation.setTextColor(ContextCompat.getColor(
-                            itemView.getContext(), R.color.critical_operation_red));
-                } else {
-                    tvOperation.setTextColor(ContextCompat.getColor(
-                            itemView.getContext(), R.color.operation_default));
-                }
+            boolean hasOperation = operation != null
+                    && !operation.isEmpty()
+                    && !operation.equals("-")
+                    && !operation.equals("—");
+
+            boolean hasNotes = notes != null
+                    && !notes.isEmpty()
+                    && !notes.equals("-")
+                    && !notes.equals("—");
+
+            if (hasOperation && hasNotes) {
+                tvOperation.setVisibility(View.VISIBLE);
+                tvOperation.setText("Операция: " + operation + " (" + notes + ")");
+                tvOperation.setTextColor(isCriticalOperation(operation)
+                        ? ContextCompat.getColor(itemView.getContext(), R.color.critical_operation_red)
+                        : ContextCompat.getColor(itemView.getContext(), R.color.operation_default));
+
+            } else if (hasOperation) {
+                tvOperation.setVisibility(View.VISIBLE);
+                tvOperation.setText("Операция: " + operation);
+                tvOperation.setTextColor(isCriticalOperation(operation)
+                        ? ContextCompat.getColor(itemView.getContext(), R.color.critical_operation_red)
+                        : ContextCompat.getColor(itemView.getContext(), R.color.operation_default));
+
+            } else if (hasNotes) {
+                tvOperation.setVisibility(View.VISIBLE);
+                tvOperation.setText("Примечания: " + notes);
+                tvOperation.setTextColor(ContextCompat.getColor(
+                        itemView.getContext(), R.color.operation_default));
+
             } else {
                 tvOperation.setVisibility(View.GONE);
-            }
-
-            // Выдержка (всегда видна, если есть значение)
-            String delayTime = setpoint.getDelayTime();
-            if (delayTime != null && !delayTime.isEmpty() && !delayTime.equals("-") && !delayTime.equals("—")) {
-                tvDelayTime.setVisibility(View.VISIBLE);
-                tvDelayTime.setText("Выдержка: " + delayTime);
-            } else {
-                tvDelayTime.setVisibility(View.GONE);
             }
 
             // Разворачиваемая часть

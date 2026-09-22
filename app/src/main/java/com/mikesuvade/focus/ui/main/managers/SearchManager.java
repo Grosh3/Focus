@@ -54,7 +54,7 @@ public class SearchManager {
         new Thread(() -> {
             try {
                 List<GateValve> results = repository.searchGateValvesWithUser(query);
-
+                fillBlockingBlobsFromReference(results);
                 AppState appState = AppState.getInstance();
                 List<Integer> selectedIds = new ArrayList<>();
 
@@ -147,7 +147,7 @@ public class SearchManager {
         new Thread(() -> {
             try {
                 List<GateValve> all = repository.getAllGateValvesWithUser();
-
+                fillBlockingBlobsFromReference(all);
                 AppState appState = AppState.getInstance();
                 List<Integer> selectedIds = new ArrayList<>();
 
@@ -249,6 +249,40 @@ public class SearchManager {
         String rest = clean.replaceFirst("^[0-9]+", "");
         if (!rest.isEmpty() && rest.length() >= 3) return rest;
         return clean;
+    }
+    /**
+     * Для user-задвижек (id < 0) с originalId > 0 добирает blob'ы картинок
+     * блокировок из справочной записи БД1. Описания блокировок НЕ трогаем —
+     * они уже есть в БД2 и могли быть отредактированы пользователем.
+     *
+     * Вызывается в фоновом потоке, результат кладётся прямо в объекты списка.
+     */
+    private void fillBlockingBlobsFromReference(List<GateValve> valves) {
+        if (valves == null || valves.isEmpty()) return;
+
+        for (GateValve v : valves) {
+            if (v.getId() >= 0) continue;                 // справочная — картинки уже с ней
+            if (v.getOriginalId() <= 0) continue;         // нет родителя в справочнике
+
+            boolean alreadyFilled =
+                    v.getNameSpaceViewOpen() != null
+                            && v.getNamespaceViewClose() != null
+                            && v.getNamespaceViewPerifer() != null;
+
+            if (alreadyFilled) continue;
+
+            try {
+                GateValve ref = repository.getGateValveById(v.getOriginalId());
+                if (ref == null) continue;
+
+                v.setNameSpaceViewOpen(ref.getNameSpaceViewOpen());
+                v.setNamespaceViewClose(ref.getNamespaceViewClose());
+                v.setNamespaceViewPerifer(ref.getNamespaceViewPerifer());
+            } catch (Exception e) {
+                Log.e(TAG, "fillBlockingBlobsFromReference failed for id=" + v.getId()
+                        + ", originalId=" + v.getOriginalId(), e);
+            }
+        }
     }
 
 }

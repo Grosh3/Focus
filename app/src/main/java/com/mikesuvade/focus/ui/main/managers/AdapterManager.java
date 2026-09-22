@@ -112,29 +112,41 @@ public class AdapterManager {
         });
 
         valveAdapter.setOnBlockingClickListener((valve, type) -> {
-            String title = valve.getName() + " - ";
-            byte[] imageData = null;
-            String description = "";
+            // Страховка: если у user-задвижки не оказалось blob'ов (не подгрузились
+            // в SearchManager, или запись пришла откуда-то ещё) — добираем из справочника.
+            boolean missingBlobs =
+                    valve.getNameSpaceViewOpen() == null
+                            && valve.getNamespaceViewClose() == null
+                            && valve.getNamespaceViewPerifer() == null;
 
-            switch (type) {
-                case "open":
-                    title += "БЛОКИРОВКИ \"ОТКРЫТИЕ\"";
-                    imageData = valve.getNameSpaceViewOpen();
-                    description = valve.getDescriptionBlockingOpen();
-                    break;
-                case "close":
-                    title += "БЛОКИРОВКИ \"ЗАКРЫТИЕ\"";
-                    imageData = valve.getNamespaceViewClose();
-                    description = valve.getDescriptionBlockingClose();
-                    break;
-                case "external":
-                    title += "ВНЕШНИЕ ЦЕПИ";
-                    imageData = valve.getNamespaceViewPerifer();
-                    description = valve.getDescriptionBlockingPerifer();
-                    break;
+            if (missingBlobs && valve.getOriginalId() > 0) {
+                final GateValve finalValve = valve;
+                new Thread(() -> {
+                    try {
+                        GateValve ref = ((com.mikesuvade.focus.MyApp) context.getApplicationContext())
+                                .getRepository()
+                                .getGateValveById(finalValve.getOriginalId());
+
+                        if (ref != null) {
+                            finalValve.setNameSpaceViewOpen(ref.getNameSpaceViewOpen());
+                            finalValve.setNamespaceViewClose(ref.getNamespaceViewClose());
+                            finalValve.setNamespaceViewPerifer(ref.getNamespaceViewPerifer());
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Fallback blob load failed for originalId="
+                                + finalValve.getOriginalId(), e);
+                    }
+
+                    if (context instanceof android.app.Activity) {
+                        ((android.app.Activity) context).runOnUiThread(
+                                () -> dispatchBlockingClick(finalValve, type));
+                    } else {
+                        dispatchBlockingClick(finalValve, type);
+                    }
+                }).start();
+            } else {
+                dispatchBlockingClick(valve, type);
             }
-
-            callbacks.showOverlay(title, imageData, description);
         });
     }
 
@@ -256,5 +268,34 @@ public class AdapterManager {
 
     public List<Integer> getExpandedPositions() {
         return expandedPositions;
+    }
+    /**
+     * Собирает заголовок/картинку/описание для оверлея блокировки и вызывает showOverlay.
+     * Вынесено отдельно, чтобы можно было вызвать после асинхронной догрузки blob'ов.
+     */
+    private void dispatchBlockingClick(GateValve valve, String type) {
+        String title = valve.getName() + " - ";
+        byte[] imageData = null;
+        String description = "";
+
+        switch (type) {
+            case "open":
+                title += "БЛОКИРОВКИ \"ОТКРЫТИЕ\"";
+                imageData = valve.getNameSpaceViewOpen();
+                description = valve.getDescriptionBlockingOpen();
+                break;
+            case "close":
+                title += "БЛОКИРОВКИ \"ЗАКРЫТИЕ\"";
+                imageData = valve.getNamespaceViewClose();
+                description = valve.getDescriptionBlockingClose();
+                break;
+            case "external":
+                title += "ВНЕШНИЕ ЦЕПИ";
+                imageData = valve.getNamespaceViewPerifer();
+                description = valve.getDescriptionBlockingPerifer();
+                break;
+        }
+
+        callbacks.showOverlay(title, imageData, description);
     }
 }

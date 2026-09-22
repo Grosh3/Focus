@@ -13,9 +13,10 @@
         android:theme="@style/Theme.FocusApp"
         tools:targetApi="31">
 
-        <!-- Главная активность -->
+        <!-- Главная активность (назначаем ей стартовую тему заставки) -->
         <activity
             android:name=".ui.main.MainActivity"
+            android:theme="@style/Theme.App.Starting"
             android:exported="true"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize">

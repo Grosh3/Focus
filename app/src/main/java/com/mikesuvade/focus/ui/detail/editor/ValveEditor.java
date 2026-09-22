@@ -2,9 +2,7 @@ package com.mikesuvade.focus.ui.detail.editor;
 
 import android.content.Intent;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,16 +25,6 @@ public class ValveEditor extends BaseEntityEditor {
     private EditText etLocationDescription;
     private EditText etOnPlace;
     private EditText etValveFullName;
-    private EditText etNameEng;
-    private EditText etAp50;
-    private EditText etMark;
-    private EditText etCdaCabinet;
-    private EditText etCdaCabinetPosition;
-    private EditText etSlot;
-
-    private View btnToggleExtra;
-    private LinearLayout extraFieldsContainer;
-    private boolean isExtraVisible = false;
 
     public ValveEditor(AppCompatActivity activity, IRepository repository) {
         super(activity, repository);
@@ -56,26 +44,6 @@ public class ValveEditor extends BaseEntityEditor {
         etLocationDescription = root.findViewById(R.id.etLocationDescription);
         etOnPlace = root.findViewById(R.id.etOnPlace);
         etValveFullName = root.findViewById(R.id.etValveFullName);
-        etNameEng = root.findViewById(R.id.etNameEng);
-        etAp50 = root.findViewById(R.id.etAp50);
-        etMark = root.findViewById(R.id.etMark);
-        etCdaCabinet = root.findViewById(R.id.etCdaCabinet);
-        etCdaCabinetPosition = root.findViewById(R.id.etCdaCabinetPosition);
-        etSlot = root.findViewById(R.id.etSlot);
-
-        extraFieldsContainer = root.findViewById(R.id.extraFieldsContainer);
-        btnToggleExtra = root.findViewById(R.id.btnToggleExtra);
-
-        if (btnToggleExtra != null) {
-            btnToggleExtra.setOnClickListener(v -> {
-                isExtraVisible = !isExtraVisible;
-                extraFieldsContainer.setVisibility(isExtraVisible ? View.VISIBLE : View.GONE);
-                String text = isExtraVisible
-                        ? activity.getString(R.string.hide_extra_fields)
-                        : activity.getString(R.string.toggle_extra_fields);
-                ((Button) btnToggleExtra).setText(text);
-            });
-        }
 
         View valveFields = root.findViewById(R.id.valveFields);
         View sensorFields = root.findViewById(R.id.sensorFields);
@@ -164,12 +132,6 @@ public class ValveEditor extends BaseEntityEditor {
         etLocationDescription.setText(currentValve.getLocationDescription());
         etOnPlace.setText(currentValve.getOnPlace());
         etValveFullName.setText(currentValve.getFullName());
-        etNameEng.setText(currentValve.getNameEng());
-        etAp50.setText(currentValve.getAp50());
-        etMark.setText(currentValve.getMark());
-        etCdaCabinet.setText(currentValve.getCdaCabinet());
-        etCdaCabinetPosition.setText(currentValve.getCdaCabinetPosition());
-        etSlot.setText(currentValve.getSlot());
     }
 
     @Override
@@ -191,19 +153,14 @@ public class ValveEditor extends BaseEntityEditor {
         String onPlace = textOf(etOnPlace);
         String fullName = textOf(etValveFullName);
         String kks = textOf(etValveKks);
-        String nameEng = textOf(etNameEng);
-        String ap50 = textOf(etAp50);
-        String mark = textOf(etMark);
-        String cdaCabinet = textOf(etCdaCabinet);
-        String cdaCabinetPosition = textOf(etCdaCabinetPosition);
-        String slot = textOf(etSlot);
 
-        boolean allFieldsEmpty = isy.isEmpty() && name.isEmpty()
-                && powerCabinet.isEmpty() && locationDescription.isEmpty()
-                && onPlace.isEmpty() && fullName.isEmpty()
-                && kks.isEmpty() && nameEng.isEmpty() && ap50.isEmpty()
-                && mark.isEmpty() && cdaCabinet.isEmpty()
-                && cdaCabinetPosition.isEmpty() && slot.isEmpty();
+        boolean allFieldsEmpty = isy.isEmpty()
+                && name.isEmpty()
+                && powerCabinet.isEmpty()
+                && locationDescription.isEmpty()
+                && onPlace.isEmpty()
+                && fullName.isEmpty()
+                && kks.isEmpty();
 
         if (isNew && allFieldsEmpty) {
             Toast.makeText(activity, "Заполните хотя бы одно поле", Toast.LENGTH_SHORT).show();
@@ -225,12 +182,9 @@ public class ValveEditor extends BaseEntityEditor {
         toSave.setOnPlace(onPlace);
         toSave.setFullName(fullName);
         toSave.setKks(kks.isEmpty() ? null : kks);
-        toSave.setNameEng(nameEng);
-        toSave.setAp50(ap50);
-        toSave.setMark(mark);
-        toSave.setCdaCabinet(cdaCabinet);
-        toSave.setCdaCabinetPosition(cdaCabinetPosition);
-        toSave.setSlot(slot);
+
+        // ❌ Остальные поля (nameEng, ap50, mark, cdaCabinet, cdaCabinetPosition, slot)
+        // НЕ заполняем — они обнуляются при сохранении. В БД1 они остаются как есть.
 
         if (currentValve != null) {
             toSave.setNameSpaceViewOpen(currentValve.getNameSpaceViewOpen());
@@ -348,13 +302,7 @@ public class ValveEditor extends BaseEntityEditor {
                 || !eq(textOf(etLocationDescription), originalValve.getLocationDescription())
                 || !eq(textOf(etOnPlace), originalValve.getOnPlace())
                 || !eq(textOf(etValveFullName), originalValve.getFullName())
-                || !eq(textOf(etValveKks), originalValve.getKks())
-                || !eq(textOf(etNameEng), originalValve.getNameEng())
-                || !eq(textOf(etAp50), originalValve.getAp50())
-                || !eq(textOf(etMark), originalValve.getMark())
-                || !eq(textOf(etCdaCabinet), originalValve.getCdaCabinet())
-                || !eq(textOf(etCdaCabinetPosition), originalValve.getCdaCabinetPosition())
-                || !eq(textOf(etSlot), originalValve.getSlot());
+                || !eq(textOf(etValveKks), originalValve.getKks());
     }
 
     @Override

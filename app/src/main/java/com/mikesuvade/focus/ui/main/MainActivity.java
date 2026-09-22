@@ -167,6 +167,8 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // 🌟 Инициализируем заставку перед созданием Activity
+        androidx.core.splashscreen.SplashScreen.installSplashScreen(this);
 
         super.onCreate(savedInstanceState);
 

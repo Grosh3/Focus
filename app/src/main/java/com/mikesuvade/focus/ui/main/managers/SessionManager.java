@@ -204,8 +204,14 @@ public class SessionManager {
     }
 
     public void showCloseListDialog() {
+        // Получаем название активного списка
+        String name = AppState.getInstance().getLastOpenedSessionName();
+        if (name == null || name.isEmpty()) {
+            name = "без названия";
+        }
+
         new AlertDialog.Builder(btnNewValve.getContext())
-                .setTitle(R.string.dialog_close_list_title)
+                .setTitle(btnNewValve.getContext().getString(R.string.dialog_close_list_title, name))
                 .setPositiveButton(R.string.dialog_close_list_positive, (dialog, which) -> closeCurrentList())
                 .setNegativeButton(R.string.dialog_close_list_negative, (dialog, which) -> dialog.dismiss())
                 .show();

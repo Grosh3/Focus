@@ -20,7 +20,7 @@
     <string name="toast_selection_cleared">Выбор очищен</string>
 
     <!-- Диалог закрытия списка -->
-    <string name="dialog_close_list_title">Закрыть список БЛ 3?</string>
+    <string name="dialog_close_list_title">Закрыть список \"%1$s\"?</string>
     <string name="dialog_close_list_positive">Да</string>
     <string name="dialog_close_list_negative">Нет</string>
     <string name="toast_list_closed">Список закрыт</string>

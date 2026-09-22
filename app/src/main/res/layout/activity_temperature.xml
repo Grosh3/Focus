@@ -46,7 +46,7 @@
             android:contentDescription="@string/content_desc_help"
             app:icon="@drawable/questchen"
             app:iconTint="@color/icon_top_panel_color"
-            app:iconSize="24dp"
+            app:iconSize="30dp"
             app:layout_constraintEnd_toStartOf="@id/btnSavedMeasurements"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />

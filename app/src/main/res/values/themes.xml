@@ -1,4 +1,19 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- 🌟 ТЕМА ДЛЯ ЭКРАНА ЗАСТАВКИ (SPLASH SCREEN) -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Цвет фона заставки (можете заменить на ваш @color/background) -->
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+
+        <!-- Иконка или логотип по центру (замените ic_launcher на свой логотип, если есть) -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+
+
+        <!-- Основная тема, которая включится автоматически после скрытия заставки -->
+        <item name="postSplashScreenTheme">@style/Theme.FocusApp</item>
+    </style>
+
+    <!-- Ваша основная тема приложения -->
     <style name="Theme.FocusApp" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Основные цвета -->
         <item name="colorPrimary">@color/primary</item>

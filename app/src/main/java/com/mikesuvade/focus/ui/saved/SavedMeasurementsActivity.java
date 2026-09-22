@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.Measurement;
+import androidx.recyclerview.widget.RecyclerView;
 
 public class SavedMeasurementsActivity extends AppCompatActivity {
 
@@ -37,7 +38,7 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
         // 🔥 Системные бары + отступ от статус-бара
         setStatusBarAndNavigationIconsDark(true);
         fixTopPanelPadding();
-
+        fixRecyclerViewBottomPadding();
         viewModel = new ViewModelProvider(
                 this,
                 new ViewModelProvider.Factory() {
@@ -194,6 +195,26 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
             controller.setAppearanceLightStatusBars(dark);
             controller.setAppearanceLightNavigationBars(dark);
         }
+    }
+    private void fixRecyclerViewBottomPadding() {
+        RecyclerView rv = findViewById(R.id.rvSavedMeasurements);
+        if (rv == null) return;
+
+        rv.setClipToPadding(false);
+
+        ViewCompat.setOnApplyWindowInsetsListener(rv, (v, insets) -> {
+            int navBarHeight = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            int extraPadding = (int) (16 * getResources().getDisplayMetrics().density);
+
+            rv.setPadding(
+                    rv.getPaddingLeft(),
+                    rv.getPaddingTop(),
+                    rv.getPaddingRight(),
+                    navBarHeight + extraPadding
+            );
+
+            return insets;
+        });
     }
 
     @Override
