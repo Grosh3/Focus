@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mikesuvade.focus.R;
@@ -14,12 +15,11 @@ import com.mikesuvade.focus.domain.models.Setpoint;
 
 import java.util.ArrayList;
 import java.util.List;
-import androidx.core.content.ContextCompat;
 
 public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHolder> {
 
     private List<Setpoint> setpoints = new ArrayList<>();
-    private List<Integer> expandedPositions = new ArrayList<>();
+    private final List<Integer> expandedPositions = new ArrayList<>();
 
     private OnItemClickListener listener;
     private OnItemLongClickListener longClickListener;
@@ -34,7 +34,7 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
 
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
-        Log.d("SETPOINT_ADAPTER", "setOnItemClickListener: listener=" + (listener != null ? "NOT NULL" : "NULL"));
+
     }
 
     public void setOnItemLongClickListener(OnItemLongClickListener listener) {
@@ -42,7 +42,7 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
     }
 
     public void updateData(List<Setpoint> newSetpoints) {
-        Log.d("SETPOINT_ADAPTER", "updateData: size=" + (newSetpoints != null ? newSetpoints.size() : 0));
+
         this.setpoints = newSetpoints != null ? newSetpoints : new ArrayList<>();
         this.expandedPositions.clear();
         notifyDataSetChanged();
@@ -51,20 +51,19 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
     }
 
     public void setExpanded(int position, boolean expanded) {
-        Log.d("EXPAND_SETPOINT", "setExpanded: position=" + position + ", expanded=" + expanded);
-        Log.d("EXPAND_SETPOINT", "expandedPositions before: " + expandedPositions);
+
 
         if (expanded) {
             if (!expandedPositions.contains(position)) {
                 expandedPositions.add(position);
-                Log.d("EXPAND_SETPOINT", "added position " + position);
+
             }
         } else {
             expandedPositions.remove(Integer.valueOf(position));
-            Log.d("EXPAND_SETPOINT", "removed position " + position);
+
         }
 
-        Log.d("EXPAND_SETPOINT", "expandedPositions after: " + expandedPositions);
+
         notifyItemChanged(position);
     }
 
@@ -124,11 +123,7 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
                   OnItemLongClickListener longClickListener,
                   int position) {
 
-            Log.d("SETPOINT_BIND", "=== bind START ===");
-            Log.d("SETPOINT_BIND", "position=" + position);
-            Log.d("SETPOINT_BIND", "setpoint=" + setpoint.getPositionName());
-            Log.d("SETPOINT_BIND", "isExpanded=" + isExpanded);
-            Log.d("SETPOINT_BIND", "listener=" + (listener != null ? "NOT NULL" : "NULL"));
+
 
             // Позиция
             String positionName = setpoint.getPositionName();
@@ -227,7 +222,7 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
 
             // Слушатели
             itemView.setOnClickListener(v -> {
-                Log.d("SETPOINT_CLICK", "!!! itemView CLICKED !!! position=" + position);
+
                 if (listener != null) {
                     listener.onItemClick(setpoint, position);
                 } else {
@@ -236,7 +231,7 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
             });
 
             itemView.setOnLongClickListener(v -> {
-                Log.d("SETPOINT_LONG_CLICK", "!!! itemView LONG CLICKED !!! position=" + position);
+
                 if (longClickListener != null) {
                     return longClickListener.onItemLongClick(setpoint, position);
                 }

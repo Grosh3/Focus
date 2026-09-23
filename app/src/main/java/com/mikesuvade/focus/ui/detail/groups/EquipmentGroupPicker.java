@@ -5,6 +5,7 @@ import android.content.Context;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
@@ -83,10 +84,18 @@ public class EquipmentGroupPicker {
                 android.os.Handler main = new android.os.Handler(context.getMainLooper());
                 main.post(() -> displayGroupsList(allGroups));
 
-            } catch (Exception e) {
+            } catch (android.database.sqlite.SQLiteException e) {
+                Log.e("EquipmentGroupPicker", "SQLite error loading groups", e);
                 android.os.Handler main = new android.os.Handler(context.getMainLooper());
                 main.post(() -> {
-                    Toast.makeText(context, "Ошибка загрузки групп", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "Ошибка БД при загрузке групп", Toast.LENGTH_LONG).show();
+                    hide();
+                });
+            } catch (RuntimeException e) {
+                Log.e("EquipmentGroupPicker", "Runtime error loading groups", e);
+                android.os.Handler main = new android.os.Handler(context.getMainLooper());
+                main.post(() -> {
+                    Toast.makeText(context, "Ошибка загрузки групп", Toast.LENGTH_LONG).show();
                     hide();
                 });
             }

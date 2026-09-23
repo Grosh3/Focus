@@ -6,10 +6,7 @@ import android.util.Log;
 
 import androidx.appcompat.app.AlertDialog;
 
-import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.GateValve;
-import com.mikesuvade.focus.domain.models.Sensor;
-import com.mikesuvade.focus.domain.models.Setpoint;
 import com.mikesuvade.focus.ui.detail.DetailActivity;
 import com.mikesuvade.focus.ui.main.GateValveAdapter;
 import com.mikesuvade.focus.ui.main.SensorAdapter;
@@ -74,7 +71,7 @@ public class AdapterManager {
     private void setupValveAdapter() {
         valveAdapter.setOnItemClickListener((valve, position) -> {
             callbacks.hideKeyboardOnClick();
-            Log.d(TAG, "Valve click: " + position);
+
             callbacks.toggleExpanded(position);
         });
 
@@ -105,7 +102,7 @@ public class AdapterManager {
         });
 
         valveAdapter.setOnCheckBoxClickListener((valve, position, isChecked) -> {
-            Log.d(TAG, "CheckBox: " + valve.getName() + " = " + isChecked);
+
             callbacks.onCheckBoxChanged(valve, isChecked);
             callbacks.syncAdapterSelection();
             callbacks.updateButtonState();
@@ -154,7 +151,7 @@ public class AdapterManager {
         // 🔥 КОРОТКИЙ КЛИК - РАЗВОРАЧИВАЕМ КАРТОЧКУ (БАЯН)
         sensorAdapter.setOnItemClickListener((sensor, position) -> {
             callbacks.hideKeyboardOnClick();
-            Log.d(TAG, "Sensor click: " + position);
+
             callbacks.toggleExpanded(position);
         });
 
@@ -193,7 +190,7 @@ public class AdapterManager {
         // 🔥 КОРОТКИЙ КЛИК - РАЗВОРАЧИВАЕМ КАРТОЧКУ (БАЯН)
         setpointAdapter.setOnItemClickListener((setpoint, position) -> {
             callbacks.hideKeyboardOnClick();
-            Log.d(TAG, "Setpoint click: " + position);
+
             callbacks.toggleExpanded(position);
         });
 

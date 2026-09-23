@@ -26,11 +26,12 @@ public class SavedMeasurementsViewModel extends ViewModel {
     public void loadMeasurements() {
         new Thread(() -> {
             try {
-                // 🔥 ИСПРАВЛЕНО: используем ПОЛЬЗОВАТЕЛЬСКУЮ БД
                 List<Measurement> result = repository.getAllUserMeasurements();
                 measurements.postValue(result);
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (android.database.sqlite.SQLiteException e) {
+                measurements.postValue(new ArrayList<>());
+            } catch (RuntimeException e) {
+                measurements.postValue(new ArrayList<>());
             }
         }).start();
     }
@@ -38,24 +39,25 @@ public class SavedMeasurementsViewModel extends ViewModel {
     public void renameMeasurement(int id, String newDescription) {
         new Thread(() -> {
             try {
-                // 🔥 ИСПРАВЛЕНО: используем ПОЛЬЗОВАТЕЛЬСКУЮ БД
                 repository.updateUserMeasurementDescription(id, newDescription);
-                loadMeasurements();
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (android.database.sqlite.SQLiteException e) {
+                // ignore
+            } catch (RuntimeException e) {
+                // ignore
             }
+            loadMeasurements();
         }).start();
     }
-
     public void deleteMeasurement(int id) {
         new Thread(() -> {
             try {
-                // 🔥 ИСПРАВЛЕНО: используем ПОЛЬЗОВАТЕЛЬСКУЮ БД
                 repository.deleteUserMeasurement(id);
-                loadMeasurements();
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (android.database.sqlite.SQLiteException e) {
+                // ignore
+            } catch (RuntimeException e) {
+                // ignore
             }
+            loadMeasurements();
         }).start();
     }
 }

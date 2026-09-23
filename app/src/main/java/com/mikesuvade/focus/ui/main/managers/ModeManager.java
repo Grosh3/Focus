@@ -1,13 +1,11 @@
 package com.mikesuvade.focus.ui.main.managers;
 
-import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.ui.main.GateValveAdapter;
 import com.mikesuvade.focus.ui.main.SensorAdapter;
 import com.mikesuvade.focus.ui.main.SetpointAdapter;
@@ -78,7 +76,7 @@ public class ModeManager {
     }
 
     public void switchToMain() {
-        Log.d(TAG, "=== switchToMain ===");
+
         currentMode = MODE_MAIN;
 
         updateTopButtonsVisibility(true);
@@ -99,7 +97,7 @@ public class ModeManager {
     }
 
     public void switchToSensors() {
-        Log.d(TAG, "=== switchToSensors ===");
+
         currentMode = MODE_SENSORS;
 
         updateTopButtonsVisibility(false);
@@ -123,7 +121,7 @@ public class ModeManager {
     }
 
     public void switchToSetpoints() {
-        Log.d(TAG, "=== switchToSetpoints ===");
+
         currentMode = MODE_SETPOINTS;
 
         updateTopButtonsVisibility(false);

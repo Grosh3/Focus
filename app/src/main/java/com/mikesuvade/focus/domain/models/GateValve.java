@@ -1,7 +1,6 @@
 package com.mikesuvade.focus.domain.models;
 
 import java.io.Serializable;
-import java.util.Arrays;
 
 public class GateValve implements Serializable {
 

@@ -183,14 +183,21 @@ public class ValveItemAdapter extends RecyclerView.Adapter<ValveItemAdapter.View
                     try {
                         SimpleDateFormat fullFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
                         Date date = fullFormat.parse(item.getCheckedAt());
-                        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
-                        String timeOnly = timeFormat.format(date);
+                        if (date != null) {
+                            SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                            String timeOnly = timeFormat.format(date);
 
-                        tvCheckedAt.setVisibility(View.VISIBLE);
-                        tvCheckedAt.setText(timeOnly);
-                        tvCheckedAt.setTextColor(item.getIsAssembled() == 1 ?
-                                ContextCompat.getColor(context, R.color.status_success) :
-                                ContextCompat.getColor(context, R.color.status_error));
+                            tvCheckedAt.setVisibility(View.VISIBLE);
+                            tvCheckedAt.setText(timeOnly);
+                            tvCheckedAt.setTextColor(item.getIsAssembled() == 1 ?
+                                    ContextCompat.getColor(context, R.color.status_success) :
+                                    ContextCompat.getColor(context, R.color.status_error));
+                        } else {
+                            tvCheckedAt.setVisibility(View.VISIBLE);
+                            tvCheckedAt.setText(item.getCheckedAt());
+                        }
+
+
                     } catch (Exception e) {
                         tvCheckedAt.setVisibility(View.VISIBLE);
                         tvCheckedAt.setText(item.getCheckedAt());

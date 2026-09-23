@@ -4,13 +4,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Rect;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -23,6 +21,7 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -39,11 +38,8 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.GateValve;
-import com.mikesuvade.focus.domain.models.Sensor;
 import com.mikesuvade.focus.domain.models.ValveWorkSession;
 import com.mikesuvade.focus.domain.repository.IRepository;
-import com.mikesuvade.focus.ui.detail.DetailActivity;
-import com.mikesuvade.focus.ui.list.ListDetailActivity;
 import com.mikesuvade.focus.ui.main.managers.AdapterManager;
 import com.mikesuvade.focus.ui.main.managers.ModeManager;
 import com.mikesuvade.focus.ui.main.managers.SearchManager;
@@ -55,7 +51,6 @@ import com.mikesuvade.focus.utils.AppState;
 
 import java.util.ArrayList;
 import java.util.List;
-import androidx.annotation.NonNull;
 
 public class MainActivity extends AppCompatActivity implements
         ModeManager.MainActivityCallback,
@@ -136,7 +131,7 @@ public class MainActivity extends AppCompatActivity implements
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK) {
-                    Log.d("MAIN_ACTIVITY", "Sensor edited, refreshing...");
+
                     refreshData();
                 }
             }
@@ -147,7 +142,7 @@ public class MainActivity extends AppCompatActivity implements
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK) {
-                    Log.d("MAIN_ACTIVITY", "Setpoint edited, refreshing...");
+
                     refreshData();
                 }
             }
@@ -191,34 +186,25 @@ public class MainActivity extends AppCompatActivity implements
 
         restoreLastSession();
         updateButtonState();
-        checkRefDb();
+
         updateTitleForMode();
-        Log.d("MAIN_ACTIVITY", "onCreate START");
-        Log.d("MAIN_ACTIVITY", "hasActiveSession=" + AppState.getInstance().hasActiveSession());
+
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d("MAIN_ACTIVITY", "=== onResume START ===");
+
 
         AppState appState = AppState.getInstance();
-        Log.d("MAIN_ACTIVITY", "hasActiveSession = " + appState.hasActiveSession());
-        Log.d("MAIN_ACTIVITY", "lastOpenedSessionId = " + appState.getLastOpenedSessionId());
-        Log.d("MAIN_ACTIVITY", "hasUnsavedList = " + appState.hasUnsavedList());
-        Log.d("MAIN_ACTIVITY", "unsavedListIds = " + appState.getUnsavedListIds());
-        Log.d("MAIN_ACTIVITY", "isMainMode = " + (modeManager != null && modeManager.isMainMode()));
-        Log.d("MAIN_ACTIVITY", "isSearchActive = " + isSearchActive);
+
 
         if (modeManager != null && modeManager.isMainMode()) {
             if (appState.hasActiveSession()) {
-                Log.d("MAIN_ACTIVITY", "branch: restoreLastSession");
                 sessionManager.restoreLastSession();
             } else if (appState.hasUnsavedList()) {
-                Log.d("MAIN_ACTIVITY", "branch: restoreUnsavedList");
                 sessionManager.restoreUnsavedList();
             } else {
-                Log.d("MAIN_ACTIVITY", "branch: clearCurrentList");
                 viewModel.clearCurrentList();
             }
 
@@ -226,11 +212,9 @@ public class MainActivity extends AppCompatActivity implements
                 sessionManager.syncAdapterSelection();
                 updateButtonState();
             }, 100);
-        } else {
-            Log.d("MAIN_ACTIVITY", "branch: not main mode, skipping restore");
         }
 
-        Log.d("MAIN_ACTIVITY", "=== onResume END ===");
+
     }
 
     // ==========================================
@@ -325,6 +309,20 @@ public class MainActivity extends AppCompatActivity implements
                 rvGateValves
         );
 
+        searchManager.setOnSearchErrorListener((userMessage, cause) -> {
+            if (isFinishing() || isDestroyed()) return;
+
+            // Скрываем RecyclerView и показываем сообщение в tvEmptySearch
+            rvGateValves.setVisibility(View.GONE);
+            tvEmptySearch.setVisibility(View.VISIBLE);
+
+            String display = "⚠️ " + userMessage
+                    + "\n\nЕсли проблема повторяется — проверьте базу данных.";
+            tvEmptySearch.setText(display);
+
+            Toast.makeText(MainActivity.this, userMessage, Toast.LENGTH_LONG).show();
+        });
+
         sessionManager = new SessionManager(
                 repository,
                 btnNewValve,
@@ -376,7 +374,7 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 String query = s.toString().trim();
-                Log.d(TAG, "onTextChanged: query='" + query + "', currentMode=" + modeManager.getCurrentMode());
+
 
                 if (modeManager.isMainMode()) {
                     if (query.isEmpty()) {
@@ -432,12 +430,12 @@ public class MainActivity extends AppCompatActivity implements
         btnOverlayBack.setOnClickListener(v -> hideOverlay());
 
         btnSensors.setOnClickListener(v -> {
-            Log.d(TAG, "btnSensors clicked");
+
             modeManager.switchToSensors();
         });
 
         btnSetpoints.setOnClickListener(v -> {
-            Log.d(TAG, "btnSetpoints clicked");
+
             modeManager.switchToSetpoints();
         });
 
@@ -683,7 +681,7 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void toggleExpanded(int position) {
-        Log.d(TAG, "toggleExpanded: position=" + position + ", mode=" + modeManager.getCurrentMode());
+
 
         List<Integer> expandedPositions = adapterManager.getExpandedPositions();
 
@@ -715,25 +713,25 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void launchValveDetailActivity(Intent intent) {
-        Log.d("MAIN_ACTIVITY", "launchValveDetailActivity");
+
         detailResultLauncher.launch(intent);
     }
 
     @Override
     public void launchSensorDetailActivity(Intent intent) {
-        Log.d("MAIN_ACTIVITY", "launchSensorDetailActivity");
+
         sensorDetailResultLauncher.launch(intent);
     }
 
     @Override
     public void launchSetpointDetailActivity(Intent intent) {
-        Log.d("MAIN_ACTIVITY", "launchSetpointDetailActivity");
+
         setpointDetailResultLauncher.launch(intent);
     }
 
     @Override
     public void onCheckBoxChanged(GateValve valve, boolean isChecked) {
-        Log.d(TAG, "onCheckBoxChanged: " + valve.getName() + " = " + isChecked);
+
 
         if (isChecked) {
             if (viewModel.isInCurrentList(valve)) {
@@ -937,31 +935,7 @@ public class MainActivity extends AppCompatActivity implements
         }
     }
 
-    private void checkRefDb() {
-        new Thread(() -> {
-            try {
-                IRepository repo = ((MyApp) getApplication()).getRepository();
 
-                List<Sensor> all = repo.getAllSensors();
-                Log.d("DB_CHECK", "=== ALL SENSORS FROM REF DB ===");
-                Log.d("DB_CHECK", "count = " + all.size());
-                for (Sensor s : all) {
-                    Log.d("DB_CHECK", "  " + s.getStMarkir() + " | " + s.getFullName() + " | " + s.getKks());
-                }
-
-                String testQuery = "МИ 4 24";
-                List<Sensor> found = repo.searchSensors(testQuery);
-                Log.d("DB_CHECK", "=== SEARCH FOR '" + testQuery + "' ===");
-                Log.d("DB_CHECK", "found = " + found.size());
-                for (Sensor s : found) {
-                    Log.d("DB_CHECK", "  found: " + s.getStMarkir());
-                }
-
-            } catch (Exception e) {
-                Log.e("DB_CHECK", "Error", e);
-            }
-        }).start();
-    }
     private void fixRecyclerViewBottomPadding() {
         RecyclerView recyclerView = rvGateValves; // Ваш RecyclerView
         if (recyclerView == null) return;
@@ -1044,23 +1018,22 @@ public class MainActivity extends AppCompatActivity implements
     }
     @Override
     public void syncAdapterSelectionWithIds(List<Integer> currentIds) {
-        Log.d(TAG, "=== syncAdapterSelectionWithIds ===");
-        Log.d(TAG, "currentIds = " + currentIds);
+
 
         // Получаем текущие задвижки из адаптера
         List<GateValve> allValves = adapterManager.getValveAdapter().getValves();
-        Log.d(TAG, "allValves size = " + allValves.size());
+
 
         List<Integer> selectedPositions = new ArrayList<>();
         for (int i = 0; i < allValves.size(); i++) {
             GateValve valve = allValves.get(i);
             if (currentIds.contains(valve.getId())) {
                 selectedPositions.add(i);
-                Log.d(TAG, "Found match at position " + i + ": " + valve.getName());
+
             }
         }
 
-        Log.d(TAG, "selectedPositions = " + selectedPositions);
+
         adapterManager.syncAdapterSelection(selectedPositions);
     }
 }

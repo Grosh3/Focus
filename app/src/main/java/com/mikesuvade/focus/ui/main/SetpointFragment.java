@@ -17,7 +17,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mikesuvade.focus.R;
-import com.mikesuvade.focus.domain.models.Setpoint;
 
 import java.util.ArrayList;
 import java.util.List;

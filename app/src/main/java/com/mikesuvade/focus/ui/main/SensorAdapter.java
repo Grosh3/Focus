@@ -1,11 +1,9 @@
 package com.mikesuvade.focus.ui.main;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.BackgroundColorSpan;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,7 +22,7 @@ import java.util.List;
 public class SensorAdapter extends RecyclerView.Adapter<SensorAdapter.ViewHolder> {
 
     private List<Sensor> sensors = new ArrayList<>();
-    private List<Integer> expandedPositions = new ArrayList<>();
+    private final List<Integer> expandedPositions = new ArrayList<>();
     private String searchQuery = "";
 
     private OnItemClickListener listener;
@@ -47,14 +45,13 @@ public class SensorAdapter extends RecyclerView.Adapter<SensorAdapter.ViewHolder
     }
 
     public void updateData(List<Sensor> newSensors) {
-        Log.d("SENSOR_ADAPTER", "=== updateData ===");
-        Log.d("SENSOR_ADAPTER", "newSensors size = " + (newSensors != null ? newSensors.size() : 0));
+
 
         this.sensors = newSensors != null ? newSensors : new ArrayList<>();
         this.expandedPositions.clear();
         notifyDataSetChanged();
 
-        Log.d("SENSOR_ADAPTER", "adapter now has " + this.sensors.size() + " items");
+
     }
 
     public void setSearchQuery(String query) {

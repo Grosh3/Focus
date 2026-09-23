@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -119,6 +120,7 @@ public abstract class BaseEntityEditor {
 
     protected void onSaveSuccess(String message) {
         activity.runOnUiThread(() -> {
+            if (activity.isFinishing() || activity.isDestroyed()) return;
             Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
             activity.setResult(AppCompatActivity.RESULT_OK);
             activity.finish();
@@ -127,8 +129,22 @@ public abstract class BaseEntityEditor {
 
     protected void onSaveError(String message) {
         isSaved = false;
-        activity.runOnUiThread(() ->
-                Toast.makeText(activity, message, Toast.LENGTH_SHORT).show());
+        activity.runOnUiThread(() -> {
+            if (activity.isFinishing() || activity.isDestroyed()) return;
+            Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+        });
+    }
+
+    /**
+     * Единая точка логирования + показа сообщения об ошибке.
+     * Использовать во всех catch-блоках редакторов.
+     */
+    protected void logAndToast(String logMessage, Throwable cause, String userMessage) {
+        Log.e(getClass().getSimpleName(), logMessage, cause);
+        activity.runOnUiThread(() -> {
+            if (activity.isFinishing() || activity.isDestroyed()) return;
+            Toast.makeText(activity, userMessage, Toast.LENGTH_LONG).show();
+        });
     }
 
     protected void hideKeyboard() {

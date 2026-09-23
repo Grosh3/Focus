@@ -20,13 +20,13 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
-import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.ui.detail.DetailActivity;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -199,6 +199,10 @@ public class SettingsActivity extends AppCompatActivity {
                 try (InputStream in = new FileInputStream(currentDb);
                      OutputStream out = getContentResolver().openOutputStream(targetUri)) {
 
+                    if (out == null) {
+                        throw new IOException("openOutputStream returned null");
+                    }
+
                     byte[] buffer = new byte[1024];
                     int length;
                     while ((length = in.read(buffer)) > 0) {
@@ -207,9 +211,18 @@ public class SettingsActivity extends AppCompatActivity {
                 }
 
                 runOnUiThread(() -> Toast.makeText(this, "✅ Экспорт успешно завершен!", Toast.LENGTH_LONG).show());
-            } catch (Exception e) {
-                Log.e(TAG, "Ошибка экспорта БД", e);
-                runOnUiThread(() -> Toast.makeText(this, "❌ Ошибка экспорта", Toast.LENGTH_SHORT).show());
+            } catch (IOException e) {
+                Log.e(TAG, "IO error exporting DB", e);
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    Toast.makeText(this, "Ошибка экспорта: доступ к файлу", Toast.LENGTH_LONG).show();
+                });
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Runtime error exporting DB", e);
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    Toast.makeText(this, "Ошибка экспорта БД", Toast.LENGTH_LONG).show();
+                });
             }
         }).start();
     }
@@ -229,10 +242,15 @@ public class SettingsActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 File targetDb = getDatabasePath("focus_user.db");
-                targetDb.getParentFile().mkdirs();
+                File parent = targetDb.getParentFile();
+                if (parent != null) parent.mkdirs();
 
                 try (InputStream in = getContentResolver().openInputStream(sourceUri);
                      OutputStream out = new FileOutputStream(targetDb)) {
+
+                    if (in == null) {
+                        throw new IOException("openInputStream returned null");
+                    }
 
                     byte[] buffer = new byte[1024];
                     int length;
@@ -245,9 +263,18 @@ public class SettingsActivity extends AppCompatActivity {
                     Toast.makeText(this, "✅ База данных успешно восстановлена! Перезапустите приложение.", Toast.LENGTH_LONG).show();
                     finishAffinity();
                 });
-            } catch (Exception e) {
-                Log.e(TAG, "Ошибка импорта БД", e);
-                runOnUiThread(() -> Toast.makeText(this, "❌ Ошибка при накатывании бэкапа", Toast.LENGTH_SHORT).show());
+            } catch (IOException e) {
+                Log.e(TAG, "IO error importing DB", e);
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    Toast.makeText(this, "Ошибка импорта: доступ к файлу", Toast.LENGTH_LONG).show();
+                });
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Runtime error importing DB", e);
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    Toast.makeText(this, "Ошибка импорта БД", Toast.LENGTH_LONG).show();
+                });
             }
         }).start();
     }

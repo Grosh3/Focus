@@ -30,8 +30,10 @@ public class SetpointViewModel extends ViewModel {
             try {
                 List<Setpoint> all = repository.getAllSetpoints();
                 setpoints.postValue(all);
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (android.database.sqlite.SQLiteException e) {
+                setpoints.postValue(new ArrayList<>());
+            } catch (RuntimeException e) {
+                setpoints.postValue(new ArrayList<>());
             }
         }).start();
     }
@@ -46,8 +48,10 @@ public class SetpointViewModel extends ViewModel {
             try {
                 List<Setpoint> results = repository.searchSetpoints(query.trim());
                 setpoints.postValue(results);
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (android.database.sqlite.SQLiteException e) {
+                // ignore: ошибка БД при поиске уставок
+            } catch (RuntimeException e) {
+                // ignore
             }
         }).start();
     }

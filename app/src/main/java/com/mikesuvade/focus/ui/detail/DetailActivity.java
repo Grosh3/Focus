@@ -68,7 +68,7 @@ public class DetailActivity extends AppCompatActivity {
         editor.bindViews(root);
         editor.loadFromIntent(getIntent());
 
-        if (editor.getScreenTitle() != null) {
+        if (editor.getScreenTitle() != null && getSupportActionBar() != null) {
             getSupportActionBar().setTitle(editor.getScreenTitle());
         }
 

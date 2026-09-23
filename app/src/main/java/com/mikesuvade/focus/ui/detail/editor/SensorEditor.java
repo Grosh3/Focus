@@ -1,16 +1,17 @@
 package com.mikesuvade.focus.ui.detail.editor;
 
 import android.content.Intent;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.Sensor;
 import com.mikesuvade.focus.domain.repository.IRepository;
 import com.mikesuvade.focus.ui.detail.helper.EntityCopyUtils;
-import com.mikesuvade.focus.R;
 
 public class SensorEditor extends BaseEntityEditor {
 
@@ -119,11 +120,14 @@ public class SensorEditor extends BaseEntityEditor {
                     displayData();
                 });
 
-            } catch (Exception e) {
-                activity.runOnUiThread(() -> {
-                    Toast.makeText(activity, "Ошибка загрузки датчика", Toast.LENGTH_SHORT).show();
-                    activity.finish();
-                });
+            } catch (android.database.sqlite.SQLiteException e) {
+                logAndToast("SQLite error loading sensor id=" + sensorId,
+                        e, "Ошибка базы данных при загрузке датчика");
+                activity.runOnUiThread(() -> activity.finish());
+            } catch (RuntimeException e) {
+                logAndToast("Runtime error loading sensor id=" + sensorId,
+                        e, "Ошибка загрузки датчика");
+                activity.runOnUiThread(() -> activity.finish());
             }
         }).start();
     }
@@ -278,8 +282,12 @@ public class SensorEditor extends BaseEntityEditor {
                         }
                     }
                 }
-            } catch (Exception e) {
-                onSaveError("Ошибка: " + e.getMessage());
+            } catch (android.database.sqlite.SQLiteException e) {
+                Log.e("SensorEditor", "SQLite error saving sensor", e);
+                onSaveError("Ошибка БД при сохранении датчика");
+            } catch (RuntimeException e) {
+                Log.e("SensorEditor", "Runtime error saving sensor", e);
+                onSaveError("Ошибка сохранения датчика");
             }
         }).start();
     }
@@ -298,8 +306,12 @@ public class SensorEditor extends BaseEntityEditor {
                     repository.markSensorAsDeleted(currentSensor.getId());
                 }
                 onSaveSuccess("Удалено");
-            } catch (Exception e) {
-                onSaveError("Ошибка удаления");
+            } catch (android.database.sqlite.SQLiteException e) {
+                Log.e("SensorEditor", "SQLite error deleting sensor", e);
+                onSaveError("Ошибка БД при удалении датчика");
+            } catch (RuntimeException e) {
+                Log.e("SensorEditor", "Runtime error deleting sensor", e);
+                onSaveError("Ошибка удаления датчика");
             }
         }).start();
     }

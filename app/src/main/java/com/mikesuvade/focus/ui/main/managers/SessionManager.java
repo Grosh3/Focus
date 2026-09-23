@@ -1,6 +1,7 @@
 package com.mikesuvade.focus.ui.main.managers;
 
 import android.content.Intent;
+import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
@@ -22,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import android.os.Handler;
 
 public class SessionManager {
 
@@ -65,25 +65,25 @@ public class SessionManager {
     }
 
     public void restoreLastSession() {
-        Log.d(TAG, "=== restoreLastSession START ===");
+
         AppState appState = AppState.getInstance();
 
         if (!appState.hasActiveSession()) {
-            Log.d(TAG, "No active session");
+
             listener.syncAdapterSelection();
             listener.updateButtonState();
             return;
         }
 
         String sessionId = appState.getLastOpenedSessionId();
-        Log.d(TAG, "sessionId = " + sessionId);
+
 
         new Thread(() -> {
             try {
                 // 🔥 1. Проверяем, есть ли сессия в БД
                 ValveWorkSession dbSession = repository.getUserWorkSessionById(sessionId);
                 boolean sessionExistsInDb = dbSession != null;
-                Log.d(TAG, "sessionExistsInDb = " + sessionExistsInDb);
+
 
                 List<GateValve> loadedValves = new ArrayList<>();
                 List<Integer> loadedIds = new ArrayList<>();
@@ -91,7 +91,7 @@ public class SessionManager {
                 if (sessionExistsInDb) {
                     // Сессия в БД есть — грузим items
                     List<ValveItem> items = repository.getUserSessionItemsBySession(sessionId);
-                    Log.d(TAG, "items size = " + items.size());
+
 
                     for (ValveItem item : items) {
                         GateValve valve = item.getGateValveId() < 0
@@ -109,7 +109,7 @@ public class SessionManager {
 
                 // 🔥 2. Если в БД пусто — fallback на unsavedListIds
                 if (loadedValves.isEmpty() && appState.hasUnsavedList()) {
-                    Log.d(TAG, "falling back to unsavedListIds");
+
                     for (Integer id : appState.getUnsavedListIds()) {
                         GateValve valve = id < 0
                                 ? repository.getUserGateValveById(id)
@@ -123,21 +123,18 @@ public class SessionManager {
 
                 // 🔥 3. Если совсем пусто и сессии в БД нет — сбрасываем AppState
                 if (loadedValves.isEmpty() && !sessionExistsInDb && !appState.hasUnsavedList()) {
-                    Log.d(TAG, "no session in DB, no unsaved ids — clearing");
+
                     AppState.getInstance().clearSession();
                 }
 
-                List<GateValve> finalValves = loadedValves;
-                List<Integer> finalIds = loadedIds;
-
                 new Handler(Looper.getMainLooper()).post(() -> {
                     viewModelCallback.clearCurrentList();
-                    for (GateValve valve : finalValves) {
+                    for (GateValve valve : loadedValves) {
                         viewModelCallback.addToCurrentList(valve);
                     }
-                    viewModelCallback.updateCurrentListSize(finalValves.size());
+                    viewModelCallback.updateCurrentListSize(loadedValves.size());
 
-                    listener.syncAdapterSelectionWithIds(finalIds);
+                    listener.syncAdapterSelectionWithIds(loadedIds);
                     listener.updateButtonState();
                 });
             } catch (Exception e) {
@@ -147,7 +144,7 @@ public class SessionManager {
     }
 
     public void openSession() {
-        Log.d(TAG, "=== openSession START ===");
+
         String sessionId = AppState.getInstance().getLastOpenedSessionId();
 
         if (sessionId != null && !sessionId.isEmpty()) {
@@ -161,7 +158,7 @@ public class SessionManager {
     }
 
     public void openNewList() {
-        Log.d(TAG, "=== openNewList START ===");
+
 
         List<GateValve> currentList = viewModelCallback.getCurrentList();
 
@@ -179,7 +176,8 @@ public class SessionManager {
             names.add(valve.getName() != null ? valve.getName() : "");
             isys.add(valve.getIsy() != null ? valve.getIsy() : "");
         }
-
+        Log.d("SESSY", "openNewList: currentList.size=" + currentList.size());
+        Log.d("SESSY", "ids=" + ids.size() + ", names=" + names.size() + ", isys=" + isys.size());
         String sessionId = "SESSION_" + System.currentTimeMillis();
 
         ValveWorkSession session = new ValveWorkSession();
@@ -228,7 +226,7 @@ public class SessionManager {
     }
 
     public void updateButtonState() {
-        Log.d(TAG, "=== updateButtonState START ===");
+
         AppState appState = AppState.getInstance();
 
         if (appState.hasActiveSession()) {
@@ -274,7 +272,7 @@ public class SessionManager {
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
     }
     public void syncAdapterSelection() {
-        Log.d(TAG, "=== syncAdapterSelection ===");
+
 
         // Получаем текущий список из ViewModel
         List<GateValve> currentList = viewModelCallback.getCurrentList();
@@ -287,20 +285,20 @@ public class SessionManager {
             currentIds.add(v.getId());
         }
 
-        Log.d(TAG, "currentIds = " + currentIds);
+
 
         // Передаем в listener
         listener.syncAdapterSelectionWithIds(currentIds);
     }
     public void restoreUnsavedList() {
-        Log.d(TAG, "=== restoreUnsavedList START ===");
+
         AppState appState = AppState.getInstance();
 
         List<Integer> ids = new ArrayList<>(appState.getUnsavedListIds());
-        Log.d(TAG, "unsavedListIds = " + ids);
+
 
         if (ids.isEmpty()) {
-            Log.d(TAG, "empty, nothing to restore");
+
             listener.syncAdapterSelection();
             listener.updateButtonState();
             return;
@@ -321,7 +319,7 @@ public class SessionManager {
                     }
                 }
 
-                Log.d(TAG, "loaded valves = " + loadedValves.size());
+
 
                 new Handler(Looper.getMainLooper()).post(() -> {
                     viewModelCallback.clearCurrentList();

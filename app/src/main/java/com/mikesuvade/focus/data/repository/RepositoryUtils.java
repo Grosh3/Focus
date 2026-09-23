@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 final class RepositoryUtils {
 
@@ -38,24 +40,20 @@ final class RepositoryUtils {
     }
 
     static String buildKksQuery(String cleanQuery) {
-        String kksQuery = cleanQuery;
-
-        java.util.regex.Matcher m = java.util.regex.Pattern
-                .compile("^[A-Za-z][0-9]+")
-                .matcher(kksQuery);
+        Matcher m = Pattern.compile("^[A-Za-z][0-9]+").matcher(cleanQuery);
         if (m.find()) {
-            String rest = kksQuery.substring(m.end());
+            String rest = cleanQuery.substring(m.end());
             if (rest.length() >= 3) {
                 return rest;
             }
-            return kksQuery;
+            return cleanQuery;
         }
 
-        String rest = kksQuery.replaceFirst("^[0-9]+", "");
+        String rest = cleanQuery.replaceFirst("^[0-9]+", "");
         if (!rest.isEmpty() && rest.length() >= 3) {
             return rest;
         }
-        return kksQuery;
+        return cleanQuery;
     }
 
     static List<String> buildWordPrefixes(String query) {
@@ -77,9 +75,9 @@ final class RepositoryUtils {
             } else if (word.length() >= 5) {
                 prefix = word.substring(0, word.length() - 1);
             }
-            if (!prefix.isEmpty()) {
+
                 prefixes.add(prefix);
-            }
+
         }
         return prefixes;
     }

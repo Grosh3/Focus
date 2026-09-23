@@ -26,27 +26,27 @@ public class MyApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d(TAG, "=== MyApp.onCreate START ===");
+
 
         try {
             instance = this;
             applySavedTheme();
           //  com.mikesuvade.focus.utils.AppState.getInstance().init(this);
 
-            Log.d(TAG, "About to init DatabaseHelper");
+
             DatabaseHelper dbHelper = DatabaseHelper.getInstance(this);
 
-            Log.d(TAG, "About to init UserDatabaseHelper");
+
             userDatabaseHelper = UserDatabaseHelper.getInstance(this);
 
-            Log.d(TAG, "About to create Repository");
+
             repository = new RepositoryImpl(dbHelper, userDatabaseHelper);
 
-            Log.d(TAG, "Application initialized successfully");
+
 
         } catch (Exception e) {
             Log.e(TAG, "ERROR in onCreate", e);
-            e.printStackTrace();
+
         }
     }
 
@@ -68,7 +68,7 @@ public class MyApp extends Application {
         }
 
         AppCompatDelegate.setDefaultNightMode(mode);
-        Log.d(TAG, "Applied theme: " + savedTheme);
+
     }
 
     public static MyApp getInstance() {

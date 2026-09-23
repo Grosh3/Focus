@@ -21,7 +21,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.Measurement;
-import androidx.recyclerview.widget.RecyclerView;
 
 public class SavedMeasurementsActivity extends AppCompatActivity {
 

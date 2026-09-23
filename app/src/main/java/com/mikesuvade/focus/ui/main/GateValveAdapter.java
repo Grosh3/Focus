@@ -1,6 +1,5 @@
 package com.mikesuvade.focus.ui.main;
 
-import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,15 +21,15 @@ import java.util.List;
 public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.ViewHolder> {
 
     private List<GateValve> valves = new ArrayList<>();
-    private List<Integer> expandedPositions = new ArrayList<>();
-    private List<Integer> selectedPositions = new ArrayList<>();
+    private final List<Integer> expandedPositions = new ArrayList<>();
+    private final List<Integer> selectedPositions = new ArrayList<>();
 
     private OnItemClickListener listener;
     private OnItemLongClickListener longClickListener;
     private OnCheckBoxClickListener checkBoxListener;
     private OnBlockingClickListener blockingClickListener;
 
-    private boolean isUpdating = false;
+    private final boolean isUpdating = false;
 
     // ==================== INTERFACES ====================
 
@@ -92,20 +91,19 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
     }
 
     public void setExpanded(int position, boolean expanded) {
-        Log.d("EXPAND", "SetpointAdapter.setExpanded: position=" + position + ", expanded=" + expanded);
-        Log.d("EXPAND", "expandedPositions before: " + expandedPositions);
+
 
         if (expanded) {
             if (!expandedPositions.contains(position)) {
                 expandedPositions.add(position);
-                Log.d("EXPAND", "added position " + position + " to expandedPositions");
+
             }
         } else {
             expandedPositions.remove(Integer.valueOf(position));
-            Log.d("EXPAND", "removed position " + position + " from expandedPositions");
+
         }
 
-        Log.d("EXPAND", "expandedPositions after: " + expandedPositions);
+
         notifyItemChanged(position);
     }
 
@@ -114,9 +112,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
         notifyDataSetChanged();
     }
 
-    public boolean isSelected(int position) {
-        return selectedPositions.contains(position);
-    }
+
 
     // ==================== ADAPTER METHODS ====================
 
@@ -131,7 +127,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         GateValve valve = valves.get(position);
-        Log.d("GATE_ADAPTER", "onBindViewHolder: position=" + position + ", id=" + valve.getId());
+
         boolean isExpanded = expandedPositions.contains(position);
         boolean isSelected = selectedPositions.contains(position);
 
@@ -180,9 +176,7 @@ public class GateValveAdapter extends RecyclerView.Adapter<GateValveAdapter.View
                   OnCheckBoxClickListener checkBoxListener,
                   OnBlockingClickListener blockingClickListener,
                   int position) {
-            Log.d("GATE_ADAPTER", "bind: valve.getId() = " + valve.getId());
-            Log.d("GATE_ADAPTER", "bind: valve.getName() = " + valve.getName());
-            Log.d("GATE_ADAPTER", "bind: valve.getOriginalId() = " + valve.getOriginalId());
+
 
             // ISY и NAME
             String isy = valve.getIsy();

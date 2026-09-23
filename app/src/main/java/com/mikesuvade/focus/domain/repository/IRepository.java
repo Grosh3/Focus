@@ -1,11 +1,11 @@
 package com.mikesuvade.focus.domain.repository;
 
 import com.mikesuvade.focus.domain.models.GateValve;
+import com.mikesuvade.focus.domain.models.Measurement;
 import com.mikesuvade.focus.domain.models.Sensor;
 import com.mikesuvade.focus.domain.models.Setpoint;
-import com.mikesuvade.focus.domain.models.Measurement;
-import com.mikesuvade.focus.domain.models.ValveWorkSession;
 import com.mikesuvade.focus.domain.models.ValveItem;
+import com.mikesuvade.focus.domain.models.ValveWorkSession;
 
 import java.util.List;
 

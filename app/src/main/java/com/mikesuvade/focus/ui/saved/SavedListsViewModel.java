@@ -26,23 +26,23 @@ public class SavedListsViewModel extends ViewModel {
     }
 
     public void loadSessions() {
-        Log.d("SESSY", "=== loadSessions START ===");
+
         new Thread(() -> {
             try {
                 // 🔥 ТОЛЬКО ПОЛЬЗОВАТЕЛЬСКАЯ БД
                 List<ValveWorkSession> items = repository.getAllUserWorkSessions();
-                Log.d("SESSY", "loadSessions: loaded " + (items != null ? items.size() : 0) + " sessions");
+
                 if (items != null && !items.isEmpty()) {
                     for (int i = 0; i < items.size(); i++) {
                         ValveWorkSession s = items.get(i);
-                        Log.d("SESSY", "  session[" + i + "] id=" + s.getSessionId() + ", name=" + s.getEquipmentDescription());
+
                     }
                 }
                 sessions.postValue(items);
-                Log.d("SESSY", "=== loadSessions END ===");
+
             } catch (Exception e) {
                 Log.e("SESSY", "Error loading sessions", e);
-                e.printStackTrace();
+
             }
         }).start();
     }
@@ -50,11 +50,12 @@ public class SavedListsViewModel extends ViewModel {
     public void deleteSession(String sessionId) {
         new Thread(() -> {
             try {
-                // 🔥 ТОЛЬКО ПОЛЬЗОВАТЕЛЬСКАЯ БД
                 repository.deleteUserWorkSession(sessionId);
                 loadSessions();
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (android.database.sqlite.SQLiteException e) {
+                // ignore
+            } catch (RuntimeException e) {
+                // ignore
             }
         }).start();
     }
@@ -62,16 +63,17 @@ public class SavedListsViewModel extends ViewModel {
     public void renameSession(String sessionId, String newName) {
         new Thread(() -> {
             try {
-                // 🔥 ТОЛЬКО ПОЛЬЗОВАТЕЛЬСКАЯ БД
                 ValveWorkSession session = repository.getUserWorkSessionById(sessionId);
                 if (session != null) {
                     session.setEquipmentDescription(newName);
                     repository.updateUserWorkSession(session);
-                    loadSessions();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (android.database.sqlite.SQLiteException e) {
+                // ignore
+            } catch (RuntimeException e) {
+                // ignore
             }
+            loadSessions();   // ← вынесено, вызывается всегда
         }).start();
     }
 }

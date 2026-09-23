@@ -1,6 +1,7 @@
 package com.mikesuvade.focus.ui.detail.editor;
 
 import android.content.Intent;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -119,11 +120,14 @@ public class SetpointEditor extends BaseEntityEditor {
                     displayData();
                 });
 
-            } catch (Exception e) {
-                activity.runOnUiThread(() -> {
-                    Toast.makeText(activity, "Ошибка загрузки", Toast.LENGTH_SHORT).show();
-                    activity.finish();
-                });
+            } catch (android.database.sqlite.SQLiteException e) {
+                logAndToast("SQLite error loading setpoint id=" + setpointId,
+                        e, "Ошибка базы данных при загрузке уставки");
+                activity.runOnUiThread(() -> activity.finish());
+            } catch (RuntimeException e) {
+                logAndToast("Runtime error loading setpoint id=" + setpointId,
+                        e, "Ошибка загрузки уставки");
+                activity.runOnUiThread(() -> activity.finish());
             }
         }).start();
     }
@@ -281,8 +285,12 @@ public class SetpointEditor extends BaseEntityEditor {
                         }
                     }
                 }
-            } catch (Exception e) {
-                onSaveError("Ошибка: " + e.getMessage());
+            } catch (android.database.sqlite.SQLiteException e) {
+                Log.e("SetpointEditor", "SQLite error saving setpoint", e);
+                onSaveError("Ошибка БД при сохранении уставки");
+            } catch (RuntimeException e) {
+                Log.e("SetpointEditor", "Runtime error saving setpoint", e);
+                onSaveError("Ошибка сохранения уставки");
             }
         }).start();
     }
@@ -301,8 +309,12 @@ public class SetpointEditor extends BaseEntityEditor {
                     repository.markSetpointAsDeleted(currentSetpoint.getId());
                 }
                 onSaveSuccess("Удалено");
-            } catch (Exception e) {
-                onSaveError("Ошибка удаления");
+            } catch (android.database.sqlite.SQLiteException e) {
+                Log.e("SetpointEditor", "SQLite error deleting setpoint", e);
+                onSaveError("Ошибка БД при удалении уставки");
+            } catch (RuntimeException e) {
+                Log.e("SetpointEditor", "Runtime error deleting setpoint", e);
+                onSaveError("Ошибка удаления уставки");
             }
         }).start();
     }

@@ -80,7 +80,7 @@ public class TemperatureActivity extends AppCompatActivity {
                 mode = "OHM";
             }
 
-            Log.d("TEMP_DEBUG", "1. setContentView done, mode=" + mode);
+
 
             TextView tvTitle = findViewById(R.id.tvTitle);
             if (tvTitle != null) {
@@ -110,12 +110,13 @@ public class TemperatureActivity extends AppCompatActivity {
             setupListeners();
             setupObservers();
 
-            Log.d("TEMP_DEBUG", "✅ onCreate COMPLETED SUCCESSFULLY");
 
-        } catch (Exception e) {
-            Log.e("TEMP_DEBUG", "❌ ERROR in onCreate", e);
-            Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            e.printStackTrace();
+
+        } catch (RuntimeException e) {
+            Log.e("TemperatureActivity", "ERROR in onCreate", e);
+            if (!isFinishing() && !isDestroyed()) {
+                Toast.makeText(this, "Ошибка инициализации экрана", Toast.LENGTH_LONG).show();
+            }
         }
     }
 
@@ -218,26 +219,22 @@ public class TemperatureActivity extends AppCompatActivity {
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if (ev.getAction() == MotionEvent.ACTION_UP) {
             View focused = getCurrentFocus();
-            Log.d("TEMP_KB", "ACTION_UP, focused=" + focused +
-                    ", rawX=" + ev.getRawX() + ", rawY=" + ev.getRawY());
+
             if (focused instanceof EditText) {
                 android.graphics.Rect outRect = new android.graphics.Rect();
                 focused.getGlobalVisibleRect(outRect);
-                Log.d("TEMP_KB", "outRect=" + outRect);
+
                 if (!outRect.contains((int) ev.getRawX(), (int) ev.getRawY())) {
-                    Log.d("TEMP_KB", "outside → hide");
                     focused.clearFocus();
                     hideKeyboard();
-                } else {
-                    Log.d("TEMP_KB", "inside → skip");
                 }
             } else {
-                Log.d("TEMP_KB", "focused not EditText → hide");
                 hideKeyboard();
             }
         }
         return super.dispatchTouchEvent(ev);
     }
+
     private void hideKeyboard() {
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         if (imm == null) return;
@@ -410,7 +407,7 @@ public class TemperatureActivity extends AppCompatActivity {
         TextView info = new TextView(this);
         String infoText = result.getSensorName() + "   " +
                 result.getUserValue() + " " + result.getUnit() + " → " +
-                String.format("%.2f", result.getTemperature()) + " °C";
+                String.format(Locale.getDefault(), "%.2f", result.getTemperature()) + " °C";
         info.setText(infoText);
         info.setPadding(0, 24, 0, 0);
         info.setTextSize(14);
@@ -466,10 +463,17 @@ public class TemperatureActivity extends AppCompatActivity {
                         Toast.makeText(this, "Ошибка сохранения", Toast.LENGTH_SHORT).show();
                     }
                 });
-            } catch (Exception e) {
-                Log.e("TEMP_DEBUG", "ERROR saving measurement", e);
+            } catch (android.database.sqlite.SQLiteException e) {
+                Log.e("TemperatureActivity", "SQLite error saving measurement", e);
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "Ошибка: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    if (isFinishing() || isDestroyed()) return;
+                    Toast.makeText(this, "Ошибка БД при сохранении замера", Toast.LENGTH_LONG).show();
+                });
+            } catch (RuntimeException e) {
+                Log.e("TemperatureActivity", "Runtime error saving measurement", e);
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    Toast.makeText(this, "Ошибка сохранения замера", Toast.LENGTH_LONG).show();
                 });
             }
         }).start();

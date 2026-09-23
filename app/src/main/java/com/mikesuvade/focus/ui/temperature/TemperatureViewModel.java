@@ -50,17 +50,15 @@ public class TemperatureViewModel extends ViewModel {
                 List<TemperatureResult> resultList = new ArrayList<>();
 
                 if ("OHM".equals(mode)) {
-                    Log.d(TAG, "=== OHM CALCULATION ===");
-                    Log.d(TAG, "userValue: " + value);
-                    Log.d(TAG, "lineResistance: " + lineResistance);
+
 
                     double correctedValue = value - lineResistance;
-                    Log.d(TAG, "correctedValue: " + correctedValue);
+
 
                     for (int i = 0; i < ohmTables.length; i++) {
                         double temperature = repository.getTemperatureFromResistance(
                                 ohmTables[i], correctedValue);
-                        Log.d(TAG, "sensor: " + ohmNames[i] + ", temperature: " + temperature);
+
 
                         TemperatureResult result = new TemperatureResult();
                         result.setSensorName(ohmNames[i]);
@@ -78,12 +76,10 @@ public class TemperatureViewModel extends ViewModel {
                         resultList.add(result);
                     }
                 } else {
-                    Log.d(TAG, "=== MV CALCULATION ===");
-                    Log.d(TAG, "userValue: " + value);
-                    Log.d(TAG, "coldJunctionTemp: " + coldJunctionTemp);
+
 
                     boolean hasColdJunction = (coldJunctionTemp != -999);
-                    Log.d(TAG, "hasColdJunction: " + hasColdJunction);
+
 
                     for (int i = 0; i < mvTables.length; i++) {
                         double coldJunctionMv;
@@ -95,21 +91,19 @@ public class TemperatureViewModel extends ViewModel {
                                     mvTables[i], coldJunctionTemp);
                             totalMv = value + coldJunctionMv;
                             effectiveTemp = coldJunctionTemp;
-                            Log.d(TAG, "sensor: " + mvNames[i]);
-                            Log.d(TAG, "  coldJunctionMv: " + coldJunctionMv);
+
                         } else {
                             coldJunctionMv = 0;
                             totalMv = value;
                             effectiveTemp = 0;
-                            Log.d(TAG, "sensor: " + mvNames[i]);
-                            Log.d(TAG, "  no cold junction temperature provided, skipping compensation");
+
                         }
 
-                        Log.d(TAG, "  totalMv: " + totalMv);
+
 
                         double temperature = repository.getTemperatureFromResistance(
                                 mvTables[i], totalMv);
-                        Log.d(TAG, "  temperature: " + temperature);
+
 
                         TemperatureResult result = new TemperatureResult();
                         result.setSensorName(mvNames[i]);
@@ -130,12 +124,11 @@ public class TemperatureViewModel extends ViewModel {
                     }
                 }
 
-                Log.d(TAG, "results count: " + resultList.size());
+
                 results.postValue(resultList);
 
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 Log.e(TAG, "Error in calculate", e);
-                e.printStackTrace();
             }
         }).start();
     }
@@ -191,7 +184,7 @@ public class TemperatureViewModel extends ViewModel {
                 }
 
                 results.postValue(resultList);
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 Log.e(TAG, "Error in calculateInverse", e);
             }
         }).start();

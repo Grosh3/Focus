@@ -1,6 +1,7 @@
 package com.mikesuvade.focus.ui.detail.editor;
 
 import android.content.Intent;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -109,11 +110,14 @@ public class ValveEditor extends BaseEntityEditor {
                     displayData();
                 });
 
-            } catch (Exception e) {
-                activity.runOnUiThread(() -> {
-                    Toast.makeText(activity, "Ошибка загрузки", Toast.LENGTH_SHORT).show();
-                    activity.finish();
-                });
+            } catch (android.database.sqlite.SQLiteException e) {
+                logAndToast("SQLite error loading valve id=" + valveId,
+                        e, "Ошибка базы данных при загрузке задвижки");
+                activity.runOnUiThread(() -> activity.finish());
+            } catch (RuntimeException e) {
+                logAndToast("Runtime error loading valve id=" + valveId,
+                        e, "Ошибка загрузки задвижки");
+                activity.runOnUiThread(() -> activity.finish());
             }
         }).start();
     }
@@ -267,8 +271,12 @@ public class ValveEditor extends BaseEntityEditor {
                         }
                     }
                 }
-            } catch (Exception e) {
-                onSaveError("Ошибка: " + e.getMessage());
+            } catch (android.database.sqlite.SQLiteException e) {
+                Log.e("ValveEditor", "SQLite error saving valve", e);
+                onSaveError("Ошибка БД при сохранении задвижки");
+            } catch (RuntimeException e) {
+                Log.e("ValveEditor", "Runtime error saving valve", e);
+                onSaveError("Ошибка сохранения задвижки");
             }
         }).start();
     }
@@ -287,8 +295,12 @@ public class ValveEditor extends BaseEntityEditor {
                     repository.markGateValveAsDeleted(currentValve.getId());
                 }
                 onSaveSuccess("Удалено");
-            } catch (Exception e) {
-                onSaveError("Ошибка удаления");
+            } catch (android.database.sqlite.SQLiteException e) {
+                Log.e("ValveEditor", "SQLite error deleting valve", e);
+                onSaveError("Ошибка БД при удалении задвижки");
+            } catch (RuntimeException e) {
+                Log.e("ValveEditor", "Runtime error deleting valve", e);
+                onSaveError("Ошибка удаления задвижки");
             }
         }).start();
     }

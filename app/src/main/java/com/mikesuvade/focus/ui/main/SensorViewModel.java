@@ -30,8 +30,10 @@ public class SensorViewModel extends ViewModel {
             try {
                 List<Sensor> all = repository.getAllSensors();
                 sensors.postValue(all);
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (android.database.sqlite.SQLiteException e) {
+                sensors.postValue(new ArrayList<>());
+            } catch (RuntimeException e) {
+                sensors.postValue(new ArrayList<>());
             }
         }).start();
     }
@@ -46,8 +48,10 @@ public class SensorViewModel extends ViewModel {
             try {
                 List<Sensor> results = repository.searchSensors(query.trim());
                 sensors.postValue(results);
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (android.database.sqlite.SQLiteException e) {
+                sensors.postValue(new ArrayList<>());
+            } catch (RuntimeException e) {
+                sensors.postValue(new ArrayList<>());
             }
         }).start();
     }

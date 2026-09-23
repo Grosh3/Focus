@@ -13,13 +13,12 @@ import com.mikesuvade.focus.domain.repository.IRepository;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Collections;
-import com.mikesuvade.focus.MyApp;
 
 public class ListDetailViewModel extends ViewModel {
 
@@ -66,7 +65,7 @@ public class ListDetailViewModel extends ViewModel {
 
     public void setUseUserDb(boolean useUserDb) {
         this.useUserDb = useUserDb;
-        Log.d("LIST_DEBUG", "setUseUserDb: " + useUserDb);
+
     }
 
     public boolean isUseUserDb() {
@@ -84,11 +83,7 @@ public class ListDetailViewModel extends ViewModel {
     }
 
     public void loadFromGateValves(List<GateValve> valves) {
-        Log.d("SESSY", "=== loadFromGateValves START ===");
-        Log.d("SESSY", "valves size = " + (valves != null ? valves.size() : 0));
-
         if (valves == null || valves.isEmpty()) {
-            Log.d("SESSY", "valves is empty, creating empty session");
             createEmptySession();
             return;
         }
@@ -100,11 +95,8 @@ public class ListDetailViewModel extends ViewModel {
             ValveItem item = new ValveItem();
             item.setGateValveId(valve.getId());
 
-            // 🔥 СОХРАНЯЕМ ВСЕ ДАННЫЕ В ValveItem
             String name = valve.getName();
             String isy = valve.getIsy();
-
-            Log.d("DELETE_DEBUG", "LOADING valve: id=" + valve.getId() + ", name=" + name + ", isy=" + isy);
 
             item.setGateValveName(name != null ? name : "");
             item.setGateValveIsy(isy != null ? isy : "");
@@ -114,10 +106,6 @@ public class ListDetailViewModel extends ViewModel {
             item.setGateValveOnPlace(valve.getOnPlace() != null ? valve.getOnPlace() : "");
             item.setGateValveFullName(valve.getFullName() != null ? valve.getFullName() : "");
 
-            Log.d("DELETE_DEBUG", "CREATED item: id=" + item.getGateValveId() +
-                    ", name=" + item.getGateValveName() +
-                    ", isy=" + item.getGateValveIsy());
-
             item.setIsAssembled(1);
             item.setMotorDisabled(0);
             item.setBoxRemoved(0);
@@ -125,73 +113,30 @@ public class ListDetailViewModel extends ViewModel {
             items.add(item);
         }
 
-        // 🔥 ПРОВЕРЯЕМ ПЕРЕД СОРТИРОВКОЙ
-        for (ValveItem item : items) {
-            Log.d("DELETE_DEBUG", "BEFORE SORT: id=" + item.getGateValveId() +
-                    ", name=" + item.getGateValveName() +
-                    ", isy=" + item.getGateValveIsy());
-        }
-
         items = sortItems(items);
         leftList.setValue(items);
         rightList.setValue(new ArrayList<>());
-
-        // 🔥 ПРОВЕРЯЕМ ПОСЛЕ УСТАНОВКИ В LiveData
-        List<ValveItem> checkItems = leftList.getValue();
-        if (checkItems != null) {
-            for (ValveItem item : checkItems) {
-                Log.d("DELETE_DEBUG", "AFTER SET: id=" + item.getGateValveId() +
-                        ", name=" + item.getGateValveName() +
-                        ", isy=" + item.getGateValveIsy());
-            }
-        }
-
-        Log.d("SESSY", "=== loadFromGateValves END ===");
     }
-
     public void createEmptySession() {
-        Log.d("SESSY", "createEmptySession");
+
         leftList.setValue(new ArrayList<>());
         rightList.setValue(new ArrayList<>());
         sessionIdLive.setValue(null);
     }
 
     public void loadSession(String sessionId) {
-        Log.d("SESSY", "=== ListDetailViewModel.loadSession ===");
-        Log.d("SESSY", "sessionId = " + sessionId);
-        Log.d("SESSY", "useUserDb = " + useUserDb);
-
         new Thread(() -> {
             try {
-                // 🔥 ПОЛУЧАЕМ СЕССИЮ ПО ID
                 ValveWorkSession session = repository.getUserWorkSessionById(sessionId);
                 if (session != null) {
                     String name = session.getEquipmentDescription();
                     if (name != null && !name.isEmpty()) {
                         currentSessionName = name;
-                        listName.postValue(name); // 🔥 УСТАНАВЛИВАЕМ ИМЯ
-                        Log.d("SESSY", "Session name: " + name);
+                        listName.postValue(name);
                     }
                 }
 
-                List<ValveItem> items;
-                if (useUserDb) {
-                    Log.d("SESSY", "Loading from USER DB");
-                    items = repository.getUserSessionItemsBySession(sessionId);
-                } else {
-                    Log.d("SESSY", "Loading from MAIN DB");
-                    items = repository.getUserSessionItemsBySession(sessionId);
-                }
-
-                Log.d("SESSY", "Items loaded: " + (items != null ? items.size() : 0));
-
-                if (items != null) {
-                    for (int i = 0; i < items.size(); i++) {
-                        ValveItem item = items.get(i);
-                        Log.d("SESSY", "  ITEM[" + i + "] gateValveId=" + item.getGateValveId() +
-                                ", assembled=" + item.getIsAssembled());
-                    }
-                }
+                List<ValveItem> items = repository.getUserSessionItemsBySession(sessionId);
 
                 processItems(items);
             } catch (Exception e) {
@@ -199,10 +144,8 @@ public class ListDetailViewModel extends ViewModel {
             }
         }).start();
     }
-
     private void processItems(List<ValveItem> items) {
-        Log.d("SESSY", "=== processItems ===");
-        Log.d("SESSY", "items size = " + (items != null ? items.size() : 0));
+
 
         if (items == null) {
             items = new ArrayList<>();
@@ -214,10 +157,10 @@ public class ListDetailViewModel extends ViewModel {
         for (ValveItem item : items) {
             if (item.getIsAssembled() == 1) {
                 left.add(item);
-                Log.d("SESSY", "  LEFT: gateValveId=" + item.getGateValveId());
+
             } else {
                 right.add(item);
-                Log.d("SESSY", "  RIGHT: gateValveId=" + item.getGateValveId());
+
             }
         }
 
@@ -225,7 +168,7 @@ public class ListDetailViewModel extends ViewModel {
         left = sortItems(left);
         right = sortItems(right);
 
-        Log.d("SESSY", "left size = " + left.size() + ", right size = " + right.size());
+
 
         leftList.postValue(left);
         rightList.postValue(right);
@@ -236,7 +179,7 @@ public class ListDetailViewModel extends ViewModel {
     // ==========================================
 
     public void assembleAll() {
-        Log.d("LIST_DEBUG", "assembleAll");
+
         List<ValveItem> left = leftList.getValue();
         List<ValveItem> right = rightList.getValue();
 
@@ -257,7 +200,7 @@ public class ListDetailViewModel extends ViewModel {
     }
 
     public void disassembleAll() {
-        Log.d("LIST_DEBUG", "disassembleAll");
+
         List<ValveItem> left = leftList.getValue();
         List<ValveItem> right = rightList.getValue();
 
@@ -278,8 +221,7 @@ public class ListDetailViewModel extends ViewModel {
     }
 
     public void moveItem(ValveItem item, boolean toLeft) {
-        Log.d("LIST_DEBUG", "=== moveItem START ===");
-        Log.d("LIST_DEBUG", "toLeft=" + toLeft + ", gateValveId=" + item.getGateValveId());
+
 
         List<ValveItem> left = leftList.getValue();
         List<ValveItem> right = rightList.getValue();
@@ -315,7 +257,7 @@ public class ListDetailViewModel extends ViewModel {
                 }
                 if (!existsInLeft) {
                     left.add(foundItem);
-                    Log.d("LIST_DEBUG", "Moved RIGHT -> LEFT: gateValveId=" + foundItem.getGateValveId());
+
                 }
             } else {
                 Log.e("LIST_DEBUG", "Item not found in RIGHT list!");
@@ -345,7 +287,7 @@ public class ListDetailViewModel extends ViewModel {
                 }
                 if (!existsInRight) {
                     right.add(foundItem);
-                    Log.d("LIST_DEBUG", "Moved LEFT -> RIGHT: gateValveId=" + foundItem.getGateValveId());
+
                 }
             } else {
                 Log.e("LIST_DEBUG", "Item not found in LEFT list!");
@@ -358,11 +300,11 @@ public class ListDetailViewModel extends ViewModel {
 
         leftList.setValue(left);
         rightList.setValue(right);
-        Log.d("LIST_DEBUG", "=== moveItem END ===");
+
     }
 
     public void toggleMotor(ValveItem item) {
-        Log.d("LIST_DEBUG", "toggleMotor: gateValveId=" + item.getGateValveId());
+
         ValveItem foundItem = findItemInLists(item.getGateValveId());
         if (foundItem != null) {
             // 🔥 ПЕРЕКЛЮЧАЕМ СОСТОЯНИЕ
@@ -372,7 +314,7 @@ public class ListDetailViewModel extends ViewModel {
     }
 
     public void toggleBox(ValveItem item) {
-        Log.d("LIST_DEBUG", "toggleBox: gateValveId=" + item.getGateValveId());
+
         ValveItem foundItem = findItemInLists(item.getGateValveId());
         if (foundItem != null) {
             // 🔥 ПЕРЕКЛЮЧАЕМ СОСТОЯНИЕ
@@ -382,7 +324,7 @@ public class ListDetailViewModel extends ViewModel {
     }
 
     public void toggleChecked(ValveItem item) {
-        Log.d("LIST_DEBUG", "toggleChecked: gateValveId=" + item.getGateValveId());
+
         ValveItem foundItem = findItemInLists(item.getGateValveId());
         if (foundItem != null) {
             foundItem.setIsChecked(foundItem.getIsChecked() == 1 ? 0 : 1);
@@ -408,7 +350,7 @@ public class ListDetailViewModel extends ViewModel {
         }
     }
     public void removeItem(ValveItem item) {
-        Log.d("LIST_DEBUG", "removeItem: gateValveId=" + item.getGateValveId());
+
         ValveItem foundItem = findItemInLists(item.getGateValveId());
         if (foundItem != null) {
             List<ValveItem> left = leftList.getValue();
@@ -458,9 +400,7 @@ public class ListDetailViewModel extends ViewModel {
     // ==========================================
 
     public void saveSession(String name) {
-        Log.d("SESSY", "=== saveSession START ===");
-        Log.d("SESSY", "name = " + name);
-        Log.d("SESSY", "useUserDb = " + useUserDb);
+
 
         new Thread(() -> {
             try {
@@ -468,7 +408,7 @@ public class ListDetailViewModel extends ViewModel {
                 if (sessionId == null) {
                     sessionId = "SESSION_" + System.currentTimeMillis();
                     sessionIdLive.postValue(sessionId);
-                    Log.d("SESSY", "Generated new sessionId: " + sessionId);
+
                 }
 
                 // 🔥 ПРОВЕРЯЕМ, ЕСТЬ ЛИ УЖЕ ТАКАЯ СЕССИЯ
@@ -482,24 +422,24 @@ public class ListDetailViewModel extends ViewModel {
                 session.setIsSynced(0);
 
                 if (useUserDb) {
-                    Log.d("SESSY", "Saving to USER DB");
+
                     if (existing != null) {
-                        Log.d("SESSY", "Updating existing session");
+
                         repository.updateUserWorkSession(session);
                     } else {
-                        Log.d("SESSY", "Inserting new session");
+
                         // 🔥 ИСПРАВЛЕНО: insertUserWorkSession
                         repository.insertUserWorkSession(session);
                     }
 
                     saveItemsToUserDb(sessionId);
                 } else {
-                    Log.d("SESSY", "Saving to MAIN DB");
+
                     repository.insertUserWorkSession(session);
                     saveItemsToUserDb(sessionId);
                 }
 
-                Log.d("SESSY", "Session saved successfully");
+
             } catch (Exception e) {
                 Log.e("SESSY", "Error saving session", e);
             }
@@ -507,26 +447,22 @@ public class ListDetailViewModel extends ViewModel {
     }
 
     public void updateSession(String sessionId) {
-        Log.d("DATEFRESH", "=== updateSession START ===");
-        Log.d("DATEFRESH", "sessionId: " + sessionId);
-        Log.d("DATEFRESH", "useUserDb: " + useUserDb);
+
 
         String newDate = getCurrentDateTime();
-        Log.d("DATEFRESH", "newDate: " + newDate);
+
 
         new Thread(() -> {
             try {
                 if (useUserDb) {
-                    Log.d("DATEFRESH", "Updating date in USER DB...");
+
                     // 🔥 ИСПРАВЛЕНО: updateUserWorkSessionDate
                     int result = repository.updateUserWorkSessionDate(sessionId, newDate);
-                    Log.d("DATEFRESH", "updateUserWorkSessionDate result: " + result);
 
-                    Log.d("DATEFRESH", "Saving items to USER DB...");
                     saveItemsToUserDb(sessionId);
-                    Log.d("DATEFRESH", "Items saved to USER DB");
+
                 }
-                Log.d("DATEFRESH", "=== updateSession END (success) ===");
+
             } catch (Exception e) {
                 Log.e("DATEFRESH", "Error updating session", e);
             }
@@ -539,7 +475,7 @@ public class ListDetailViewModel extends ViewModel {
                 int count = repository.getAllUserWorkSessions().size();
                 callback.onResult(count);
             } catch (Exception e) {
-                e.printStackTrace();
+
                 callback.onResult(0);
             }
         }).start();
@@ -554,8 +490,7 @@ public class ListDetailViewModel extends ViewModel {
     // ==========================================
 
     private void saveItemsToUserDb(String sessionId) {
-        Log.d("SESSY", "=== saveItemsToUserDb ===");
-        Log.d("SESSY", "sessionId = " + sessionId);
+
 
         List<ValveItem> leftItems = leftList.getValue();
         List<ValveItem> rightItems = rightList.getValue();
@@ -569,16 +504,16 @@ public class ListDetailViewModel extends ViewModel {
         }
         List<ValveItem> uniqueList = new ArrayList<>(uniqueItems.values());
 
-        Log.d("SESSY", "Total unique items to save: " + uniqueList.size());
+
 
         for (ValveItem item : uniqueList) {
             item.setParentSessionId(sessionId);
             if (item.getItemId() > 0) {
-                Log.d("SESSY", "Updating item: " + item.getItemId());
+
                 // 🔥 ИСПРАВЛЕНО: updateUserSessionItem
                 repository.updateUserSessionItem(item);
             } else {
-                Log.d("SESSY", "Inserting new item");
+
                 // 🔥 ИСПРАВЛЕНО: insertUserSessionItem
                 repository.insertUserSessionItem(item);
             }
@@ -635,18 +570,18 @@ public class ListDetailViewModel extends ViewModel {
     private String getIsyForItemMerged(ValveItem item) {
         // 🔥 1. СНАЧАЛА БЕРЕМ ИЗ ValveItem (это данные, сохраненные в БД2)
         if (item.getGateValveIsy() != null && !item.getGateValveIsy().isEmpty()) {
-            Log.d("LIST_DEBUG", "getIsyForItemMerged: using from ValveItem: " + item.getGateValveIsy());
+
             return item.getGateValveIsy();
         }
 
         // 🔥 2. Если в ValveItem нет - пробуем из GateValve (объединенный источник)
         GateValve valve = getGateValveMerged(item.getGateValveId());
         if (valve != null && valve.getIsy() != null && !valve.getIsy().isEmpty()) {
-            Log.d("LIST_DEBUG", "getIsyForItemMerged: using from GateValve: " + valve.getIsy());
+
             return valve.getIsy();
         }
 
-        Log.d("LIST_DEBUG", "getIsyForItemMerged: no ISY found, returning ZZZZ");
+
         return "ZZZZ";
     }
     /**

@@ -3,8 +3,8 @@ package com.mikesuvade.focus.ui.saved;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
-import android.util.Log;
 import android.view.View;
+import android.view.Window;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -12,6 +12,9 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -21,10 +24,6 @@ import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.ValveWorkSession;
 import com.mikesuvade.focus.ui.list.ListDetailActivity;
 import com.mikesuvade.focus.utils.AppState;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
-import androidx.core.view.WindowInsetsControllerCompat;
-import android.view.Window;
 
 public class SavedListsActivity extends AppCompatActivity {
 
@@ -92,22 +91,21 @@ public class SavedListsActivity extends AppCompatActivity {
     }
 
     private void setupObservers() {
-        Log.d("SESSY", "=== SavedListsActivity.setupObservers START ===");
+
         viewModel.getSessions().observe(this, sessions -> {
-            Log.d("SESSY", "SavedListsActivity: sessions observer triggered");
-            Log.d("SESSY", "sessions size = " + (sessions != null ? sessions.size() : 0));
+
             if (sessions != null && !sessions.isEmpty()) {
                 adapter.setSessions(sessions);
                 rvSavedLists.setVisibility(View.VISIBLE);
                 tvEmpty.setVisibility(View.GONE);
-                Log.d("SESSY", "Showing " + sessions.size() + " sessions");
+
             } else {
                 rvSavedLists.setVisibility(View.GONE);
                 tvEmpty.setVisibility(View.VISIBLE);
-                Log.d("SESSY", "No sessions to show");
+
             }
         });
-        Log.d("SESSY", "=== SavedListsActivity.setupObservers END ===");
+
     }
 
     private void showItemOptionsDialog(ValveWorkSession session) {

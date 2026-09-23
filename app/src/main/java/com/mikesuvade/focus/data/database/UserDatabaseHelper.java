@@ -171,45 +171,38 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
     }
 
     public void ensureDatabaseReady() {
-        Log.d(TAG, "=== ensureDatabaseReady START ===");
         if (isDatabaseReady()) {
-            Log.d(TAG, "✅ User DB already exists and has size > 0");
             return;
         }
 
-        Log.d(TAG, "📂 Copying user DB from assets...");
         try {
             copyDatabaseFromAssets();
             if (!isDatabaseReady()) {
                 throw new IOException("Copied user DB file is empty or missing");
             }
-            Log.d(TAG, "✅ User DB copied successfully, size: "
-                    + context.getDatabasePath(DATABASE_NAME).length());
         } catch (IOException e) {
-            // 🔥 НЕ падаем: если в assets нет файла — onCreate создаст пустые таблицы.
+            // Если в assets нет файла — onCreate создаст пустые таблицы.
             // Это позволяет собирать проект без заранее подготовленной focus_user.db.
-            Log.w(TAG, "⚠️ Failed to copy user DB from assets, falling back to onCreate()", e);
+            Log.w(TAG, "Failed to copy user DB from assets, falling back to onCreate()", e);
         }
-        Log.d(TAG, "=== ensureDatabaseReady END ===");
     }
 
     private void copyDatabaseFromAssets() throws IOException {
-        InputStream inputStream = context.getAssets().open(ASSETS_PATH);
         File outFile = context.getDatabasePath(DATABASE_NAME);
         File parent = outFile.getParentFile();
         if (parent != null) parent.mkdirs();
 
-        OutputStream outputStream = new FileOutputStream(outFile);
+        try (InputStream inputStream = context.getAssets().open(ASSETS_PATH);
+             OutputStream outputStream = new FileOutputStream(outFile)) {
 
-        byte[] buffer = new byte[4096];
-        int length;
-        while ((length = inputStream.read(buffer)) > 0) {
-            outputStream.write(buffer, 0, length);
+            byte[] buffer = new byte[4096];
+            int length;
+            while ((length = inputStream.read(buffer)) > 0) {
+                outputStream.write(buffer, 0, length);
+            }
+            outputStream.flush();
         }
-
-        outputStream.flush();
-        outputStream.close();
-        inputStream.close();
+        // inputStream.close() и outputStream.close() вызовутся автоматически
     }
 
     // ==========================================
@@ -221,19 +214,19 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
         // Срабатывает ТОЛЬКО если в assets не оказалось focus_user.db.
         // Если assets-файл есть — SQLiteOpenHelper.onCreate не вызовется,
         // потому что файл уже создан копированием.
-        Log.d(TAG, "onCreate: creating empty user DB tables (fallback)");
+
         db.execSQL(CREATE_USER_GATE_VALVES);
         db.execSQL(CREATE_USER_SENSORS);
         db.execSQL(CREATE_USER_SETPOINTS);
         db.execSQL(CREATE_USER_WORK_SESSIONS);
         db.execSQL(CREATE_USER_SESSION_ITEMS);
         db.execSQL(CREATE_USER_MEASUREMENTS);
-        Log.d(TAG, "User DB tables created successfully (fallback)");
+
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        Log.d(TAG, "Upgrading user DB from " + oldVersion + " to " + newVersion);
+
 
         // 🔥 МИГРАЦИИ — добавляются здесь, по одной на версию.
         // Пример:
@@ -256,11 +249,5 @@ public class UserDatabaseHelper extends SQLiteOpenHelper {
      * Используйте осторожно — пользовательские данные будут потеряны.
      * Может пригодиться в экране «Сбросить к заводским настройкам».
      */
-    public void forceRestoreFromAssets() throws IOException {
-        File dbFile = context.getDatabasePath(DATABASE_NAME);
-        if (dbFile.exists()) {
-            dbFile.delete();
-        }
-        copyDatabaseFromAssets();
-    }
+
 }
