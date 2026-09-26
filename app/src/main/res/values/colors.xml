@@ -111,6 +111,17 @@
     <!-- 🔟 ЦВЕТ ИКОНКИ ИНВЕРСИИ -->
     <!-- ========================================== -->
     <color name="inverse_icon_color">#1A73E8</color>
+    <!-- Диалог выбора типа замера -->
+    <color name="measurement_dialog_title">#202124</color>          <!-- заголовок -->
+    <color name="measurement_dialog_text">#202124</color>           <!-- текст на кнопках -->
+    <color name="measurement_dialog_mv_bg">#E8E0F0</color>          <!-- фон кнопки мВ -->
+    <color name="measurement_dialog_ohm_bg">#FFF8E0</color>         <!-- фон кнопки Ом -->
+    <color name="measurement_dialog_divider">#9E9E9E</color>        <!-- разделители -->
+    <!-- 🔟 ТЕМПЕРАТУРА КАРТОЧКА РЕЗУЛЬТАТ -->
+    <color name="temp_calc_value">#5F6368</color>   <!-- светлая: тёмно-серый -->
+    <color name="temp_calc_temp">#2E7D32</color>    <!-- светлая: зелёный -->
+    <color name="temp_calc_inverse">#1565C0</color> <!-- светлая: синий -->
+    <color name="temp_calc_error">#D32F2F</color>   <!-- ошибка: красный -->
 
 
 </resources>

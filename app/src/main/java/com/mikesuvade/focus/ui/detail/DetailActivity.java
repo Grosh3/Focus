@@ -19,13 +19,14 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.repository.IRepository;
+import com.mikesuvade.focus.ui.common.BaseActivity;
 import com.mikesuvade.focus.ui.detail.editor.BaseEntityEditor;
 import com.mikesuvade.focus.ui.detail.editor.SensorEditor;
 import com.mikesuvade.focus.ui.detail.editor.SetpointEditor;
 import com.mikesuvade.focus.ui.detail.editor.ValveEditor;
 import com.mikesuvade.focus.ui.detail.helper.KeyboardInsetsHelper;
 
-public class DetailActivity extends AppCompatActivity {
+public class DetailActivity extends BaseActivity {
 
     public static final String EXTRA_TYPE = BaseEntityEditor.EXTRA_TYPE;
     public static final String EXTRA_ID = BaseEntityEditor.EXTRA_ID;
@@ -78,7 +79,7 @@ public class DetailActivity extends AppCompatActivity {
         }
 
         fixToolbarPadding(toolbar);
-        setStatusBarIconsDark(true);
+
     }
 
     @Override
@@ -151,11 +152,5 @@ public class DetailActivity extends AppCompatActivity {
         });
     }
 
-    private void setStatusBarIconsDark(boolean dark) {
-        Window window = getWindow();
-        if (window != null) {
-            WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(window, window.getDecorView());
-            controller.setAppearanceLightStatusBars(dark);
-        }
-    }
+
 }

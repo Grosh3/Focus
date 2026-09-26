@@ -21,6 +21,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.mikesuvade.focus.R;
+import com.mikesuvade.focus.ui.common.BaseActivity;
 import com.mikesuvade.focus.ui.detail.DetailActivity;
 
 import java.io.File;
@@ -30,7 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends BaseActivity {
 
     private static final String TAG = "SettingsActivity";
     private static final String PREFS_NAME = "theme_prefs";
@@ -68,7 +69,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         // 🔥 ФИКС СТАТУС-БАРА
         fixTopPanelPadding();
-        setStatusBarAndNavigationIconsDark(true);
+
 
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
@@ -100,15 +101,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
-    private void setStatusBarAndNavigationIconsDark(boolean dark) {
-        Window window = getWindow();
-        if (window != null) {
-            WindowInsetsControllerCompat controller =
-                    new WindowInsetsControllerCompat(window, window.getDecorView());
-            controller.setAppearanceLightStatusBars(dark);
-            controller.setAppearanceLightNavigationBars(dark);
-        }
-    }
+
 
     // ========================================== //
     // 📋 ИНИЦИАЛИЗАЦИЯ

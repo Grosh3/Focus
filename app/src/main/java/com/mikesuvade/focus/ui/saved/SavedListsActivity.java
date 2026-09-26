@@ -22,10 +22,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.ValveWorkSession;
+import com.mikesuvade.focus.ui.common.BaseActivity;
 import com.mikesuvade.focus.ui.list.ListDetailActivity;
 import com.mikesuvade.focus.utils.AppState;
 
-public class SavedListsActivity extends AppCompatActivity {
+public class SavedListsActivity extends BaseActivity {
 
     private SavedListsViewModel viewModel;
     private SavedListAdapter adapter;
@@ -37,7 +38,7 @@ public class SavedListsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         androidx.activity.EdgeToEdge.enable(this);
         setContentView(R.layout.activity_saved_lists);
-        setStatusBarIconsDark(true);              // 🔥 ДОБАВИТЬ
+
         fixTopPanelPadding();                     // 🔥 ДОБАВИТЬ
         fixRecyclerViewBottomPadding();
         viewModel = new ViewModelProvider(
@@ -166,14 +167,7 @@ public class SavedListsActivity extends AppCompatActivity {
             }
         }, 300);
     }
-    private void setStatusBarIconsDark(boolean dark) {
-        Window window = getWindow();
-        if (window != null) {
-            WindowInsetsControllerCompat controller =
-                    new WindowInsetsControllerCompat(window, window.getDecorView());
-            controller.setAppearanceLightStatusBars(dark);
-        }
-    }
+
 
     private void fixTopPanelPadding() {
         View topPanel = findViewById(R.id.topPanel);

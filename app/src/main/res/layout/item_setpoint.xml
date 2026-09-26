@@ -60,7 +60,6 @@
             android:id="@+id/tvDelayTime"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Выдержка: 3 сек."
             android:textSize="14sp"
             android:textColor="?android:attr/textColorSecondary"
             android:layout_marginBottom="4dp" />

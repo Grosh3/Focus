@@ -21,8 +21,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.mikesuvade.focus.MyApp;
 import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.Measurement;
+import com.mikesuvade.focus.ui.common.BaseActivity;
 
-public class SavedMeasurementsActivity extends AppCompatActivity {
+public class SavedMeasurementsActivity extends BaseActivity {
 
     private SavedMeasurementsViewModel viewModel;
     private SavedMeasurementsAdapter adapter;
@@ -35,7 +36,7 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_saved_measurements);
 
         // 🔥 Системные бары + отступ от статус-бара
-        setStatusBarAndNavigationIconsDark(true);
+
         fixTopPanelPadding();
         fixRecyclerViewBottomPadding();
         viewModel = new ViewModelProvider(
@@ -70,7 +71,7 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
         adapter.setListener(new SavedMeasurementsAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(Measurement measurement) {
-                showMeasurementInfoDialog(measurement);
+
             }
 
             @Override
@@ -94,30 +95,7 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
         });
     }
 
-    private void showMeasurementInfoDialog(Measurement measurement) {
-        StringBuilder info = new StringBuilder();
-        info.append("Дата: ").append(measurement.getMeasurementDate()).append("\n");
-        info.append("Температура: ").append(measurement.getTemperature()).append(" °C\n");
-        info.append("Тип датчика: ").append(measurement.getSensorType()).append("\n");
 
-        if (measurement.getSensorType() != null && measurement.getSensorType().equals("MV")) {
-            info.append("Значение: ").append(measurement.getInputValue()).append(" мВ\n");
-            info.append("Холодный спай: ").append(measurement.getColdJunctionMv()).append(" мВ\n");
-        } else {
-            info.append("Значение: ").append(measurement.getInputValue()).append(" Ом\n");
-            info.append("Сопротивление линии: ").append(measurement.getLineResistance()).append(" Ом\n");
-        }
-
-        if (measurement.getDescription() != null && !measurement.getDescription().isEmpty()) {
-            info.append("Описание: ").append(measurement.getDescription());
-        }
-
-        new AlertDialog.Builder(this)
-                .setTitle("Информация о замере")
-                .setMessage(info.toString().trim())
-                .setPositiveButton("Закрыть", (dialog, which) -> dialog.dismiss())
-                .show();
-    }
 
     private void showItemOptionsDialog(Measurement measurement) {
         String[] options = {"Переименовать", "Удалить"};
@@ -186,15 +164,7 @@ public class SavedMeasurementsActivity extends AppCompatActivity {
         });
     }
 
-    private void setStatusBarAndNavigationIconsDark(boolean dark) {
-        Window window = getWindow();
-        if (window != null) {
-            WindowInsetsControllerCompat controller =
-                    new WindowInsetsControllerCompat(window, window.getDecorView());
-            controller.setAppearanceLightStatusBars(dark);
-            controller.setAppearanceLightNavigationBars(dark);
-        }
-    }
+
     private void fixRecyclerViewBottomPadding() {
         RecyclerView rv = findViewById(R.id.rvSavedMeasurements);
         if (rv == null) return;

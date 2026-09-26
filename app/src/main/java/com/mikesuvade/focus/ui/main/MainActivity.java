@@ -40,6 +40,7 @@ import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.GateValve;
 import com.mikesuvade.focus.domain.models.ValveWorkSession;
 import com.mikesuvade.focus.domain.repository.IRepository;
+import com.mikesuvade.focus.ui.common.BaseActivity;
 import com.mikesuvade.focus.ui.main.managers.AdapterManager;
 import com.mikesuvade.focus.ui.main.managers.ModeManager;
 import com.mikesuvade.focus.ui.main.managers.SearchManager;
@@ -52,7 +53,7 @@ import com.mikesuvade.focus.utils.AppState;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements
+public class MainActivity extends BaseActivity implements
         ModeManager.MainActivityCallback,
         SessionManager.SessionListener,
         AdapterManager.AdapterCallbacks,
@@ -77,11 +78,12 @@ public class MainActivity extends AppCompatActivity implements
     private View bottomButtons;
 
     private ConstraintLayout overlayDetail;
-    private ImageButton btnOverlayBack;
+
     private TextView tvOverlayTitle;
     private ImageView ivOverlayImage;
     private TextView tvOverlayDescription;
     private ProgressBar progressOverlay;
+    private TextView tvOverlaySubtitle;
     private com.google.android.material.card.MaterialCardView cardOverlayDescription;
 
     // Менеджеры
@@ -167,15 +169,15 @@ public class MainActivity extends AppCompatActivity implements
 
         super.onCreate(savedInstanceState);
 
-        androidx.activity.EdgeToEdge.enable(this);
+       // androidx.activity.EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
         initViews();
         setupNavigationBarPadding();
-        setupStatusBarPadding();
-        fixTopPanelPadding();
-        setStatusBarIconsDark(true);
 
+        fixTopPanelPadding();
+
+        setupOverlayTopPadding();
         setupViewModel();
         setupManagers();
         setupRecyclerView();
@@ -238,7 +240,7 @@ public class MainActivity extends AppCompatActivity implements
         bottomButtons = findViewById(R.id.bottomButtons);
 
         overlayDetail = findViewById(R.id.overlayDetail);
-        btnOverlayBack = findViewById(R.id.btnOverlayBack);
+
         tvOverlayTitle = findViewById(R.id.tvOverlayTitle);
         ivOverlayImage = findViewById(R.id.ivOverlayImage);
         tvOverlayDescription = findViewById(R.id.tvOverlayDescription);
@@ -247,7 +249,7 @@ public class MainActivity extends AppCompatActivity implements
         tvTitle = findViewById(R.id.tvTitle);
 
         btnNewValve.setVisibility(View.GONE);
-
+        tvOverlaySubtitle = findViewById(R.id.tvOverlaySubtitle);
         btnNewValve.setOnLongClickListener(v -> {
             if (AppState.getInstance().hasActiveSession()) {
                 sessionManager.showCloseListDialog();
@@ -427,7 +429,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void setupListeners() {
-        btnOverlayBack.setOnClickListener(v -> hideOverlay());
+
 
         btnSensors.setOnClickListener(v -> {
 
@@ -622,7 +624,7 @@ public class MainActivity extends AppCompatActivity implements
     // ==========================================
 
     @Override
-    public void showOverlay(String title, byte[] imageData, String description) {
+    public void showOverlay(String title, String subtitle, byte[] imageData, String description) {
         if (imageData == null || imageData.length == 0) {
             Toast.makeText(this, "Изображение отсутствует", Toast.LENGTH_SHORT).show();
             return;
@@ -631,22 +633,39 @@ public class MainActivity extends AppCompatActivity implements
         hideKeyboard();
 
         tvOverlayTitle.setText(title);
-        tvOverlayDescription.setText(description != null && !description.isEmpty()
-                ? description
-                : "Описание отсутствует");
+        tvOverlaySubtitle.setText(subtitle);
+        boolean hasDescription = description != null
+                && !description.trim().isEmpty()
+                && !description.trim().equals("—")
+                && !description.trim().equals("-");
+
+        if (hasDescription) {
+            cardOverlayDescription.setVisibility(View.VISIBLE);
+            tvOverlayDescription.setText(description);
+        } else {
+            cardOverlayDescription.setVisibility(View.GONE);
+        }
 
         progressOverlay.setVisibility(View.VISIBLE);
         ivOverlayImage.setImageDrawable(null);
         overlayDetail.setVisibility(View.VISIBLE);
 
-        if (cardOverlayDescription != null) {
-            float density = getResources().getDisplayMetrics().density;
-            int safeNavBarHeight = (navigationBarHeight > 0) ? navigationBarHeight : (int) (80 * density);
-            int baseMarginPx = (int) (24 * density);
+        float density = getResources().getDisplayMetrics().density;
+        int safeNavBarHeight = (navigationBarHeight > 0) ? navigationBarHeight : (int) (80 * density);
+        int baseMarginPx = (int) (16 * density);
 
-            ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) cardOverlayDescription.getLayoutParams();
-            params.bottomMargin = safeNavBarHeight + baseMarginPx;
-            cardOverlayDescription.setLayoutParams(params);
+// Картинка всегда не доходит до низа на высоту навбара
+        ConstraintLayout.LayoutParams imageParams =
+                (ConstraintLayout.LayoutParams) ivOverlayImage.getLayoutParams();
+        imageParams.bottomMargin = safeNavBarHeight + baseMarginPx;
+        ivOverlayImage.setLayoutParams(imageParams);
+
+// Карточка описания — свой отступ, если она видима
+        if (hasDescription && cardOverlayDescription != null) {
+            ConstraintLayout.LayoutParams cardParams =
+                    (ConstraintLayout.LayoutParams) cardOverlayDescription.getLayoutParams();
+            cardParams.bottomMargin = safeNavBarHeight + baseMarginPx;
+            cardOverlayDescription.setLayoutParams(cardParams);
         }
 
         new Thread(() -> {
@@ -658,7 +677,8 @@ public class MainActivity extends AppCompatActivity implements
                         ivOverlayImage.setImageBitmap(bitmap);
                     } else {
                         ivOverlayImage.setImageResource(R.drawable.ic_image_placeholder);
-                        Toast.makeText(MainActivity.this, "Не удалось загрузить изображение", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "Не удалось загрузить изображение",
+                                Toast.LENGTH_SHORT).show();
                     }
                 });
             } catch (Exception e) {
@@ -666,7 +686,8 @@ public class MainActivity extends AppCompatActivity implements
                 runOnUiThread(() -> {
                     progressOverlay.setVisibility(View.GONE);
                     ivOverlayImage.setImageResource(R.drawable.ic_image_placeholder);
-                    Toast.makeText(MainActivity.this, "Ошибка загрузки изображения", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Ошибка загрузки изображения",
+                            Toast.LENGTH_SHORT).show();
                 });
             }
         }).start();
@@ -677,6 +698,7 @@ public class MainActivity extends AppCompatActivity implements
         ivOverlayImage.setImageBitmap(null);
         ivOverlayImage.setImageDrawable(null);
         progressOverlay.setVisibility(View.GONE);
+        cardOverlayDescription.setVisibility(View.VISIBLE);
     }
 
     @Override
@@ -852,24 +874,7 @@ public class MainActivity extends AppCompatActivity implements
         sessionManager.restoreLastSession();
     }
 
-    private void setupStatusBarPadding() {
-        if (btnOverlayBack == null) return;
 
-        ViewCompat.setOnApplyWindowInsetsListener(btnOverlayBack, (v, insets) -> {
-            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
-            MainActivity.this.statusBarHeightPx = statusBarHeight;
-
-            float density = v.getResources().getDisplayMetrics().density;
-            int baseMarginPx = (int) (16 * density);
-
-            ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) v.getLayoutParams();
-            params.topMargin = statusBarHeight + baseMarginPx;
-            v.setLayoutParams(params);
-
-            ViewCompat.setOnApplyWindowInsetsListener(v, null);
-            return insets;
-        });
-    }
 
     private void setupNavigationBarPadding() {
         if (rootLayout == null || cardOverlayDescription == null) return;
@@ -893,13 +898,7 @@ public class MainActivity extends AppCompatActivity implements
         });
     }
 
-    private void setStatusBarIconsDark(boolean dark) {
-        Window window = getWindow();
-        if (window != null) {
-            WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(window, window.getDecorView());
-            controller.setAppearanceLightStatusBars(dark);
-        }
-    }
+
 
     private void fixTopPanelPadding() {
         if (topPanel == null) return;
@@ -1035,5 +1034,29 @@ public class MainActivity extends AppCompatActivity implements
 
 
         adapterManager.syncAdapterSelection(selectedPositions);
+    }
+    private void setupOverlayTopPadding() {
+        if (tvOverlayTitle == null) return;
+
+        ViewCompat.setOnApplyWindowInsetsListener(tvOverlayTitle, (v, insets) -> {
+            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            float density = v.getResources().getDisplayMetrics().density;
+            int basePaddingPx = (int) (16 * density);
+
+            v.setPadding(
+                    v.getPaddingLeft(),
+                    statusBarHeight + basePaddingPx,
+                    v.getPaddingRight(),
+                    v.getPaddingBottom()
+            );
+
+            ViewCompat.setOnApplyWindowInsetsListener(v, null);
+            return insets;
+        });
+    }
+    private boolean isNightMode() {
+        int nightMode = getResources().getConfiguration().uiMode
+                & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+        return nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES;
     }
 }

@@ -1,5 +1,6 @@
 package com.mikesuvade.focus.ui.temperature;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -7,6 +8,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.mikesuvade.focus.R;
@@ -72,15 +74,19 @@ public class TemperatureResultAdapter extends RecyclerView.Adapter<TemperatureRe
 
         void bind(TemperatureResult item, OnSaveClickListener listener,
                   DecimalFormat df, DecimalFormat dfTemp) {
+
+            Context ctx = itemView.getContext();
             tvSensorName.setText(item.getSensorName());
 
             if (item.isOutOfRange()) {
                 // 🔥 ЗА ПРЕДЕЛОМ
+                int errorColor = ContextCompat.getColor(ctx, R.color.temp_calc_error);
+
                 tvValue.setText("за пределом!");
-                tvValue.setTextColor(0xFFD32F2F);
+                tvValue.setTextColor(errorColor);
 
                 tvTemperature.setText("");
-                tvTemperature.setTextColor(0xFFD32F2F);
+                tvTemperature.setTextColor(errorColor);
 
                 btnSave.setEnabled(false);
                 btnSave.setAlpha(0.4f);
@@ -90,8 +96,8 @@ public class TemperatureResultAdapter extends RecyclerView.Adapter<TemperatureRe
 
             if (item.isInverse()) {
                 // 🔄 РЕЖИМ ИНВЕРСИИ: T °C → сигнал
-                tvValue.setTextColor(0xFF5F6368);
-                tvTemperature.setTextColor(0xFF1565C0);   // синий для инверсии
+                tvValue.setTextColor(ContextCompat.getColor(ctx, R.color.temp_calc_value));
+                tvTemperature.setTextColor(ContextCompat.getColor(ctx, R.color.temp_calc_inverse));
 
                 // Слева — введённая температура
                 tvValue.setText(dfTemp.format(item.getTemperature()) + " °C");
@@ -102,10 +108,11 @@ public class TemperatureResultAdapter extends RecyclerView.Adapter<TemperatureRe
                 btnSave.setEnabled(false);
                 btnSave.setAlpha(0.4f);
                 btnSave.setOnClickListener(null);
+
             } else {
                 // 🔥 НОРМА
-                tvValue.setTextColor(0xFF5F6368);
-                tvTemperature.setTextColor(0xFF2E7D32);
+                tvValue.setTextColor(ContextCompat.getColor(ctx, R.color.temp_calc_value));
+                tvTemperature.setTextColor(ContextCompat.getColor(ctx, R.color.temp_calc_temp));
 
                 if ("Ом".equals(item.getUnit())) {
                     tvValue.setText(df.format(item.getCorrectedValue()) + " Ом");

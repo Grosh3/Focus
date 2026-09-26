@@ -5,36 +5,29 @@
     android:orientation="vertical"
     android:padding="24dp">
 
-    <!-- ========================================== -->
-    <!-- 1️⃣ ВЕРХНЯЯ ЧАСТЬ — ЗАГОЛОВОК -->
-    <!-- ========================================== -->
+    <!-- Заголовок -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/dialog_measurement_title"
         android:textSize="18sp"
-        android:textColor="@android:color/black"
+        android:textColor="@color/measurement_dialog_title"
         android:gravity="center"
         android:paddingBottom="16dp" />
 
-    <!-- ========================================== -->
-    <!-- 2️⃣ РАЗДЕЛИТЕЛЬНАЯ ПОЛОСА -->
-    <!-- ========================================== -->
+    <!-- Разделительная полоса -->
     <View
         android:layout_width="match_parent"
         android:layout_height="2dp"
-        android:background="@android:color/darker_gray" />
+        android:background="@color/measurement_dialog_divider" />
 
-    <!-- ========================================== -->
-    <!-- 3️⃣ НИЖНЯЯ ЧАСТЬ — ДВЕ КНОПКИ -->
-    <!-- ========================================== -->
+    <!-- Две кнопки -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:paddingTop="16dp">
 
-        <!-- ЛЕВАЯ КНОПКА — мВ -->
         <TextView
             android:id="@+id/tvMv"
             android:layout_width="0dp"
@@ -42,21 +35,19 @@
             android:layout_weight="1"
             android:text="@string/measurement_mv"
             android:textSize="24sp"
-            android:textColor="@android:color/black"
+            android:textColor="@color/measurement_dialog_text"
             android:gravity="center"
             android:padding="24dp"
-            android:background="#E8E0F0"
+            android:background="@color/measurement_dialog_mv_bg"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackground" />
 
-        <!-- ВЕРТИКАЛЬНЫЙ РАЗДЕЛИТЕЛЬ -->
         <View
             android:layout_width="2dp"
             android:layout_height="match_parent"
-            android:background="@android:color/darker_gray" />
+            android:background="@color/measurement_dialog_divider" />
 
-        <!-- ПРАВАЯ КНОПКА — Ом -->
         <TextView
             android:id="@+id/tvOhm"
             android:layout_width="0dp"
@@ -64,10 +55,10 @@
             android:layout_weight="1"
             android:text="@string/measurement_ohm"
             android:textSize="24sp"
-            android:textColor="@android:color/black"
+            android:textColor="@color/measurement_dialog_text"
             android:gravity="center"
             android:padding="24dp"
-            android:background="#FFF8E0"
+            android:background="@color/measurement_dialog_ohm_bg"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?android:attr/selectableItemBackground" />

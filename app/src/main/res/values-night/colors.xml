@@ -1,5 +1,6 @@
 <resources>
     <!-- ===== ПЕРЕОПРЕДЕЛЕНИЕ ТОЛЬКО ДЛЯ НОЧНОГО РЕЖИМА ===== -->
+    <color name="icon_top_panel_color">#4FC3F7</color>
     <color name="primary">#4FC3F7</color>
     <color name="primary_container">#1A237E</color>
     <color name="secondary">#4DB6AC</color>
@@ -18,6 +19,10 @@
     <color name="card_background">#2D2D2D</color>
     <color name="card_elevation">#3D3D3D</color>
 
+    <color name="status_box_installed">#22FB62</color>  <!-- ККВ установлена -->
+    <color name="status_box_removed">#22FB62</color>
+    <color name="status_warning">#22FB62</color>   <!-- Оранжевый - ККВ снята -->
+
     <color name="error">#EF5350</color>
     <color name="success">#66BB6A</color>
     <color name="warning">#FFA726</color>
@@ -25,4 +30,17 @@
     <color name="card_checked_background">#11082A</color>  <!-- Мягкий бежевый для отмеченных карточек -->
     <color name="status_success">#22FB62</color>   <!-- Зеленый - подключен/установлена -->
     <color name="status_error">#22FB62</color>     <!-- Красный - отключен/снята -->
+    <!-- Диалог выбора типа замера -->
+    <color name="measurement_dialog_title">#F6F5EF</color>
+    <color name="measurement_dialog_text">#E8EAED</color>
+    <color name="measurement_dialog_mv_bg">#3C2771</color>          <!-- тёмно-фиолетовый -->
+    <color name="measurement_dialog_ohm_bg">#564003</color>         <!-- тёмно-жёлтый -->
+    <color name="measurement_dialog_divider">#B6BFBA</color>
+    <!-- 🔟 ТЕМПЕРАТУРА КАРТОЧКА РЕЗУЛЬТАТ -->
+    <color name="temp_calc_value">#B0B0B0</color>   <!-- тёмная: светло-серый, читается на тёмном -->
+    <color name="temp_calc_temp">#66BB6A</color>    <!-- тёмная: светло-зелёный -->
+    <color name="temp_calc_inverse">#4FC3F7</color> <!-- тёмная: голубой -->
+    <color name="temp_calc_error">#EF5350</color>   <!-- тёмная: светло-красный -->
+
+
 </resources>

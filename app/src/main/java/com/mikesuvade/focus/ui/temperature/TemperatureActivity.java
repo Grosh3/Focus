@@ -34,13 +34,14 @@ import com.mikesuvade.focus.R;
 import com.mikesuvade.focus.domain.models.Measurement;
 import com.mikesuvade.focus.domain.models.TemperatureResult;
 import com.mikesuvade.focus.domain.repository.IRepository;
+import com.mikesuvade.focus.ui.common.BaseActivity;
 import com.mikesuvade.focus.ui.saved.SavedMeasurementsActivity;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-public class TemperatureActivity extends AppCompatActivity {
+public class TemperatureActivity extends BaseActivity {
 
     private TemperatureViewModel viewModel;
     private TemperatureResultAdapter adapter;
@@ -72,8 +73,8 @@ public class TemperatureActivity extends AppCompatActivity {
         try {
             setContentView(R.layout.activity_temperature);
             fixTopPanelPadding();
-            setStatusBarIconsDark(true);
-            setStatusBarAndNavigationIconsDark(true);
+
+
 
             mode = getIntent().getStringExtra("MODE");
             if (mode == null) {
@@ -498,22 +499,7 @@ public class TemperatureActivity extends AppCompatActivity {
         });
     }
 
-    private void setStatusBarIconsDark(boolean dark) {
-        Window window = getWindow();
-        if (window != null) {
-            WindowInsetsControllerCompat controller =
-                    new WindowInsetsControllerCompat(window, window.getDecorView());
-            controller.setAppearanceLightStatusBars(dark);
-        }
-    }
 
-    private void setStatusBarAndNavigationIconsDark(boolean dark) {
-        Window window = getWindow();
-        if (window != null) {
-            WindowInsetsControllerCompat controller =
-                    new WindowInsetsControllerCompat(window, window.getDecorView());
-            controller.setAppearanceLightStatusBars(dark);
-            controller.setAppearanceLightNavigationBars(dark);
-        }
-    }
+
+
 }

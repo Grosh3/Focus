@@ -27,6 +27,7 @@ import com.mikesuvade.focus.domain.models.GateValve;
 import com.mikesuvade.focus.domain.models.ValveItem;
 import com.mikesuvade.focus.domain.models.ValveWorkSession;
 import com.mikesuvade.focus.domain.repository.IRepository;
+import com.mikesuvade.focus.ui.common.BaseActivity;
 import com.mikesuvade.focus.utils.AppState;
 
 import java.text.SimpleDateFormat;
@@ -34,7 +35,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-public class ListDetailActivity extends AppCompatActivity {
+public class ListDetailActivity extends BaseActivity {
 
     private ListDetailViewModel viewModel;
     private ValveItemAdapter leftAdapter;
@@ -56,8 +57,7 @@ public class ListDetailActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_list_detail);
 
-        // 🔥 УСТАНАВЛИВАЕМ ТЁМНЫЕ ИКОНКИ СТАТУС-БАРА
-        setStatusBarIconsDark(true);
+
 
         // 🔥 ДОБАВЛЯЕМ ОТСТУПЫ ДЛЯ СИСТЕМНЫХ БАРОВ
         fixTopPanelPadding();
@@ -120,8 +120,7 @@ public class ListDetailActivity extends AppCompatActivity {
                     valves.add(valve);
                 }
 
-                Log.d("SESSY", "valves.size=" + valves.size());
-                Log.d("SESSY", "вызов viewModel.loadFromGateValves");
+
 
                 viewModel.setListName("Новый список");
                 viewModel.loadFromGateValves(valves);
@@ -135,7 +134,7 @@ public class ListDetailActivity extends AppCompatActivity {
         } else if (currentSessionId != null && !currentSessionId.isEmpty()) {
             isExistingSession = true;
 
-            Log.d("SESSY", "загрузка существующей сессии: " + currentSessionId);
+
             viewModel.loadSession(currentSessionId);
             updateTitle("Загрузка...");
             showListNumber();
@@ -564,14 +563,7 @@ public class ListDetailActivity extends AppCompatActivity {
         // 3. Если не нашли в БД2, ищем в БД1 (справочник)
         return repository.getGateValveById(item.getGateValveId());
     }
-    private void setStatusBarIconsDark(boolean dark) {
-        Window window = getWindow();
-        if (window != null) {
-            WindowInsetsControllerCompat controller =
-                    new WindowInsetsControllerCompat(window, window.getDecorView());
-            controller.setAppearanceLightStatusBars(dark);
-        }
-    }
+
     private void fixTopPanelPadding() {
         View topPanel = findViewById(R.id.topPanel);
         if (topPanel == null) return;

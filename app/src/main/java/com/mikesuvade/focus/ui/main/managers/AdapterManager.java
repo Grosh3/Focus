@@ -28,15 +28,24 @@ public class AdapterManager {
     private ModeManager modeManager;
 
     public interface AdapterCallbacks {
-        void showOverlay(String title, byte[] imageData, String description);
+        void showOverlay(String title, String subtitle, byte[] imageData, String description);
+
         void toggleExpanded(int position);
+
         void syncAdapterSelection();
+
         void updateButtonState();
+
         void showToast(String message);
+
         void launchValveDetailActivity(Intent intent);
+
         void launchSensorDetailActivity(Intent intent);
+
         void launchSetpointDetailActivity(Intent intent);
+
         void onCheckBoxChanged(GateValve valve, boolean isChecked);
+
         void hideKeyboardOnClick();
     }
 
@@ -266,33 +275,57 @@ public class AdapterManager {
     public List<Integer> getExpandedPositions() {
         return expandedPositions;
     }
+
     /**
      * Собирает заголовок/картинку/описание для оверлея блокировки и вызывает showOverlay.
      * Вынесено отдельно, чтобы можно было вызвать после асинхронной догрузки blob'ов.
      */
     private void dispatchBlockingClick(GateValve valve, String type) {
-        String title = valve.getName() + " - ";
+        String title;
+        String subtitle = buildValveSubtitle(valve);
         byte[] imageData = null;
         String description = "";
 
         switch (type) {
             case "open":
-                title += "БЛОКИРОВКИ \"ОТКРЫТИЕ\"";
+                title = "Открытие";
                 imageData = valve.getNameSpaceViewOpen();
                 description = valve.getDescriptionBlockingOpen();
                 break;
             case "close":
-                title += "БЛОКИРОВКИ \"ЗАКРЫТИЕ\"";
+                title = "Закрытие";
                 imageData = valve.getNamespaceViewClose();
                 description = valve.getDescriptionBlockingClose();
                 break;
             case "external":
-                title += "ВНЕШНИЕ ЦЕПИ";
+                title = "Внешние цепи";
                 imageData = valve.getNamespaceViewPerifer();
                 description = valve.getDescriptionBlockingPerifer();
                 break;
+            default:
+                title = "Блокировка";
+                break;
         }
 
-        callbacks.showOverlay(title, imageData, description);
+        callbacks.showOverlay(title, subtitle, imageData, description);
+    }
+
+    /**
+     * Формирует строку «ИСУ  Название» для подзаголовка оверлея.
+     * Если ИСУ нет — только название. Если и названия нет — пустая строка.
+     */
+    private String buildValveSubtitle(GateValve valve) {
+        String isy = valve.getIsy();
+        String name = valve.getName();
+
+        StringBuilder sb = new StringBuilder();
+        if (isy != null && !isy.isEmpty()) {
+            sb.append(isy);
+        }
+        if (name != null && !name.isEmpty()) {
+            if (sb.length() > 0) sb.append("  ");
+            sb.append(name);
+        }
+        return sb.toString();
     }
 }

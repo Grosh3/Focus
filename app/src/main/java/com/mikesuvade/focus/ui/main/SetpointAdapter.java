@@ -193,7 +193,15 @@ public class SetpointAdapter extends RecyclerView.Adapter<SetpointAdapter.ViewHo
             } else {
                 tvOperation.setVisibility(View.GONE);
             }
-
+            // Выдержка времени
+            String delayTime = setpoint.getDelayTime();
+            if (delayTime != null && !delayTime.isEmpty()
+                    && !delayTime.equals("-") && !delayTime.equals("—")) {
+                tvDelayTime.setVisibility(View.VISIBLE);
+                tvDelayTime.setText("Выдержка: " + delayTime);
+            } else {
+                tvDelayTime.setVisibility(View.GONE);
+            }
             // Разворачиваемая часть
             if (isExpanded) {
                 expandedContent.setVisibility(View.VISIBLE);

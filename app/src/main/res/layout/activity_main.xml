@@ -225,35 +225,44 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Кнопка Назад (крестик) -->
-        <ImageButton
-            android:id="@+id/btnOverlayBack"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_margin="16dp"
-            android:src="@drawable/ic_close"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Закрыть оверлей"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Заголовок -->
+
+        <!-- Заголовок: тип блокировки -->
         <TextView
             android:id="@+id/tvOverlayTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
             android:layout_marginStart="16dp"
-            android:layout_marginEnd="72dp"
-            android:text="Блокировка"
+            android:layout_marginEnd="16dp"
+            android:text="Открытие"
             android:textSize="20sp"
             android:textStyle="bold"
             android:gravity="center"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Подзаголовок: ИСУ + name -->
+        <TextView
+            android:id="@+id/tvOverlaySubtitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:text=""
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorSecondary"
+            android:gravity="center"
             android:maxLines="2"
             android:ellipsize="end"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/btnOverlayBack"
-            app:layout_constraintTop_toTopOf="@id/btnOverlayBack"
-            app:layout_constraintBottom_toBottomOf="@id/btnOverlayBack" />
+            app:layout_constraintTop_toBottomOf="@id/tvOverlayTitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
         <!-- Изображение схемы -->
         <ImageView
@@ -268,7 +277,7 @@
             android:adjustViewBounds="true"
             android:background="@android:color/white"
             android:contentDescription="Фрагмент схемы"
-            app:layout_constraintTop_toBottomOf="@id/btnOverlayBack"
+            app:layout_constraintTop_toBottomOf="@id/tvOverlaySubtitle"
             app:layout_constraintBottom_toTopOf="@id/cardOverlayDescription"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
