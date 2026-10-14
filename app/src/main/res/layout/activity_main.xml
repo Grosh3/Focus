@@ -48,6 +48,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="4dp"
+            app:backgroundTint="@color/main_button_background"
             android:text="@string/new_valve"
             android:maxLines="1"
             android:ellipsize="end"
@@ -159,6 +160,7 @@
                 android:id="@+id/btnSetpoints"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
+                app:backgroundTint="@color/main_button_background"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 android:text="@string/setpoints" />
@@ -167,6 +169,7 @@
                 android:id="@+id/btnSensors"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
+                app:backgroundTint="@color/main_button_background"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 android:text="@string/sensors" />
@@ -175,6 +178,7 @@
                 android:id="@+id/btnConverter"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
+                app:backgroundTint="@color/main_button_background"
                 android:layout_height="wrap_content"
                 android:text="@string/converter" />
         </LinearLayout>

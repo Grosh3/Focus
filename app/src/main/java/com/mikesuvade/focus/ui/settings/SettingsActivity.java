@@ -69,6 +69,7 @@ public class SettingsActivity extends BaseActivity {
 
         // 🔥 ФИКС СТАТУС-БАРА
         fixTopPanelPadding();
+        fixScrollViewBottomPadding();
 
 
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
@@ -76,6 +77,7 @@ public class SettingsActivity extends BaseActivity {
         initThemeSection();
         initAdminSection();
         initBackupSection();
+        initAboutSection();
     }
 
     // ========================================== //
@@ -270,6 +272,36 @@ public class SettingsActivity extends BaseActivity {
                 });
             }
         }).start();
+    }
+    private void initAboutSection() {
+        Button btnAbout = findViewById(R.id.btnAbout);
+        btnAbout.setOnClickListener(v -> showAboutDialog());
+    }
+
+    private void showAboutDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.about_title)
+                .setMessage(R.string.about_text)
+                .setPositiveButton("Закрыть", (dialog, which) -> dialog.dismiss())
+                .show();
+    }
+    private void fixScrollViewBottomPadding() {
+        View scroll = findViewById(R.id.settingsScroll);
+        if (scroll == null) return;
+
+        ViewCompat.setOnApplyWindowInsetsListener(scroll, (v, insets) -> {
+            int navBarHeight = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            int extraPadding = (int) (16 * getResources().getDisplayMetrics().density);
+
+            v.setPadding(
+                    v.getPaddingLeft(),
+                    v.getPaddingTop(),
+                    v.getPaddingRight(),
+                    navBarHeight + extraPadding
+            );
+
+            return insets;
+        });
     }
 
     @Override

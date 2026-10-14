@@ -453,9 +453,7 @@ public class MainActivity extends BaseActivity implements
 
         btnConverter.setOnClickListener(v -> showMeasurementTypeDialog());
 
-        btnHelp.setOnClickListener(v -> {
-            Toast.makeText(this, "Справка", Toast.LENGTH_SHORT).show();
-        });
+        btnHelp.setOnClickListener(v -> showHelpDialog());
     }
 
     // ==========================================
@@ -1053,6 +1051,31 @@ public class MainActivity extends BaseActivity implements
             ViewCompat.setOnApplyWindowInsetsListener(v, null);
             return insets;
         });
+    }
+    private void showHelpDialog() {
+        int titleRes;
+        int textRes;
+
+        if (modeManager.isMainMode()) {
+            titleRes = R.string.help_title_armatura;
+            textRes = R.string.help_text_armatura;
+        } else if (modeManager.isSensorsMode()) {
+            titleRes = R.string.help_title_sensors;
+            textRes = R.string.help_text_sensors;
+        } else if (modeManager.isSetpointsMode()) {
+            titleRes = R.string.help_title_setpoints;
+            textRes = R.string.help_text_setpoints;
+        } else {
+            // fallback — если появится ещё один режим
+            titleRes = R.string.help_title_armatura;
+            textRes = R.string.help_text_armatura;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(titleRes)
+                .setMessage(textRes)
+                .setPositiveButton("Закрыть", (dialog, which) -> dialog.dismiss())
+                .show();
     }
     private boolean isNightMode() {
         int nightMode = getResources().getConfiguration().uiMode

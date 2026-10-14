@@ -596,7 +596,6 @@ public class ListDetailActivity extends BaseActivity {
                     rvLeft.getPaddingRight(),
                     navBarHeight + extraPadding
             );
-
             return insets;
         });
 
@@ -610,9 +609,21 @@ public class ListDetailActivity extends BaseActivity {
                     rvRight.getPaddingRight(),
                     navBarHeight + extraPadding
             );
-
             return insets;
         });
+
+        // 🔥 РАЗДЕЛИТЕЛЬ — поднять нижний край над навбаром
+        View divider = findViewById(R.id.dividerCenter);
+        if (divider != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(divider, (v, insets) -> {
+                int navBarHeight = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+                androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params =
+                        (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) v.getLayoutParams();
+                params.bottomMargin = navBarHeight;
+                v.setLayoutParams(params);
+                return insets;
+            });
+        }
     }
     private void updateTitle(String title) {
         if (tvListTitle != null) {

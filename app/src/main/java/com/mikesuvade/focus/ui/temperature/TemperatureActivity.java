@@ -160,10 +160,7 @@ public class TemperatureActivity extends BaseActivity {
             etLineResistance.setText("");
         }
 
-        findViewById(R.id.btnHelp).setOnClickListener(v -> {
-            Toast.makeText(this, "Справка по замерам температуры", Toast.LENGTH_SHORT).show();
-        });
-
+        findViewById(R.id.btnHelp).setOnClickListener(v -> showHelpDialog());
         findViewById(R.id.btnSavedMeasurements).setOnClickListener(v -> {
             Intent intent = new Intent(this, SavedMeasurementsActivity.class);
             startActivity(intent);
@@ -499,7 +496,13 @@ public class TemperatureActivity extends BaseActivity {
         });
     }
 
-
+    private void showHelpDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.help_title_temperature)
+                .setMessage(R.string.help_text_temperature)
+                .setPositiveButton("Закрыть", (dialog, which) -> dialog.dismiss())
+                .show();
+    }
 
 
 }

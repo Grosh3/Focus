@@ -1,5 +1,8 @@
 <resources>
     <!-- ===== ПЕРЕОПРЕДЕЛЕНИЕ ТОЛЬКО ДЛЯ НОЧНОГО РЕЖИМА ===== -->
+    <!-- Фон кнопок главного экрана (тёмная тема) -->
+    <color name="main_button_background">#2A2D33</color>
+    <!-- Ы -->
     <color name="icon_top_panel_color">#4FC3F7</color>
     <color name="primary">#4FC3F7</color>
     <color name="primary_container">#1A237E</color>
@@ -23,10 +26,13 @@
     <color name="status_box_removed">#22FB62</color>
     <color name="status_warning">#22FB62</color>   <!-- Оранжевый - ККВ снята -->
 
-    <color name="error">#EF5350</color>
+    <color name="error">#FB0603</color>
     <color name="success">#66BB6A</color>
     <color name="warning">#FFA726</color>
     <!-- Рабочий список -->
+    <!-- Кнопки рабочего списка: СОБРАТЬ / РАЗОБРАТЬ -->
+    <color name="list_assemble_button">#1A711E</color>     <!-- тёмная: зелёный темнее -->
+    <color name="list_disassemble_button">#7E0D0D</color>  <!-- тёмная: красный темнее -->
     <color name="card_checked_background">#11082A</color>  <!-- Мягкий бежевый для отмеченных карточек -->
     <color name="status_success">#22FB62</color>   <!-- Зеленый - подключен/установлена -->
     <color name="status_error">#22FB62</color>     <!-- Красный - отключен/снята -->
@@ -41,6 +47,10 @@
     <color name="temp_calc_temp">#66BB6A</color>    <!-- тёмная: светло-зелёный -->
     <color name="temp_calc_inverse">#4FC3F7</color> <!-- тёмная: голубой -->
     <color name="temp_calc_error">#EF5350</color>   <!-- тёмная: светло-красный -->
-
+    <!-- Обход бага Huawei EMUI 9 -->
+    <color name="m3_default_color_secondary_text">#9AA0A6</color>
+    <color name="m3_default_color_on_surface_variant">#9AA0A6</color>
+    <color name="m3_default_color_on_surface_high_emphasis">#E8EAED</color>
+    <color name="m3_default_color_on_surface_medium_emphasis">#9AA0A6</color>
 
 </resources>

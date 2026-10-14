@@ -1,4 +1,7 @@
 <resources>
+    <!-- Фон кнопок главного экрана -->
+    <color name="main_button_background">#F8FDFD</color>
+
 
     <color name="splash_background">#FF533492</color>
     <!-- ========================================== -->
@@ -51,7 +54,9 @@
     <!-- 3️⃣ ЦВЕТА ДЛЯ ОВЕРЛЕЯ -->
     <!-- ========================================== -->
     <color name="overlay_background">#CC000000</color>
-
+    <!-- Кнопки рабочего списка: СОБРАТЬ / РАЗОБРАТЬ -->
+    <color name="list_assemble_button">#388E3C</color>     <!-- светлая: зелёный -->
+    <color name="list_disassemble_button">#D32F2F</color>  <!-- светлая: красный -->
     <!-- ========================================== -->
     <!-- 4️⃣ ЦВЕТА СТАТУСОВ -->
     <!-- ========================================== -->
@@ -122,6 +127,10 @@
     <color name="temp_calc_temp">#2E7D32</color>    <!-- светлая: зелёный -->
     <color name="temp_calc_inverse">#1565C0</color> <!-- светлая: синий -->
     <color name="temp_calc_error">#D32F2F</color>   <!-- ошибка: красный -->
-
+    <!-- Обход бага Huawei EMUI 9: заменяем селектор Material на обычный цвет -->
+    <color name="m3_default_color_secondary_text">#5F6368</color>
+    <color name="m3_default_color_on_surface_variant">#5F6368</color>
+    <color name="m3_default_color_on_surface_high_emphasis">#202124</color>
+    <color name="m3_default_color_on_surface_medium_emphasis">#5F6368</color>
 
 </resources>
