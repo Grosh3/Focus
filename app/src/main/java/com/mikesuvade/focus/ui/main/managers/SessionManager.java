@@ -167,17 +167,7 @@ public class SessionManager {
             return;
         }
 
-        ArrayList<Integer> ids = new ArrayList<>();
-        ArrayList<String> names = new ArrayList<>();
-        ArrayList<String> isys = new ArrayList<>();
-
-        for (GateValve valve : currentList) {
-            ids.add(valve.getId());
-            names.add(valve.getName() != null ? valve.getName() : "");
-            isys.add(valve.getIsy() != null ? valve.getIsy() : "");
-        }
-        Log.d("SESSY", "openNewList: currentList.size=" + currentList.size());
-        Log.d("SESSY", "ids=" + ids.size() + ", names=" + names.size() + ", isys=" + isys.size());
+        ArrayList<GateValve> valvesToSend = new ArrayList<>(currentList);
         String sessionId = "SESSION_" + System.currentTimeMillis();
 
         ValveWorkSession session = new ValveWorkSession();
@@ -194,9 +184,7 @@ public class SessionManager {
         intent.putExtra("is_new_session", true);
         intent.putExtra("session_id", sessionId);
         intent.putExtra("use_user_db", true);
-        intent.putIntegerArrayListExtra("valve_ids", ids);
-        intent.putStringArrayListExtra("valve_names", names);
-        intent.putStringArrayListExtra("valve_isys", isys);
+        intent.putExtra("valves", valvesToSend);
 
         listener.launchListDetailActivity(intent);
     }

@@ -101,32 +101,15 @@ public class ListDetailActivity extends BaseActivity {
         if (isNewSession) {
             isExistingSession = false;
 
-            ArrayList<Integer> ids = getIntent().getIntegerArrayListExtra("valve_ids");
-            ArrayList<String> names = getIntent().getStringArrayListExtra("valve_names");
-            ArrayList<String> isys = getIntent().getStringArrayListExtra("valve_isys");
+            @SuppressWarnings("unchecked")
+            ArrayList<GateValve> valves = (ArrayList<GateValve>) getIntent().getSerializableExtra("valves");
 
-
-
-            if (names != null && !names.isEmpty()) {
-
-                List<GateValve> valves = new ArrayList<>();
-                for (int i = 0; i < names.size(); i++) {
-                    GateValve valve = new GateValve();
-                    if (ids != null && i < ids.size()) {
-                        valve.setId(ids.get(i));
-                    }
-                    valve.setName(names.get(i) != null ? names.get(i) : "");
-                    valve.setIsy(isys != null && i < isys.size() && isys.get(i) != null ? isys.get(i) : "");
-                    valves.add(valve);
-                }
-
-
-
+            if (valves != null && !valves.isEmpty()) {
                 viewModel.setListName("Новый список");
                 viewModel.loadFromGateValves(valves);
                 updateTitle("Новый список");
             } else {
-                Log.w("SESSY", "names == null или empty — создаём пустую сессию");
+                Log.w("SESSY", "valves == null или empty — создаём пустую сессию");
                 viewModel.createEmptySession();
             }
             showListNumber();
@@ -505,17 +488,7 @@ public class ListDetailActivity extends BaseActivity {
             info.append("- ").append(onPlace).append("\n");
         }
 
-        // 🔥 4. KKS
-        String kks = valve.getKks();
-        if (kks != null && !kks.isEmpty()) {
-            info.append("- KKS: ").append(kks).append("\n");
-        }
 
-        // 🔥 5. Полное описание
-        String fullName = valve.getFullName();
-        if (fullName != null && !fullName.isEmpty()) {
-            info.append("- ").append(fullName).append("\n");
-        }
 
         if (info.length() == 0) {
             info.append("Нет данных о задвижке");
